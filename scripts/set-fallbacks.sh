@@ -8,18 +8,18 @@ set -euo pipefail
 
 BOT="${1:?usage: set-fallbacks.sh <bot>}"
 
-# Verified-free chain (commandcode = deepseek only; routers LAST):
+# Verified-free chain (commandcode = deepseek only; routers LAST; no slow):
 #   commandcode deepseek-v4-flash (active, verified) →
-#   openrouter-free minimax-m3:free (live-verified free) →
-#   openrouter-free glm-5.2:free (live-verified free) →
-#   openrouter-free ling-3.0-flash-fin:free (live-verified free) →
+#   openrouter-free minimax-m3:free (live-verified, fast + strong) →
+#   openrouter-free ling-3.0-flash-fin:free (live-verified, fast) →
+#   openrouter-free inkling:free (live-verified, fast) →
 #   kilo longcat-2.0-free (live-verified free, router LAST) →
 #   kilo hy3:free (router LAST)
 hermes config set -p "$BOT" fallback_providers '[
   {"provider": "Api.commandcode.ai", "model": "deepseek/deepseek-v4-flash"},
   {"provider": "openrouter-free", "model": "minimax/minimax-m3:free"},
-  {"provider": "openrouter-free", "model": "z-ai/glm-5.2:free"},
   {"provider": "openrouter-free", "model": "inclusionai/ling-3.0-flash-fin:free"},
+  {"provider": "openrouter-free", "model": "thinkingmachines/inkling:free"},
   {"provider": "kilo", "model": "meituan/longcat-2.0-free"},
   {"provider": "kilo", "model": "tencent/hy3:free"}
 ]' 2>&1 | tail -1
