@@ -55,6 +55,42 @@
     Source: this repo (ai-content-pipeline) + memlawb
     `hermes-real-profile-browsing-cdp-fix-2026-08-29`
 
+## Public Story Facts (from X posts, verified via x_search 2026-08-29)
+
+11. **September 2025: reverb256 "somewhat accidentally" killed Windows on the
+    main PC while moving to Omarchy.** Source: x.com/reverb256/status/2093318293444608065
+    (2026 retrospective).
+
+12. **The distro-hopping arc: Omarchy → CachyOS (Omarchy over Arch base with
+    CachyOS repos/kernels) → Fedora → Bazzite → NixOS (March 2026) → back to
+    Omarchy (August 2026).** Source: x.com/reverb256/status/2093318293444608065
+
+13. **NixOS was used as "AI-accelerated deep-end-first Linux learning" — the
+    big win was giving agents full system context as he "experimented and
+    broke everything." Went through "enough fucking builds."**
+    Source: x.com/reverb256/status/2093318293444608065,
+    x.com/reverb256/status/2091545952020512800
+
+14. **After the NixOS phase, Home-Manager is "probably the right amount of
+    Nix" on top of Omarchy, with potential to integrate Nix strengths into
+    Omarchy's AI agent subsystem.** Source: x.com/reverb256/status/2091545952020512800
+
+15. **Gaming works: "Beat saber, zenless zone zero and genshin, and soon
+    vrchat working like a charm over here on my trusty 3090" (Aug 2025).**
+    Source: x.com/i/status/1961388912141652294
+
+16. **VRChat is a regular part of the voice and the FBT setup** (camera-based
+    FBT pipeline per the repo skills; the account posts about VRChat
+    community and "nobody cares what you look like IRL in vrchat").
+    Source: x.com/reverb256/status/1975007466883809302,
+    x.com/reverb256/status/1980271449362317405
+
+17. **reverb256.ca profile: "15 years in food service. 20 years tech-curious.
+    Now building production applications with NixOS infrastructure and
+    AI-assisted development." 14 projects shipped, 4-host NixOS cluster,
+    Rust→TypeScript→Python, open to junior roles/internships.**
+    Source: https://reverb256.ca (extracted 2026-08-29)
+
 ## Contradictions
 
 - **Omarchy's install speed claim varies.** Official FAQ says "10-15 minutes
