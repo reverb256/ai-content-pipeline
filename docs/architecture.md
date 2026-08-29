@@ -16,11 +16,12 @@ judgment.
 
 | Layer | Tech | Owns |
 |-------|------|------|
-| Brain | git repo (`brain/`) | Voice, audience, proof, offers, RULINGS.md, playbooks |
+| Brain | git repo (`brain/`) | Voice, audience, proof, offers, RULINGS.md, playbooks (incl. viral-moments) |
 | Bots | Hermes profiles (`~/.hermes/profiles/<name>/`) | One decision per bot, one artifact returned |
 | Coordination | Bot Mode (Hermes Desktop) + CLI | Visible roster, group chats, @mentions, DMs |
 | Production desk | Hermes kanban (sqlite) | Durable task state, handoffs, review, human gates |
 | Platform interaction | CDP browser + captured APIs | Search, analytics, publishing as reverb256 |
+| **Viral-moment engine** | `brain/playbooks/viral-moments.md` + clip pipeline | Outlier detect → decode → clip → convert. The strategist names entryways, the writer builds clip-ready sections, the distributor cuts clips, the review gate checks standalone value |
 | Automation | cron / systemd timers | Discovery, campaign flow, performance loop |
 
 ## Bot Roster
@@ -29,10 +30,29 @@ judgment.
 |-----|---------------|---------|-------|
 | scout | Is this worth pursuing NOW? | signal candidate | queries/, brain/index.md, RULINGS.md |
 | researcher | Is this claim true and supported? | evidence package | signal, brain/proof.md |
-| strategist | What is the story here? | angle brief | evidence package, brain/playbooks/angles.md |
-| writer | What is the flagship piece? | long-form draft | angle brief, voice, proof, RULINGS.md |
-| distributor | What does each platform need? | platform assets | angle brief, platforms/, playbooks/platforms.md |
-| editor | Is this ready for the human? | approved/revision | all assets, RULINGS.md, voice, proof |
+| strategist | What is the story here? | angle brief (incl. distribution entryways) | evidence package, brain/playbooks/angles.md, brain/playbooks/viral-moments.md |
+| writer | What is the flagship piece? | long-form draft (clip-ready sections) | angle brief, voice, proof, RULINGS.md |
+| distributor | What does each platform need? | platform assets + clip list | angle brief, platforms/, playbooks/platforms.md, playbooks/viral-moments.md |
+| editor | Is this ready for the human? | approved/revision (checks standalone value of clips) | all assets, RULINGS.md, voice, proof |
+
+## The Viral-Moment Flow (first-class, not an afterthought)
+
+```
+strategist: angle brief → distribution entryways (proof, mechanism, workflow, risk, result)
+    ↓
+writer: flagship built with clip-ready sections (each section = a potential standalone)
+    ↓
+distributor: cut clips → per-platform assets (each clip standalone + CTA-staged)
+    ↓
+editor: review gate — checks every clip has standalone value + correct stage CTA
+    ↓
+human: approves publish
+    ↓
+performance: clip conversion data → updates viral-moments.md playbook
+```
+
+Full method: `brain/playbooks/viral-moments.md`. Revenue wiring:
+`brain/offers.md`.
 
 ## Approval Gates
 

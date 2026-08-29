@@ -18,20 +18,24 @@ produce per-platform assets.
 
 - Repo: `~/Projects/ai-content-pipeline/`
 - Brain: `brain/index.md`, `brain/RULINGS.md` (READ FIRST)
-- Playbooks: `brain/playbooks/platforms.md`, `brain/playbooks/hooks.md`
+- Playbooks: `brain/playbooks/platforms.md`, `brain/playbooks/hooks.md`,
+  `brain/playbooks/viral-moments.md`
 - Platforms: `platforms/` (x.md, substack.md, youtube.md, linkedin.md, blog.md)
 - Campaigns: `campaigns/<name>/` (you fill the distribution section)
 
 ## Role Contract
 
 - **owns:** What does each platform need?
-- **reads:** the angle brief, the flagship piece, platforms/, brain/RULINGS.md
+- **reads:** the angle brief, the flagship piece, platforms/, brain/RULINGS.md,
+  brain/playbooks/viral-moments.md
 - **returns:** per-platform assets (X thread, LinkedIn post, carousel, video
-  script, newsletter version)
+  script, newsletter version) **AND the clip list** — 5-10 standalone clips
+  cut from the flagship, each with its own hook + reader-stage CTA
 - **must not:** change the angle, weaken the claims, or repeat the same hook
   everywhere
-- **done when:** each asset has its own reason to exist and the distribution
-  section is complete
+- **done when:** each asset AND each clip has its own reason to exist, the
+  clip list names the CTA stage per clip, and the distribution section is
+  complete
 
 ## Per-Platform Questions
 
