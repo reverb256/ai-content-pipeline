@@ -1,0 +1,6 @@
+G1: Campaign record exists on disk  |  CHECK: cd /home/j_kro/Projects/ai-content-pipeline && test -f campaigns/omarchy-migration/campaign.md && echo CAMPAIGN_RECORD_OK  |  EXPECT: CAMPAIGN_RECORD_OK
+G2: Signal section filled with source and urgency  |  CHECK: cd /home/j_kro/Projects/ai-content-pipeline && grep -qE "event:|source:|urgency:" campaigns/omarchy-migration/campaign.md && echo SIGNAL_COMPLETE  |  EXPECT: SIGNAL_COMPLETE
+G3: Research section has verified claims with URLs  |  CHECK: cd /home/j_kro/Projects/ai-content-pipeline && grep -cE "https?://" campaigns/omarchy-migration/research.md  |  EXPECT: /[3-9]/
+G4: Angle brief complete with reader, thesis, reusable object  |  CHECK: cd /home/j_kro/Projects/ai-content-pipeline && grep -qE "reader:|thesis:|reusable object:" campaigns/omarchy-migration/angle.md && echo ANGLE_COMPLETE  |  EXPECT: ANGLE_COMPLETE
+G5: Kanban task created on media board  |  CHECK: cd /home/j_kro/Projects/ai-content-pipeline && hermes kanban --board media list 2>/dev/null | grep -i omarchy && echo KANBAN_TASK_OK  |  EXPECT: KANBAN_TASK_OK
+G6: All files committed and pushed to origin  |  CHECK: cd /home/j_kro/Projects/ai-content-pipeline && git status --porcelain | wc -l | grep -q '^0$' && git log origin/main -1 --format=%s | grep -qi omarchy && echo COMMITTED_PUSHED  |  EXPECT: COMMITTED_PUSHED
