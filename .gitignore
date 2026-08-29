@@ -1,0 +1,35 @@
+# Secrets — never commit
+.env
+*.env
+.env.*
+!.env.example
+
+# Browser profiles / sessions — never commit
+browser-profile/
+~/.hermes/browser-profile/
+*.session.json
+*session*.json
+har-captures/*.har
+!har-captures/*.sample.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Build / cache
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Logs
+*.log
+logs/
