@@ -11,6 +11,19 @@
 
 **Status:** <discovery | research | angle | draft | distribution | review | publish | performance>
 
+## Revenue
+
+- **offer this campaign feeds:** <which offer from brain/offers.md — or "none yet, audience-building">
+- **reader stage targeted:** <aware | interested | considering | ready>
+- **primary CTA:** <follow / flagship / offer / buy>
+- **conversion path:** <how a reader moves from this content to the offer>
+
+## Viral Moments / Clips
+
+- **outlier findings:** <what's performing 3x+ in this niche right now>
+- **clip candidates:** <the 5-10 moments from the flagship worth clipping>
+- **clip CTA per stage:** <which clip targets which reader stage>
+
 ## Signal
 
 - **event:** <what happened>
