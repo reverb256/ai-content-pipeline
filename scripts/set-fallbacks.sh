@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Set the verified-free fallback chain for a content-machine bot.
+# commandcode = deepseek-v4-flash ONLY (verified working, active session).
+# MiniMax-M3 / GLM-5.2 / longcat verified FREE on openrouter-free (live HTTP).
+# kilo = longcat-2.0-free + hy3:free (verified free, router LAST).
+# Usage: set-fallbacks.sh <bot>
+set -euo pipefail
+
+BOT="${1:?usage: set-fallbacks.sh <bot>}"
+
+# Verified-free chain (commandcode = deepseek only; routers LAST):
+#   commandcode deepseek-v4-flash (active, verified) →
+#   openrouter-free minimax-m3:free (live-verified free) →
+#   openrouter-free glm-5.2:free (live-verified free) →
+#   openrouter-free ling-3.0-flash-fin:free (live-verified free) →
+#   kilo longcat-2.0-free (live-verified free, router LAST) →
+#   kilo hy3:free (router LAST)
+hermes config set -p "$BOT" fallback_providers '[
+  {"provider": "Api.commandcode.ai", "model": "deepseek/deepseek-v4-flash"},
+  {"provider": "openrouter-free", "model": "minimax/minimax-m3:free"},
+  {"provider": "openrouter-free", "model": "z-ai/glm-5.2:free"},
+  {"provider": "openrouter-free", "model": "inclusionai/ling-3.0-flash-fin:free"},
+  {"provider": "kilo", "model": "meituan/longcat-2.0-free"},
+  {"provider": "kilo", "model": "tencent/hy3:free"}
+]' 2>&1 | tail -1
+
+echo "fallbacks set for $BOT"
