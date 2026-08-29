@@ -9,7 +9,7 @@
 set -euo pipefail
 
 REPO="${REPO:-$HOME/Projects/ai-content-pipeline}"
-BOTS=(scout researcher strategist writer distributor editor)
+BOTS=(scout researcher strategist writer distributor editor oracle scriptwriter voicebot videobot thumbnailbot seobot publishbot analyst)
 
 if [ $# -gt 0 ]; then
     BOTS=("$@")

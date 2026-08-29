@@ -12,7 +12,7 @@
 #   --password-store=gnome-libsecret  real keyring so cookies decrypt
 set -euo pipefail
 
-PROFILE_DIR="${MEDIA_BROWSER_PROFILE:-$HOME/.config/chromium}"
+PROFILE_DIR="${MEDIA_BROWSER_PROFILE:-$HOME/.hermes/automation-profile}"
 PORT="${MEDIA_BROWSER_PORT:-9222}"
 URL="${MEDIA_BROWSER_URL:-https://github.com/reverb256}"
 
