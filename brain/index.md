@@ -14,6 +14,13 @@
 3. **New tools with a specific business use** — evaluated honestly, with real
    tradeoffs, not hype. What we actually use and why.
 
+## Revenue Focus
+
+Every campaign has a revenue answer. See `brain/offers.md` (the revenue
+brain) and `brain/playbooks/viral-moments.md` (how we detect, clip, and
+convert viral moments). A campaign without an offer or reader-stage CTA is
+not ready to write.
+
 ## Who We Publish For
 
 - **Technical operators** — people building real infrastructure with AI

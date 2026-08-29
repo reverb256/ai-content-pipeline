@@ -2,6 +2,35 @@
 
 **Status:** angle (awaiting human approval)
 
+## Revenue
+
+- **offer this campaign feeds:** none yet (audience-building phase). The
+  campaign builds the audience + proof that will feed the migration playbook
+  offer ($29-49) and the omnigate product funnel later. Mining revenue is the
+  only live money today.
+- **reader stage targeted:** aware → interested (the accident hook is
+  awareness; the autonomous-corporation payoff is interest)
+- **primary CTA:** follow / subscribe (build the asset), then flagship
+- **conversion path:** X thread (hook) → flagship essay (trust) → Substack
+  signup (owned asset) → future offer (migration playbook / omnigate)
+
+## Viral Moments / Clips
+
+- **outlier findings:** build-in-public + "I accidentally wiped my OS"
+  confession stories over-perform (vulnerability + specificity). NixOS↔Omarchy
+  migration content is a live conversation (Omarchy 4.0 released 2 weeks ago).
+- **clip candidates (from the flagship):**
+  1. The wrong-disk moment (the accident, cold open)
+  2. The distro-hop chaos (CachyOS over Arch base, Fedora, Bazzite)
+  3. "Enough fucking builds" — NixOS as learning accelerator
+  4. The emergency-mode wipe of nexus — what survived (391GB intact)
+  5. The 0-failed-units migration number
+  6. The defer-to-Omarchy rule (mechanism)
+  7. The autonomous corporation payoff (result)
+  8. The 8-stage roadmap (workflow, compressed)
+- **clip CTA per stage:** clips 1-2 (aware → follow), 3-6 (interested →
+  flagship), 7-8 (considering → future offer)
+
 ## Signal
 
 - **event:** September 2025, j_kro accidentally wiped his Windows 11 gaming PC
