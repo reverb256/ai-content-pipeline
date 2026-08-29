@@ -38,6 +38,18 @@
 YouTube interacts via the CDP browser (real reverb256 session) — Studio
 uploads, analytics reads. API endpoints captured when we start uploading.
 
+### MCP Integration (2026-08-29)
+
+| Server | Status | What it gives |
+|--------|--------|---------------|
+| `social-video` (social-video-mcp) | ✅ wired in `/data/agents/mcp-bridges/social-video-mcp.sh` | Sub feed, watch history, liked, watch later, channel uploads, Shorts — via browser cookies (yt-dlp `--cookies-from-browser`), NO OAuth. Needs Hermes restart to load. |
+| `youtube-mcp-server` (pauling-ai, 40 tools) | ⏳ deferred — needs Google Cloud OAuth | Full Data/Analytics/Reporting API: channel analytics, video upload, comments, SEO, transcripts. Setup requires a Google Cloud project + OAuth consent (one-time, ~20 min in console). Do when we start publishing. |
+
+**Watch history note:** the YouTube Data API no longer exposes watch history.
+The only API path is Google Takeout (export history JSON once, import via
+`romanstrazanec/youtube-mcp` or search the JSON). The browser session shows
+history via the web UI (CDP) today.
+
 ## Metrics That Matter
 
 - CTR (target 5%+)
