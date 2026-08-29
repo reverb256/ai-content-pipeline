@@ -33,6 +33,13 @@
 - Thumbnails: consistent brand, curiosity + specificity
 - Editing: cut dead air, vary shots, captions on
 
+## Channel
+
+- **Channel:** youtube.com/@Reverb256 (exists, verified 2026-08-29)
+- **Account:** reverb256@gmail.com (logged into the automation profile)
+- **YPP status:** fresh channel — needs 500 subs + 3 uploads + 3,000 watch
+  hours (long-form) OR 3M Shorts views before monetization
+
 ## Interaction Mode
 
 YouTube interacts via the CDP browser (real reverb256 session) — Studio

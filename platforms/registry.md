@@ -18,7 +18,7 @@ port 9222, real reverb256 profile).
 | GitHub | reverb256 | ✅ | read, create repos/issues/PRs, push | The repo hub; bots commit here |
 | X | reverb256 | ✅ | search, read timeline, post (via captured API) | Primary discovery + distribution |
 | Gmail | reverb256@gmail.com | ✅ | read email (via browser) | Notifications, verification |
-| YouTube | reverb256@gmail.com | ✅ | watch history, sub feed, studio (via CDP) | Full API via MCP needs OAuth (todo) |
+| YouTube | reverb256@gmail.com | ✅ | watch history, sub feed, studio (via CDP) | Channel: **youtube.com/@Reverb256** (exists, logged in). Full API via OAuth (todo — publishbot needs Google Cloud project + OAuth consent) |
 | LinkedIn | jeremy-undefined | ✅ | feed, post, profile (via CDP) | Secondary/B2B surface |
 | Substack | (reverb256) | ✅ | dashboard, publications, subs (via CDP + API) | Owned audience surface |
 | Google Search Console | reverb256 | ✅ | search performance, indexing | Blog/SEO analytics |
