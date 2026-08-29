@@ -35,7 +35,36 @@ judgment.
 | distributor | What does each platform need? | platform assets + clip list | angle brief, platforms/, playbooks/platforms.md, playbooks/viral-moments.md |
 | editor | Is this ready for the human? | approved/revision (checks standalone value of clips) | all assets, RULINGS.md, voice, proof |
 
-## The Viral-Moment Flow (first-class, not an afterthought)
+## The Automated Content Machine (separate project — faceless, no personal brand)
+
+An AI-first content factory that finds arbitrage opportunities and produces
+content automatically. Uses the same machinery (kanban, profiles, cron,
+memlawb) but runs WITHOUT personal brand or manual content work.
+
+```
+OPPORTUNITY ORACLE (oracle profile, daily cron 8:30am)
+    uses x_search: demand queries + supply-gap queries
+    scores: demand × gap × monetization × automation × platform (policy gate)
+    routes: niche, format, platform, language — follows the biggest arbitrage
+        ↓
+CONTENT MACHINE (faceless-youtube kanban board, 8 stages)
+    research → script → voice → visuals → thumbnail → SEO → upload → analyze
+        ↓
+    review gate (human, 90s/batch — avoids demonetization)
+        ↓
+    platform (YouTube long-form / X / Shorts / translations — oracle-routed)
+```
+
+- Playbook: `brain/playbooks/arbitrage.md` (the method)
+- Oracle role: `profiles/oracle/role.md`
+- Board: `faceless-youtube`
+- Video stack: manim-video skill (plan→code→render→stitch→audio), video_gen
+  plugin, TTS (xai), ffmpeg
+- Cron: oracle-daily-scan (8:30am)
+- Revenue: YouTube RPM ($7-25 in high-value niches), affiliate, digital
+  products — routed by the oracle per-opportunity
+
+Full method: `brain/playbooks/arbitrage.md`.
 
 ```
 strategist: angle brief → distribution entryways (proof, mechanism, workflow, risk, result)
