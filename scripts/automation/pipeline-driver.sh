@@ -45,6 +45,7 @@ dispatch_stage() {
     seo)       bot="seobot";      prompt="Run the SEO stage for kanban task $card. Write title/description/tags/chapters from the script. Save metadata JSON." ;;
     upload)    bot="publishbot";  prompt="Run the upload stage for kanban task $card. Upload the finished video as PRIVATE (review gate). Do NOT make public without human approval. Report the video ID." ;;
     analyze)   bot="analyst";     prompt="Run the analyze stage for kanban task $card. Pull performance, produce keep/test/stop. Post to kanban." ;;
+    story)     bot="storyteller"; prompt="Run the story/audio-drama stage for kanban task $card. Read the story script (or write one from the opportunity), run storyteller.py (scripts/audio/storyteller.py) to synthesize the audio drama with MiniMax TTS (fallback Chatterbox). Save the finished audio + comment with the output path." ;;
     *) log "unknown stage $stage for card $card"; return ;;
   esac
   log "dispatching $bot for card $card (stage $stage)"
