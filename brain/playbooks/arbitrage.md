@@ -109,6 +109,12 @@ biggest arbitrage is, the machine follows.
    friendly
 6. **Translations** — auto-dubbing is a default growth lever; content that
    wins in English can win in other languages with thin supply
+7. **Audio dramas / narrative stories with emotive TTS** — j_kro direction
+   (2026-08-29). Reddit-story / audio-drama niches are battle-tested
+   (RedditVideoMakerBot powers large channels). Highly emotive TTS
+   (MiniMax TTS / Chatterbox) + simple visuals or pure audio. Monetizes via
+   ad revenue + membership. Needs: emotive TTS provider research + a story
+   source pipeline (Reddit prompts, classic fiction, original scripts).
 
 ## Weekly Oracle Run
 

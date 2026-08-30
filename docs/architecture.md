@@ -66,6 +66,34 @@ CONTENT MACHINE (faceless-youtube kanban board, 8 stages)
 
 Full method: `brain/playbooks/arbitrage.md`.
 
+## The Audio-Drama Track (storyteller)
+
+A content track for narrative stories / audio dramas. Uses highly emotive
+TTS (MiniMax Speech API, primary) with self-hosted Chatterbox (local GPU)
+as fallback. Produces finished audio drama from annotated story scripts.
+
+```
+story selection (oracle) → annotated script (scriptwriter)
+    → per-scene TTS (MiniMax emotion/sfx, Chatterbox fallback)
+    → audio assembly (ffmpeg: mix, room tone, pauses)
+    → optional visuals (static art / waveform)
+    → upload (YouTube / audio platforms)
+    → performance → updated playbook
+```
+
+- Playbook: `brain/playbooks/audio-dramas.md` (niches, loop, monetization,
+  policy)
+- Bot: `profiles/storyteller/role.md` — owns the audio-drama stage
+- Orchestrator: `scripts/audio/storyteller.py` (scene parse → per-scene TTS →
+  ffmpeg assembly)
+- CLI: `scripts/audio/minimax-tts.sh` (single-shot MiniMax T2A wrapper)
+- Script format + example: `scripts/audio/example-story.md`
+- Voice: MiniMax T2A v2 HTTP (`speech-2.8-hd` default, per-scene emotion +
+  sound_effects); key in `~/.hermes/.env` (`MINIMAX_API_KEY`)
+- Fallback: Chatterbox on forge (`http://10.1.1.130:8004`), predefined or
+  cloned voices, ffmpeg compensation for missing emotion control
+- Board stage: `audio-drama` on `faceless-youtube`
+
 ```
 strategist: angle brief → distribution entryways (proof, mechanism, workflow, risk, result)
     ↓
