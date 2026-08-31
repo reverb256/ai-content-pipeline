@@ -365,6 +365,71 @@ def chatterbox_healthy(api: str = DEFAULT_CHATTERBOX_API, timeout: float = 4.0) 
 
 
 # --------------------------------------------------------------------------- #
+# VoxCPM (self-hosted, local GPU) — the primary audio-drama engine
+# --------------------------------------------------------------------------- #
+
+VOXCPM_QUALITY = os.environ.get("VOXCPM_QUALITY", "q8")  # f16 | q8 | q4
+
+def voxcpm_tts(text: str, out: Path, voice_desc: str = "",
+               quality: str = VOXCPM_QUALITY, timeout: float = 300.0) -> Path:
+    """Synthesize via local VoxCPM (self-hosted, no API key, emotive).
+
+    quality: f16 = full precision (best), q8 = Q8_0 (near-lossless, default),
+             q4 = Q4_K (fastest, slightly lower).
+    Uses a small wrapper script that calls the voxcpm Python API; the model
+    loads once and stays cached per process. Raises RuntimeError on failure.
+    """
+    import sys
+    base = Path(__file__).resolve().parent
+    wrapper = base / "voxcpm_generate.py"
+    if not wrapper.exists():
+        raise RuntimeError(f"voxcpm wrapper missing: {wrapper}")
+    cmd = [
+        sys.executable, str(wrapper),
+        "--text", text,
+        "--out", str(out),
+        "--quality", quality,
+    ]
+    if voice_desc:
+        cmd += ["--voice-desc", voice_desc]
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    if proc.returncode != 0:
+        raise RuntimeError(f"voxcpm failed: {proc.stderr[-500:]}")
+    if not out.exists() or out.stat().st_size < 1000:
+        raise RuntimeError("voxcpm produced no/small audio")
+    return out
+
+
+def voxcpm_available() -> bool:
+    try:
+        import voxcpm  # noqa: F401
+        return True
+    except Exception:
+        return False
+
+
+# Map story emotions to Voice Design descriptions (VoxCPM reads these)
+_EMOTION_VOICE_DESC = {
+    "happy": "a bright, cheerful voice, warm and upbeat",
+    "sad": "a soft, sorrowful voice, gentle and subdued",
+    "angry": "a sharp, forceful voice, intense and clipped",
+    "fearful": "a trembling, anxious voice, hushed and tense",
+    "disgusted": "a flat, repelled voice, cold and dismissive",
+    "surprised": "a wide-eyed, startled voice, quick and bright",
+    "calm": "a steady, even voice, composed and unhurried",
+    "fluent": "a smooth, natural voice, clear and relaxed",
+    "whisper": "a hushed whisper, intimate and secretive",
+}
+
+def _voxcpm_voice_desc(seg) -> str:
+    """Build a Voice Design description for a segment from its emotion."""
+    if seg.voice:
+        # An explicit per-scene voice override exists; keep it simple.
+        return ""
+    return _EMOTION_VOICE_DESC.get(seg.emotion, "a clear, expressive narrator")
+
+
+# --------------------------------------------------------------------------- #
 # Assembly
 # --------------------------------------------------------------------------- #
 
@@ -436,9 +501,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("script", type=Path, help="story script (.md), see example-story.md")
     parser.add_argument("-o", "--out", type=Path, default=None,
                         help="output mp3 path (default ./out/<title>.mp3)")
-    parser.add_argument("--provider", choices=["auto", "minimax", "chatterbox"],
+    parser.add_argument("--provider", choices=["auto", "voxcpm", "minimax", "chatterbox"],
                         default="auto",
-                        help="force a provider; auto tries MiniMax then Chatterbox")
+                        help="force a provider; auto tries VoxCPM then MiniMax then Chatterbox")
     parser.add_argument("--no-effects", action="store_true",
                         help="skip ffmpeg room-tone processing (concat raw scenes)")
     parser.add_argument("--keep", action="store_true",
@@ -462,12 +527,15 @@ def main(argv: list[str] | None = None) -> int:
     key = os.environ.get("MINIMAX_API_KEY", "").strip()
     chatterbox_api = os.environ.get("CHATTERBOX_API", DEFAULT_CHATTERBOX_API)
 
-    # provider decision
+    # provider decision: VoxCPM (self-hosted) → MiniMax (API) → Chatterbox
+    use_voxcpm = args.provider in ("auto", "voxcpm") and voxcpm_available()
     use_minimax = args.provider in ("auto", "minimax")
     use_chatterbox = args.provider in ("auto", "chatterbox")
     if args.provider == "auto":
+        if not use_voxcpm:
+            log("voxcpm not available — falling to MiniMax/Chatterbox")
         if not key:
-            log("no MINIMAX_API_KEY — using Chatterbox fallback")
+            log("no MINIMAX_API_KEY — skipping MiniMax")
             use_minimax = False
         elif not chatterbox_healthy(chatterbox_api):
             log(f"chatterbox unreachable ({chatterbox_api}) — MiniMax only")
@@ -475,8 +543,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.provider == "minimax" and not key:
         log("--provider minimax but no MINIMAX_API_KEY")
         return 3
-    if not use_minimax and not use_chatterbox:
-        log("no provider available (no key, chatterbox down)")
+    if not use_voxcpm and not use_minimax and not use_chatterbox:
+        log("no provider available (voxcpm missing, no key, chatterbox down)")
         return 1
 
     out = args.out or (Path("out") / f"{story.title.replace(' ', '-').lower()}.mp3")
@@ -490,7 +558,19 @@ def main(argv: list[str] | None = None) -> int:
             voice = seg.voice or story.voice
             speed = seg.speed or story.speed
             provider = ""
-            if use_minimax:
+            if use_voxcpm:
+                try:
+                    # Voice Design from the scene's emotion: build a voice
+                    # description so VoxCPM narrates with the right tone.
+                    voice_desc = _voxcpm_voice_desc(seg)
+                    log(f"seg {i}/{len(story.segments)}: VoxCPM ({seg.emotion})…")
+                    voxcpm_tts(seg.text, raw, voice_desc=voice_desc)
+                    provider = "voxcpm"
+                except RuntimeError as e:
+                    log(f"seg {i}: VoxCPM failed ({e}); falling back")
+                    use_voxcpm = False
+                    provider = ""
+            if not provider and use_minimax:
                 try:
                     log(f"seg {i}/{len(story.segments)}: MiniMax ({seg.emotion})…")
                     minimax_tts(
