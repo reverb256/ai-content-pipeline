@@ -29,10 +29,11 @@ log() { echo "$(date -Is) $1" >> "$LOG"; }
 
 # Count bots currently running (any hermes -p <bot> chat in the crew)
 running_bots() {
-  # Count crew bot processes. pgrep -c returns one number; if the pattern
-  # matched the pgrep itself, the number includes it — the caller only uses
-  # >= comparison, so 1 extra is safe (conservative).
-  pgrep -fc "hermes.*-p (researcher|scriptwriter|voicebot|videobot|thumbnailbot|seobot|publishbot|analyst|storyteller|oracle).*chat" 2>/dev/null || echo 0
+  # Count crew bot processes. pgrep -fc returns exit 1 when no matches,
+  # which would trigger || echo 0 and produce "0\n0" — capture instead.
+  local count
+  count=$(pgrep -fc "hermes.*-p (researcher|scriptwriter|voicebot|videobot|thumbnailbot|seobot|publishbot|analyst|storyteller|oracle).*chat" 2>/dev/null) || count=0
+  echo "$count"
 }
 
 # Get cards in a given stage. Kanban stages map to status; we use a label convention.
@@ -69,7 +70,8 @@ dispatch_stage() {
     seo)       bot="seobot";      prompt="Run the SEO stage for kanban task $card. Write title/description/tags/chapters from the script. Save metadata JSON." ;;
     upload)    bot="publishbot";  prompt="Run the upload stage for kanban task $card. Upload the finished video as PRIVATE (review gate). Do NOT make public without human approval. Report the video ID." ;;
     analyze)   bot="analyst";     prompt="Run the analyze stage for kanban task $card. Pull performance, produce keep/test/stop. Post to kanban." ;;
-    story)     bot="storyteller"; prompt="Run the story/audio-drama stage for kanban task $card. Read the story script (or write one from the opportunity), run storyteller.py (scripts/audio/storyteller.py) to synthesize the audio drama with MiniMax TTS (fallback Chatterbox). Save the finished audio + comment with the output path." ;;
+    review)    bot="default";     prompt="You are SPOC (chief of staff). Run the critic/review pass on kanban task $card (board $BOARD). Read the card's latest artifact (research/script/audio/video), judge it: does it meet the definition of done? Is it original (not template-slop)? Does it match the voice/brain rules? If it passes, advance it: run scripts/automation/advance-stage.sh $card <next-stage>. If it fails, comment with the specific critique and keep the card at its current stage (do NOT advance). You review; you do not redo the work." ;;
+    story)     bot="storyteller"; prompt="Run the story/audio-drama stage for kanban task $card. Read the story script (or write one from the opportunity), run storyteller.py (scripts/audio/storyteller.py) to synthesize the audio drama with VoxCPM TTS (self-hosted). Save the finished audio + comment with the output path." ;;
     *) log "unknown stage $stage for card $card"; return ;;
   esac
   log "dispatching $bot for card $card (stage $stage)"

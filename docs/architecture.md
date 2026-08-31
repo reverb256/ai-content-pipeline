@@ -66,6 +66,27 @@ CONTENT MACHINE (faceless-youtube kanban board, 8 stages)
 
 Full method: `brain/playbooks/arbitrage.md`.
 
+## The Org Chart (SPOC as chief)
+
+```
+YOU (human — strategy, approvals, taste)
+  ↓
+SPOC / default profile (the chief of staff — orchestrator, review, escalation)
+  ├── runs the daily standup (rhythm: done / stuck / one next move)
+  ├── routes to specialists (never does the work itself)
+  ├── runs the critic/review pass (judges output, advances or rejects)
+  └── escalates to you only when it should
+      ├── oracle (discovery) — finds arbitrage
+      ├── researcher, scriptwriter, voicebot, videobot, thumbnailbot,
+      │   seobot, publishbot, analyst, storyteller (production crew)
+      └── [future: cco, cro, coo — C-suite specialists SPOC routes to]
+```
+
+The executive layer is SPOC (the default profile), not a separate bot. The
+research (MIPT study) validates this: protocol/handoffs explain ~44% of
+quality variance vs ~14% for the model. Sequential coordination + explicit
+handoffs + a capable orchestrator beats more bots.
+
 ## The Audio-Drama Track (storyteller)
 
 A content track for narrative stories / audio dramas. Uses highly emotive
