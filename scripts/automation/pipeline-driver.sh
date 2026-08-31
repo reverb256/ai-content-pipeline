@@ -20,7 +20,20 @@ BOARD="faceless-youtube"
 LOG="$REPO/performance/pipeline-driver.log"
 mkdir -p "$(dirname "$LOG")"
 
+# Concurrency cap: how many bots may run at once. Default 1 (sequential) —
+# j_kro's rule: never parallelize against quota-limited providers (xAI etc.).
+# Raise via env: MAX_CONCURRENT_BOTS=2 bash pipeline-driver.sh
+MAX_CONCURRENT="${MAX_CONCURRENT_BOTS:-1}"
+
 log() { echo "$(date -Is) $1" >> "$LOG"; }
+
+# Count bots currently running (any hermes -p <bot> chat in the crew)
+running_bots() {
+  # Count crew bot processes. pgrep -c returns one number; if the pattern
+  # matched the pgrep itself, the number includes it — the caller only uses
+  # >= comparison, so 1 extra is safe (conservative).
+  pgrep -fc "hermes.*-p (researcher|scriptwriter|voicebot|videobot|thumbnailbot|seobot|publishbot|analyst|storyteller|oracle).*chat" 2>/dev/null || echo 0
+}
 
 # Get cards in a given stage. Kanban stages map to status; we use a label convention.
 # Cards carry "stage: <stage>" in their body (the oracle sets this). We scan for
@@ -65,7 +78,15 @@ dispatch_stage() {
 }
 
 log "pipeline driver run start"
+dispatched=0
 for card in $(get_ready_cards); do
+  # Respect the concurrency cap: stop dispatching once we're at the limit.
+  # This is the quota guard — never parallelize against xAI/quota providers.
+  running=$(running_bots)
+  if [ "$running" -ge "$MAX_CONCURRENT" ]; then
+    log "concurrency cap reached ($running/$MAX_CONCURRENT) — stopping dispatch"
+    break
+  fi
   stage=$(stage_of "$card")
   if [ -z "$stage" ]; then
     log "card $card has no stage label — skipping (need oracle to set stage:)"
@@ -73,5 +94,6 @@ for card in $(get_ready_cards); do
   fi
   log "card $card → stage $stage"
   dispatch_stage "$card" "$stage"
+  dispatched=$((dispatched+1))
 done
-log "pipeline driver run complete"
+log "pipeline driver run complete (dispatched $dispatched, running $(running_bots)/$MAX_CONCURRENT)"
