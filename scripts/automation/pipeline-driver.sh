@@ -30,14 +30,25 @@ get_ready_cards() {
 }
 
 stage_of() {
-  hermes kanban --board "$BOARD" show "$1" 2>/dev/null | grep -oE "stage: [a-z]+" | head -1 | awk '{print $2}'
+  # Check the card body first, then comments, then default to opportunity
+  local body
+  body=$(hermes kanban --board "$BOARD" show "$1" 2>/dev/null)
+  local s
+  s=$(echo "$body" | grep -oE "stage: [a-z]+" | head -1 | awk '{print $2}' || true)
+  if [ -z "$s" ]; then
+    # No stage label yet → the oracle created it as an opportunity; treat as
+    # opportunity stage so the driver picks it up and starts research.
+    s="opportunity"
+  fi
+  echo "$s"
 }
 
 # Dispatch the bot for a stage (async — each bot runs its own chat)
 dispatch_stage() {
   local card="$1" stage="$2"
   case "$stage" in
-    research)  bot="researcher";  prompt="Run the research stage. Read the opportunity card (kanban task $card), build the evidence package (3-7 verified claims with URLs), save to the campaign folder, comment on the kanban task with the result." ;;
+    opportunity) bot="researcher"; prompt="Run the research stage for kanban task $card. Read the opportunity card, build the evidence package (3-7 verified claims with URLs), save to the campaign folder, then advance the card: run scripts/automation/advance-stage.sh $card research." ;;
+    research)  bot="researcher";  prompt="Run the research stage. Read the opportunity card (kanban task $card), build the evidence package (3-7 verified claims with URLs), save to the campaign folder, then advance the card: run scripts/automation/advance-stage.sh $card script. Comment on the kanban task with the result." ;;
     script)    bot="scriptwriter"; prompt="Run the script stage for kanban task $card. Read the evidence package, write the retention-optimized TTS-paced script with per-section visual notes. Save + comment." ;;
     voice)     bot="voicebot";    prompt="Run the voice stage for kanban task $card. Check pick-provider.sh voice, generate narration from the script. Save audio + log tier." ;;
     visuals)   bot="videobot";    prompt="Run the visuals stage for kanban task $card. Check pick-provider.sh video, render the video (manim or fallback). Save MP4 + log tier." ;;
