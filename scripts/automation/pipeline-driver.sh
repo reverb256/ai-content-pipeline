@@ -50,6 +50,11 @@ stage_of() {
   local s
   s=$(echo "$body" | grep -oE "stage: [a-z]+" | head -1 | awk '{print $2}' || true)
   if [ -z "$s" ]; then
+    # No stage in body — check comments for the most recent stage marker.
+    # Bots call advance-stage.sh, which posts "stage: <stage>" as a comment.
+    s=$(echo "$body" | grep -oE "stage: [a-z]+" | tail -1 | awk '{print $2}' || true)
+  fi
+  if [ -z "$s" ]; then
     # No stage label yet → the oracle created it as an opportunity; treat as
     # opportunity stage so the driver picks it up and starts research.
     s="opportunity"
@@ -75,8 +80,10 @@ dispatch_stage() {
     *) log "unknown stage $stage for card $card"; return ;;
   esac
   log "dispatching $bot for card $card (stage $stage)"
-  # Fire in background so the driver doesn't block on one bot
-  nohup hermes -p "$bot" chat -q "$prompt" >> "$LOG" 2>&1 &
+  # Fire in background so the driver doesn't block on one bot.
+  # --oneshot -Q ensures the process exits after answering instead of
+  # staying resident as an interactive session.
+  nohup hermes -p "$bot" chat -q "$prompt" --oneshot -Q >> "$LOG" 2>&1 &
 }
 
 log "pipeline driver run start"
