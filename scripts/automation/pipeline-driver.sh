@@ -25,7 +25,40 @@ mkdir -p "$(dirname "$LOG")"
 # Raise via env: MAX_CONCURRENT_BOTS=2 bash pipeline-driver.sh
 MAX_CONCURRENT="${MAX_CONCURRENT_BOTS:-1}"
 
+# Rate-limit respect knobs
+# MAX_DISPATCH_PER_TICK: how many cards to advance per run (default 2). Free-tier
+#   providers can't sustain more without hitting 60/min caps. The pipeline is
+#   throughput-limited by design — 2 cards/tick = 2 bots/call each = ~4-6 model
+#   calls per 30min, well under any cap.
+MAX_DISPATCH="${MAX_DISPATCH_PER_TICK:-2}"
+# MIN_TICK_GAP: if the last run dispatched cards within this many seconds, skip
+#   this tick (gives the model calls time to drain). Default 120s.
+MIN_TICK_GAP="${MIN_TICK_GAP:-120}"
+# COOLDOWN_FILE: when a 429 is detected, mark time so subsequent ticks back off.
+COOLDOWN_FILE="$REPO/performance/.driver-cooldown"
+
 log() { echo "$(date -Is) $1" >> "$LOG"; }
+
+# Respect: skip this tick if the previous dispatch happened < MIN_TICK_GAP ago.
+recent_dispatch() {
+  local last
+  last=$(grep "dispatch" "$LOG" 2>/dev/null | tail -1 | grep -oE "^[0-9T:.+-]+" || true)
+  [ -z "$last" ] && return 1
+  local last_epoch now_epoch
+  last_epoch=$(date -d "$last" +%s 2>/dev/null || echo 0)
+  now_epoch=$(date +%s)
+  [ $((now_epoch - last_epoch)) -lt "$MIN_TICK_GAP" ]
+}
+
+# Work around: if we recently hit a 429 (cooldown marker), skip dispatch.
+in_cooldown() {
+  [ -f "$COOLDOWN_FILE" ] || return 1
+  local marker now_epoch marker_epoch
+  marker=$(cat "$COOLDOWN_FILE" 2>/dev/null || echo 0)
+  now_epoch=$(date +%s)
+  marker_epoch=$((marker))
+  [ $((now_epoch - marker_epoch)) -lt 300 ]  # 5 min cooldown
+}
 
 # Count bots currently running (any hermes -p <bot> chat in the crew)
 running_bots() {
@@ -83,6 +116,15 @@ dispatch_stage() {
 }
 
 log "pipeline driver run start"
+# Respect + work-around gates
+if in_cooldown; then
+  log "cooldown active (429 recently) — skipping tick"
+  exit 0
+fi
+if recent_dispatch; then
+  log "recent dispatch within ${MIN_TICK_GAP}s — skipping tick"
+  exit 0
+fi
 dispatched=0
 for card in $(get_ready_cards); do
   # Respect the concurrency cap: stop dispatching once we're at the limit.
@@ -90,6 +132,11 @@ for card in $(get_ready_cards); do
   running=$(running_bots)
   if [ "$running" -ge "$MAX_CONCURRENT" ]; then
     log "concurrency cap reached ($running/$MAX_CONCURRENT) — stopping dispatch"
+    break
+  fi
+  # Respect the per-tick dispatch cap (free-tier throughput limit)
+  if [ "$dispatched" -ge "$MAX_DISPATCH" ]; then
+    log "per-tick dispatch cap reached ($dispatched/$MAX_DISPATCH) — stopping dispatch"
     break
   fi
   stage=$(stage_of "$card")
