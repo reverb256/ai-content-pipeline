@@ -85,6 +85,8 @@ except Exception as e:
   test_model "opencode-zen" "https://opencode.ai/zen/v1" "$OC_KEY" "laguna-s-2.1-free"
   test_model "opencode-zen" "https://opencode.ai/zen/v1" "$OC_KEY" "ling-3.0-flash-fin-free"
   echo "### commandcode"
+  # Usage note: commandcode's only paid model we use is deepseek-v4-flash; laguna-s-2.1-free is its only :free
+  test_model "commandcode" "https://api.commandcode.ai/provider/v1" "$CC_KEY" "deepseek/deepseek-v4-flash"
   test_model "commandcode" "https://api.commandcode.ai/provider/v1" "$CC_KEY" "poolside/laguna-s-2.1-free"
   echo "### kilo"
   test_model "kilo" "https://api.kilo.ai/api/gateway" "$KILO_KEY" "kilo-auto/free"
