@@ -1,0 +1,12 @@
+[
+  {
+    "file": "clips/e2e-smoke/broll-scene-1-test-narrator-01.mp3",
+    "scene": "Scene 1 — Test",
+    "speaker": "Narrator",
+    "start": 0.0,
+    "end": 3.04,
+    "duration": 3.04,
+    "text": "This is a short end-to-end test of the audio pipeline.",
+    "emotion": "calm"
+  }
+]

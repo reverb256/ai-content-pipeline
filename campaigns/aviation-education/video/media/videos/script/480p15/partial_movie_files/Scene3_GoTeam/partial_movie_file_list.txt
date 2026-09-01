@@ -1,0 +1,11 @@
+# This file is used internally by FFMPEG.
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/aviation-education/video/media/videos/script/480p15/partial_movie_files/Scene3_GoTeam/3802445054_340699295_223132457.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/aviation-education/video/media/videos/script/480p15/partial_movie_files/Scene3_GoTeam/2779314190_3880968470_3286093146.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/aviation-education/video/media/videos/script/480p15/partial_movie_files/Scene3_GoTeam/2779314190_3168481122_1087766347.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/aviation-education/video/media/videos/script/480p15/partial_movie_files/Scene3_GoTeam/2779314190_3880968470_3942517203.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/aviation-education/video/media/videos/script/480p15/partial_movie_files/Scene3_GoTeam/2779314190_41727422_3789293453.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/aviation-education/video/media/videos/script/480p15/partial_movie_files/Scene3_GoTeam/2779314190_170846798_1008817980.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/aviation-education/video/media/videos/script/480p15/partial_movie_files/Scene3_GoTeam/2779314190_3240550104_2850230036.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/aviation-education/video/media/videos/script/480p15/partial_movie_files/Scene3_GoTeam/2779314190_499328632_710604383.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/aviation-education/video/media/videos/script/480p15/partial_movie_files/Scene3_GoTeam/2779314190_238812865_1805589785.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/aviation-education/video/media/videos/script/480p15/partial_movie_files/Scene3_GoTeam/2779314190_4235033027_903372049.mp4'

@@ -1,0 +1,62 @@
+[
+  {
+    "file": "clips/the-last-signal/broll-scene-1-the-call-narrator-01.mp3",
+    "scene": "Scene 1 — The Call",
+    "speaker": "Narrator",
+    "start": 0.0,
+    "end": 9.44,
+    "duration": 9.44,
+    "text": "The console beeped once. Then it stopped. Mara pressed her palm to\nthe cold glass and listened. Nothing came back.",
+    "emotion": "calm"
+  },
+  {
+    "file": "clips/the-last-signal/broll-scene-1-the-call-narrator-02.mp3",
+    "scene": "Scene 1 — The Call",
+    "speaker": "Narrator",
+    "start": 12.16,
+    "end": 15.84,
+    "duration": 3.68,
+    "text": "The silence answered her. The silence had always answered her.",
+    "emotion": "calm"
+  },
+  {
+    "file": "clips/the-last-signal/broll-scene-2-the-message-narrator-03.mp3",
+    "scene": "Scene 2 — The Message",
+    "speaker": "Narrator",
+    "start": 15.84,
+    "end": 24.64,
+    "duration": 8.8,
+    "text": "On the third day, the signal returned. Not a voice. A pattern. Old\nradio etiquette, tapped out in the dark by someone who still believed someone\nwas listening.",
+    "emotion": "sad"
+  },
+  {
+    "file": "clips/the-last-signal/broll-scene-2-the-message-narrator-04.mp3",
+    "scene": "Scene 2 — The Message",
+    "speaker": "Narrator",
+    "start": 27.2,
+    "end": 33.6,
+    "duration": 6.4,
+    "text": "She stared at the screen until her eyes burned. She had not told it\nwhere she was. She had told no one.",
+    "emotion": "sad"
+  },
+  {
+    "file": "clips/the-last-signal/broll-scene-3-the-return-narrator-05.mp3",
+    "scene": "Scene 3 — The Return",
+    "speaker": "Narrator",
+    "start": 33.6,
+    "end": 42.4,
+    "duration": 8.8,
+    "text": "Outside, the wind died. The station hummed its one low note.\nSomewhere in the dark, something had begun to move toward the light.",
+    "emotion": "whisper"
+  },
+  {
+    "file": "clips/the-last-signal/broll-scene-4-the-close-narrator-06.mp3",
+    "scene": "Scene 4 — The Close",
+    "speaker": "Narrator",
+    "start": 45.28,
+    "end": 54.56,
+    "duration": 9.28,
+    "text": "The log ended there. What you heard tonight is the last\ntransmission from Station Seven, recovered and restored. If you found your\nway here, you are not alone either.",
+    "emotion": "fluent"
+  }
+]

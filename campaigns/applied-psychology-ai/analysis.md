@@ -25,15 +25,15 @@ validate market timing and competitive landscape.
 
 ## Process Quality (leading indicator)
 
-| Stage | Provider | Result |
-|-------|----------|--------|
-| Research | — | 8 verified claims, all primary-source URLs spot-checked live |
-| Script | — | ~12:30 TTS-paced, every claim traces to evidence package |
-| Voice | VoxCPM (CUDA, self-hosted) | 445.7s, 28 segments, emotive annotations |
-| Visuals | Manim CE (local) | 445.67s, 10 scenes, H.264+AAC mux |
-| Thumbnail | ImageMagick (local) | 3 variants, high-contrast, <=3 words |
-| SEO | — | Title 56 chars, 10 tags, 10 chapters, 8 source URLs |
-| Upload | YouTube Studio (CDP) | Private, video ID QEr_Elylt_o |
+|| Stage | Provider | Result |
+||-------|----------|--------|
+|| Research | — | 8 verified claims, all primary-source URLs spot-checked live |
+|| Script | — | ~12:30 TTS-paced, every claim traces to evidence package |
+|| Voice | VoxCPM (CUDA, self-hosted) | 445.7s, 28 segments, emotive annotations |
+|| Visuals | Manim CE (local) | 445.67s, 10 scenes, H.264+AAC mux |
+|| Thumbnail | ImageMagick (local) | 3 variants, high-contrast, <=3 words |
+|| SEO | — | Title 56 chars, 10 tags, 10 chapters, 8 source URLs |
+|| Upload | YouTube Studio (CDP) | Private, video ID QEr_Elylt_o |
 
 **Process verdict:** Clean run. Zero fallback events on voice (VoxCPM
 held for all 28 segments). Zero fallback on visuals (Manim rendered
@@ -103,6 +103,8 @@ are spiking in discussion volume August-September 2026. Key voices:
   community
 - Multiple papers linking frequent AI use to lower critical thinking
   (especially ages 17-25)
+- Gerlich (2025, MDPI Societies, n=666): r≈-0.75 AI use vs critical thinking
+- Michael Levin preprint (July 2026): "Cognitive Offloading Is a Cognitive Universal"
 
 **Competitive landscape on YouTube:**
 - Multiple podcasts and interviews on cognitive surrender exist
@@ -111,6 +113,11 @@ are spiking in discussion volume August-September 2026. Key voices:
   on YouTube specifically
 - Opportunity: first-mover advantage on a research-backed long-form
   explainer with this specific angle
+
+**Our exact title** "AI Was Wrong 80% of the Time. They Followed It Anyway"
+returns zero X hits — expected (video is private, no sharing yet).
+
+**Bottom line:** Timing window still open. Peak cultural relevance moment — not early, not late.
 
 ---
 
@@ -128,17 +135,17 @@ Above YouTube all-niche median (~$2.30). Monetization thesis holds.
 
 ## Leading-Indicator Scoring
 
-| Dimension | Score | Evidence |
-|-----------|-------|----------|
-| Hook strength | 8/10 | Concrete number + curiosity gap; matches playbook pattern |
-| Evidence quality | 9/10 | 8 verified claims, primary-source URLs, gaps acknowledged |
-| Script structure | 8/10 | Inverted pyramid + clip-candidate sections |
-| Voice quality | 7/10 | VoxCPM emotive, but self-hosted (no third-party quality check) |
-| Visual quality | 6/10 | Manim CE is clean but basic (no face, no personality) |
-| Thumbnail | 7/10 | 3 variants, v1 strong, but ImageMagick fallback (not ideal) |
-| Timing | 9/10 | Peak cultural moment for cognitive offloading discourse |
-| Differentiation | 8/10 | No dominant creator owns this framing on YouTube |
-| **Composite (leading)** | **7.8** | Strong on evidence+timing, weaker on production value |
+|| Dimension | Score | Evidence |
+||-----------|-------|----------|
+|| Hook strength | 8/10 | Concrete number + curiosity gap; matches playbook pattern |
+|| Evidence quality | 9/10 | 8 verified claims, primary-source URLs, gaps acknowledged |
+|| Script structure | 8/10 | Inverted pyramid + clip-candidate sections |
+|| Voice quality | 7/10 | VoxCPM emotive, but self-hosted (no third-party quality check) |
+|| Visual quality | 6/10 | Manim CE is clean but basic (no face, no personality) |
+|| Thumbnail | 7/10 | 3 variants, v1 strong, but ImageMagick fallback (not ideal) |
+|| Timing | 9/10 | Peak cultural moment for cognitive offloading discourse |
+|| Differentiation | 8/10 | No dominant creator owns this framing on YouTube |
+|| **Composite (leading)** | **7.8** | Strong on evidence+timing, weaker on production value |
 
 ---
 
@@ -254,7 +261,7 @@ Proposed playbook changes: none pending public performance data.
 
 ---
 
-**Analyst:** analyst profile (longcat-2.0:free, nous)
+**Analyst:** analyst profile (upstage/solar-pro4:free, nous)
 **Board:** faceless-youtube
-**Task:** t_a947f3a5 (stage: analyze)
+**Task:** t_a947f3a5 (stage: review)
 **Status:** Analysis complete, awaiting human publish approval

@@ -1,0 +1,40 @@
+1
+00:00:01,500 --> 00:00:03,000
+Aviation media covers every crash.
+
+2
+00:00:01,500 --> 00:00:03,000
+You hear about the one that failed.
+
+3
+00:00:01,500 --> 00:00:03,500
+You do not hear about the 99.999 percent that did not.
+
+4
+00:00:01,500 --> 00:00:04,000
+It has almost nothing to say about the flights that go right.
+
+5
+00:00:11,500 --> 00:00:13,000
+Every investigation produces findings.
+
+6
+00:00:11,500 --> 00:00:13,000
+The findings become recommendations.
+
+7
+00:00:11,500 --> 00:00:13,000
+The recommendations get adopted.
+
+8
+00:00:11,500 --> 00:00:13,500
+The next generation of aircraft and procedures is safer.
+
+9
+00:00:16,800 --> 00:00:18,800
+Down from 0.83 in fiscal year 2017.
+
+10
+00:00:16,800 --> 00:00:20,300
+Fiscal year 2024 saw the lowest rate on record: 0.68 fatal accidents per 100,000 flight hours.
+

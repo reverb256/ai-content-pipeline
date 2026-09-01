@@ -1,0 +1,40 @@
+1
+00:00:00,000 --> 00:00:02,500
+It is a safety recommendation engine that uses crashes as input.
+
+2
+00:00:00,000 --> 00:00:03,000
+The NTSB is not a crash investigation agency in the way most people think.
+
+3
+00:00:04,600 --> 00:00:05,600
+The Go Team shows up.
+
+4
+00:00:04,600 --> 00:00:06,100
+The investigation takes a year or two.
+
+5
+00:00:04,600 --> 00:00:06,100
+The report is public.
+
+6
+00:00:04,600 --> 00:00:06,100
+The recommendations get adopted.
+
+7
+00:00:04,600 --> 00:00:06,600
+The next million flights are safer.
+
+8
+00:00:04,600 --> 00:00:07,600
+The Party System brings expert knowledge while keeping legal interests out.
+
+9
+00:00:07,666 --> 00:00:09,666
+It is not perfect. It is not fast.
+
+10
+00:00:07,666 --> 00:00:10,166
+But it is the reason aviation keeps getting safer.
+

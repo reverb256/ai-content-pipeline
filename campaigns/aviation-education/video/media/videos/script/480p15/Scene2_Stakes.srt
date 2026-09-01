@@ -1,0 +1,32 @@
+1
+00:00:00,000 --> 00:00:02,500
+The NTSB has investigated more than 154,000 aviation accidents.
+
+2
+00:00:04,200 --> 00:00:06,700
+They have issued more than 15,700 safety recommendations.
+
+3
+00:00:07,400 --> 00:00:09,900
+Eighty-two percent of the closed recommendations were actually implemented.
+
+4
+00:00:09,866 --> 00:00:11,866
+In 2025 alone, they adopted 1,436 investigative reports.
+
+5
+00:00:09,866 --> 00:00:11,866
+That is eighteen percent more than 2024.
+
+6
+00:00:09,866 --> 00:00:11,866
+They issued 131 new safety recommendations.
+
+7
+00:00:09,866 --> 00:00:11,866
+Fourteen of them were marked urgent.
+
+8
+00:00:13,133 --> 00:00:16,133
+As one observer put it: I wish more industries treated their mistakes the same way the aviation industry and our NTSB does.
+

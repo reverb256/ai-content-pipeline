@@ -1,0 +1,12 @@
+1
+00:00:00,000 --> 00:00:02,500
+Every time a plane crashes in the United States, a team shows up before the smoke clears.
+
+2
+00:00:02,533 --> 00:00:03,733
+They do not work for the airline.
+
+3
+00:00:04,000 --> 00:00:06,500
+And what they find changes every flight you will ever take.
+
