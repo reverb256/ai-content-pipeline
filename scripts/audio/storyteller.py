@@ -590,11 +590,15 @@ _EMOTION_VOICE_DESC = {
 
 
 def voxcpm_tts(text: str, out: Path, voice_desc: str = "",
-               quality: str = VOXCPM_QUALITY, timeout: float = 300.0) -> Path:
+               quality: str = VOXCPM_QUALITY, timeout: float = 300.0,
+               emotion: str = "") -> Path:
     """Synthesize via local VoxCPM (self-hosted, no API key, emotive).
 
     quality: f16 = full precision (best), q8 = Q8_0 (near-lossless),
              q4 = Q4_K (fastest, slightly lower).
+    emotion: per-line emotion ('angry', 'fearful', ...). When present, the
+             CFG scale is raised (2.8) so the Voice Design description is
+             followed more strongly — emotion words must land in delivery.
     Uses a small wrapper script that calls the voxcpm Python API; the model
     loads once and stays cached per process. Raises RuntimeError on failure.
     """
@@ -610,6 +614,8 @@ def voxcpm_tts(text: str, out: Path, voice_desc: str = "",
     ]
     if voice_desc:
         cmd += ["--voice-desc", voice_desc]
+    if emotion:
+        cmd += ["--cfg-value", "2.8"]
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     if proc.returncode != 0:
         raise RuntimeError(f"voxcpm failed: {proc.stderr[-500:]}")
@@ -629,18 +635,44 @@ def voxcpm_available() -> bool:
 def _voxcpm_voice_desc(seg: Segment, story: Story) -> str:
     """Build a Voice Design description for a segment.
 
-    Priority: per-segment override → cast voice description → emotion
-    description → default narrator.
+    Voice Design (VoxCPM2) takes a natural-language description in parens
+    that carries identity + texture + emotion. This BLENDS the character's
+    identity (cast baseline) with the per-line/scene emotion so the emotion
+    actually lands in the audio — a flat read kills the drama.
+
+    Priority:
+      1. per-segment explicit override (seg.voice_desc)
+      2. cast baseline voice + emotion delivery hint (blended)
+      3. narrator + emotion description
+      4. default narrator
+
+    The emotion hint is APPENDED to the identity description as an
+    'emotion + delivery' clause, e.g.:
+      cast: "a woman in her late 30s, steady, weary, quiet authority"
+      seg (angry): "a woman in her late 30s, steady, weary, quiet authority,
+                    now speaking angrily — sharp, forceful, clipped"
     """
     if seg.voice_desc:
         return seg.voice_desc
+
+    emotion = (seg.emotion or DEFAULT_EMOTION).lower()
+    emotion_hint = _EMOTION_VOICE_DESC.get(emotion, "")
+
     member = story.cast_member(seg.speaker)
     if member is not None and member.voice_desc:
-        return member.voice_desc
+        base = member.voice_desc.strip().rstrip(".")
+        if emotion_hint and emotion != DEFAULT_EMOTION:
+            return f"{base}, now {emotion_hint}"
+        return base
+
     if seg.speaker.lower() in PROMPT_NAMES:
+        if emotion_hint:
+            return emotion_hint
         return DEFAULT_EMOTION_DESC
-    emotion = seg.emotion or DEFAULT_EMOTION
-    return _EMOTION_VOICE_DESC.get(emotion, DEFAULT_EMOTION_DESC)
+
+    if emotion_hint:
+        return emotion_hint
+    return DEFAULT_EMOTION_DESC
 
 
 # --------------------------------------------------------------------------- #
@@ -1295,7 +1327,8 @@ def main(argv: list[str] | None = None) -> int:
                     voice_desc = _voxcpm_voice_desc(seg, story)
                     log(f"seg {i}/{len(story.segments)}: VoxCPM "
                         f"[{seg.speaker}|{seg.emotion}]…")
-                    voxcpm_tts(seg.text, raw, voice_desc=voice_desc)
+                    voxcpm_tts(seg.text, raw, voice_desc=voice_desc,
+                               emotion=seg.emotion or "")
                     provider = "voxcpm"
                     used_providers.add("voxcpm")
                 except RuntimeError as e:

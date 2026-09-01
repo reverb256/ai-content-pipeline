@@ -19,6 +19,7 @@ def main() -> None:
     p.add_argument("--out", required=True)
     p.add_argument("--quality", default="q8", choices=["f16", "q8", "q4"])
     p.add_argument("--voice-desc", default="")
+    p.add_argument("--cfg-value", type=float, default=2.0)
     args = p.parse_args()
 
     try:
@@ -43,7 +44,7 @@ def main() -> None:
     print("generating...", file=sys.stderr)
     wav = model.generate(
         text=text,
-        cfg_value=2.0,
+        cfg_value=args.cfg_value,
         inference_timesteps=10,
     )
     out = Path(args.out)
