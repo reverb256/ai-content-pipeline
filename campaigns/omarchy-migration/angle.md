@@ -1,4 +1,4 @@
-# Angle — The accidental Linux journey
+# Angle — Omarchy migration: the personal autonomous corporation
 
 > One complete angle brief. Returned by the strategist, awaiting HUMAN
 > APPROVAL before the writer spends hours.
@@ -9,62 +9,61 @@ reader: the technical operator or Linux-curious gamer who has thought about
         chaos, hungry for the payoff
 reader outcome: the permission + the roadmap. Permission: "if this guy
         accidentally wiped his whole Windows PC and ended up BETTER, I can
-        survive a careful migration." Roadmap: the actual year-long arc —
-        what to expect at each stage, what NOT to do (target the right disk!),
-        and the end state (a personal autonomous corporation) worth reaching.
+        survive a careful migration." Roadmap: the actual year-long arc — what
+        to expect at each stage, what NOT to do (target the right disk!), and
+        the end state (a personal autonomous corporation) worth reaching.
 current source: the X retrospective (x.com/reverb256/status/2093318293444608065
-        and the gaming posts), the accident itself (Sept 2025: targeted an
-        NVMe instead of the USB meant for Omarchy, nuked the Windows 11
-        gaming PC), the distro-hop arc (Omarchy → CachyOS → Fedora → Bazzite
-        → NixOS March 2026 → Omarchy Aug 2026), the live proof (zephyr +
-        nexus on Omarchy 4.0.0, 0 failed units, garage intact, YubiKey
-        secrets, Hermes fleet, memlawb)
+        + related gaming posts), the accident itself (Sept 2025: targeted an
+        NVMe instead of the USB meant for Omarchy, nuked the Windows 11 gaming
+        PC), the distro-hop arc (Omarchy -> CachyOS -> Fedora -> Bazzite ->
+        NixOS March 2026 -> Omarchy Aug 2026), the live proof (zephyr + nexus
+        on Omarchy 4.0.0, 0 failed units, garage intact, YubiKey secrets,
+        Hermes fleet, memlawb)
 central tension: the accident that destroyed Windows became the accident that
-        started everything. What looks like catastrophic failure (wiping your
-        main PC) becomes the moment of liberation — because the OS he landed
-        on (Omarchy) and the learning arc (NixOS as AI-accelerated deep-end
+        built everything. What looks like catastrophic failure (wiping your main
+        PC) becomes the moment of liberation — because the OS he landed on
+        (Omarchy) and the learning arc (NixOS as AI-accelerated deep-end
         learning) were better than what he lost. But the tension is real: the
-        journey included "enough fucking builds", distro-hopping chaos, and
-        an emergency-mode wipe of nexus — it was not smooth, it was
-        survivable and worth it.
+        journey included "enough fucking builds", distro-hopping chaos, and an
+        emergency-mode wipe of nexus — it was not smooth, it was survivable and
+        worth it.
 thesis: accidentally wiping Windows was the best thing that happened to my
         computing life — not because Windows is bad, but because it forced a
         real, irreversible commitment to Linux, which turned into a year of
         AI-accelerated learning that ended with a personal autonomous
-        corporation running on Omarchy. The accident is the entry point; the
-        arc is the story; the payoff is the system.
-what becomes possible: readers see the full arc from catastrophe to
-        autonomous corporation — the concrete stages, the honest failures
-        (wrong-disk wipe, distro hopping, emergency mode), the turning points
-        (NixOS as learning accelerator, "defer to Omarchy"), and the end
-        state (Hermes fleet, memlawb memory, kanban production desk, CDP
-        browser acting as operator). Permission + roadmap in one piece.
+        corporation running on Omarchy. The accident is the entry point; the arc
+        is the story; the payoff is the system.
+what becomes possible: readers see the full arc from catastrophe to autonomous
+        corporation — the concrete stages, the honest failures (wrong-disk wipe,
+        distro hopping, emergency mode), the turning points (NixOS as learning
+        accelerator, "defer to Omarchy"), and the end state (Hermes fleet,
+        memlawb memory, kanban production desk, CDP browser acting as operator).
+        Permission + roadmap in one piece.
 flagship format: a long-form essay/guide (blog + Substack) — "I accidentally
         wiped my Windows PC. A year later I run a personal autonomous
-        corporation on Omarchy." Timeline-driven narrative + the stage-by-
-        stage roadmap as the reusable object. Secondary: X thread with the
-        arc + the accident hook; a video essay (the arc is visual: timeline,
-        screenshots, the "oops" moment).
-reusable object: the "survive the OS migration" roadmap — stage-by-stage
-        what to expect (Sept 2025 accident → first Linux → distro hop →
-        deep-end NixOS learning → settle on Omarchy), with the specific
-        lessons (target the right disk; use the AI agents to learn the
-        system; NixOS is a learning accelerator not a destination; defer to
-        the OS's own way; build your autonomous layer on top). Plus the
-        "personal autonomous corporation" blueprint as the payoff.
-proof required: the X posts (arc, gaming, VRChat voice), reverb256.ca
-        (profile: 14 projects, 4-host cluster, "15 years food service, 20
-        years tech-curious"), GitHub (35 repos), the live cluster facts
-        (0 failed units, garage, YubiKey, Hermes fleet, memlawb), the Omarchy
-        4.0 public facts. All present in research.md.
+        corporation on Omarchy." Timeline-driven narrative + the stage-by-stage
+        roadmap as the reusable object. Secondary: X thread with the arc + the
+        accident hook; a video essay (the arc is visual: timeline, screenshots,
+        the "oops" moment).
+reusable object: the "survive the OS migration" roadmap — stage-by-stage what
+        to expect (Sept 2025 accident -> first Linux -> distro hop -> deep-end
+        NixOS learning -> settle on Omarchy), with the specific lessons (target
+        the right disk; use the AI agents to learn the system; NixOS is a
+        learning accelerator not a destination; defer to the OS's own way; build
+        your autonomous layer on top). Plus the "personal autonomous corporation"
+        blueprint as the payoff.
+proof required: the X posts (arc, gaming, VRChat voice), reverb256.ca (profile:
+        14 projects, 4-host cluster, "15 years food service, 20 years
+        tech-curious"), GitHub (35 repos), the live cluster facts (0 failed
+        units, garage, YubiKey, Hermes fleet, memlawb), the Omarchy 4.0 public
+        facts. All present in research.md.
 sections:
-  1. The accident: September 2025, the wrong disk (the "oops" moment —
-     everyone who has ever wiped a wrong disk knows it)
+  1. The accident: September 2025, the wrong disk (the "oops" moment — everyone
+     who has ever wiped a wrong disk knows it)
   2. The landing: Omarchy, and why it stuck at first
-  3. The chaos: distro-hopping (CachyOS, Fedora, Bazzite) and what each
-     taught
-  4. The deep end: NixOS as AI-accelerated learning ("enough fucking
-     builds", agents with full system context)
+  3. The chaos: distro-hopping (CachyOS, Fedora, Bazzite) and what each taught
+  4. The deep end: NixOS as AI-accelerated learning ("enough fucking builds",
+     agents with full system context)
   5. The return: why Omarchy, and the "defer to Omarchy" rule
   6. The payoff: the personal autonomous corporation (Hermes fleet, memlawb,
      kanban, CDP browser)
@@ -72,30 +71,46 @@ sections:
      snapshot before experiments, don't lose the /nix store learning too fast)
   8. The roadmap: stage-by-stage survival guide (the reusable object)
 distribution entryways:
-  - proof: "I wiped my Windows PC by accident. Here's what happened next."
-    (the arc as data)
+  - proof: "I wiped my Windows PC by accident. Here's what happened next." (the
+    arc as data)
   - mechanism: "why NixOS was the best learning accelerator I've used — full
     system context for agents"
   - workflow: "the 8-stage OS migration roadmap (survive the chaos)"
-  - risk: "the emergency-mode wipe of nexus — and what survived (391GB
-    backups intact)"
+  - risk: "the emergency-mode wipe of nexus — and what survived (391GB backups
+    intact)"
   - result: "what a personal autonomous corporation looks like on Omarchy"
 ```
 
 ## Rejected Directions (why they are weaker)
 
-1. **"Omarchy 4.0 review"** — 50 reviews exist; no differentiation.
-2. **"NixOS is bad, switch to Omarchy"** — attack content, no working system.
-3. **"The autonomous corporation" without the journey** — ungrounded; the
-   accident + arc is what makes the payoff credible.
-4. **A pure migration how-to** — useful but misses the story; the accident
-   hook and the human arc are what make it shareable.
+1. **"Omarchy 4.0 review"** — 50 reviews exist; no differentiation. The audience
+   already has technical reviews. What they don't have is the personal arc.
+2. **"NixOS is bad, switch to Omarchy"** — attack content, no working system. We
+   use NixOS as a learning accelerator; the story is the journey, not the fight.
+3. **"The autonomous corporation" without the journey** — ungrounded; the accident
+   + arc is what makes the payoff credible. The system is the payoff but the story
+   is the vehicle.
+4. **A pure migration how-to** — useful but misses the story. The accident hook and
+   the human arc are what make it shareable. A how-to without stakes is a manual,
+   not content.
+
+## Revenue Wiring
+
+- **offer this feeds:** the migration playbook ($29-49) — the stage-by-stage
+  roadmap becomes the paid guide after the flagship lands and proves the audience.
+  Secondarily feeds omnigate (the migration tool) and the AI content pipeline kit.
+  No live paid offer yet — this campaign is audience-building into the first offer.
+- **reader stage:** aware -> interested (accident hook = awareness; autonomous-corp
+  payoff = interest)
+- **primary CTA:** follow / subscribe (build the asset), then flagship
+- **conversion path:** X thread (hook) -> flagship essay (trust) -> Substack signup
+  (owned asset) -> future offer (migration playbook / omnigate)
 
 ## Recommendation
 
-Proceed with the flagship as a long-form essay/guide with the accident hook.
-The angle has a universal tension (catastrophe → liberation), a defensible
-thesis, a strong reusable object (the 8-stage roadmap), and 7+ verified proof
-claims spanning public (X posts, reverb256.ca, GitHub) and private (cluster
-facts) sources. It is the story only reverb256 can tell — and the 
-autonomous-corporation payoff is the reason to follow it to the end.
+Proceed with the flagship as a long-form essay/guide with the accident hook. The
+angle has a universal tension (catastrophe -> liberation), a defensible thesis, a
+strong reusable object (the 8-stage roadmap), and 9 verified proof claims spanning
+public (X posts, reverb256.ca, GitHub) and private (cluster facts) sources. It is
+the story only reverb256 can tell — and the autonomous-corporation payoff is the
+reason to follow it to the end.
