@@ -1,0 +1,12 @@
+1
+00:00:00,000 --> 00:00:04,000
+Is this temporary? Or permanent? The first formal theory of what AI does to human creativity over time.
+
+2
+00:00:01,100 --> 00:00:07,100
+Four mechanisms: cognitive muscle atrophy, ambiguity tolerance erosion, self-efficacy displacement, evaluative capacity atrophy.
+
+3
+00:00:05,100 --> 00:00:09,100
+Calculators augmented arithmetic. GPS augmented navigation. AI substitutes for core cognitive processes.
+

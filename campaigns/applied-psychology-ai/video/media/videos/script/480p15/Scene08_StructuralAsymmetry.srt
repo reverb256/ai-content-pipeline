@@ -1,0 +1,12 @@
+1
+00:00:00,000 --> 00:00:03,000
+Why is this happening now? Why not with calculators? Why not with search engines?
+
+2
+00:00:01,100 --> 00:00:06,100
+No prior relationship has this shape. Tools do not talk back. People have egos, needs, limits. AI has none of these.
+
+3
+00:00:08,000 --> 00:00:11,000
+The Anthropic 81,000-person study confirms this. The dominant request: Give me my life back.
+

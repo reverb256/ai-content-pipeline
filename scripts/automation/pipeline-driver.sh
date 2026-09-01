@@ -48,12 +48,8 @@ stage_of() {
   local body
   body=$(hermes kanban --board "$BOARD" show "$1" 2>/dev/null)
   local s
-  s=$(echo "$body" | grep -oE "stage: [a-z]+" | head -1 | awk '{print $2}' || true)
-  if [ -z "$s" ]; then
-    # No stage in body — check comments for the most recent stage marker.
-    # Bots call advance-stage.sh, which posts "stage: <stage>" as a comment.
-    s=$(echo "$body" | grep -oE "stage: [a-z]+" | tail -1 | awk '{print $2}' || true)
-  fi
+  # Read the LAST (most recent) stage marker — the first one is stale.
+  s=$(echo "$body" | grep -oE "stage: [a-z]+" | tail -1 | awk '{print $2}' || true)
   if [ -z "$s" ]; then
     # No stage label yet → the oracle created it as an opportunity; treat as
     # opportunity stage so the driver picks it up and starts research.

@@ -1,0 +1,12 @@
+1
+00:00:00,000 --> 00:00:02,000
+Now the finding that should keep you up at night.
+
+2
+00:00:01,100 --> 00:00:05,100
+1,372 participants. AI was deliberately wrong 80 percent of the time.
+
+3
+00:00:04,666 --> 00:00:09,666
+Participants followed faulty AI approximately 80 percent of the time. Cohen's h equals 0.81.
+

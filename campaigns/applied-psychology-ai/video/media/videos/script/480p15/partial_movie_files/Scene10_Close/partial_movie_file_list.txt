@@ -1,0 +1,10 @@
+# This file is used internally by FFMPEG.
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene10_Close/3802445054_2080918401_223132457.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene10_Close/2779314190_3141537840_1208829627.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene10_Close/2779314190_3880968470_1114065844.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene10_Close/2779314190_3338660336_59810202.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene10_Close/2779314190_3880968470_970620999.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene10_Close/2779314190_3129152085_328387489.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene10_Close/2779314190_2457527407_2112502197.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene10_Close/2779314190_2468503658_3463357209.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene10_Close/2779314190_2435199254_2358810818.mp4'

@@ -1,0 +1,16 @@
+1
+00:00:00,000 --> 00:00:03,000
+Not all AI use is equal. That is the finding nobody expected.
+
+2
+00:00:01,300 --> 00:00:04,300
+Two modes: dependent offloading and autonomous offloading.
+
+3
+00:00:06,733 --> 00:00:10,733
+Both feel equal in the moment. But downstream correlates diverge sharply.
+
+4
+00:00:11,866 --> 00:00:14,866
+The takeaway: you cannot trust your own judgment of whether AI is helping you.
+

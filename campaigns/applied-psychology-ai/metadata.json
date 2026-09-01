@@ -1,0 +1,48 @@
+{
+  "kanban_task": "t_a947f3a5",
+  "campaign": "applied-psychology-ai",
+  "stage": "seo",
+  "title": "AI Was Wrong 80% of the Time. They Followed It Anyway",
+  "title_length": 56,
+  "description": "1,372 people. AI was wrong 80% of the time. They followed it anyway.\n\nCognitive surrender is real. Wharton researchers proved it. MIT confirmed it with brain scans. A Frontiers study of 589 people showed you cannot even tell it is happening to you.\n\nIn this video: six peer-reviewed mechanisms explaining what AI does to your brain — from cognitive offloading to the Generative Capacity Erosion Hypothesis. All from 2025-2026. None of them are in your feed.\n\n---\n\nCHAPTERS\n\n0:00 The Hook — 1,372 People Followed Wrong AI\n0:08 The Stakes — 3 Studies You Cannot Self-Detect\n0:30 The Offloading Spectrum — Dependent vs Autonomous AI Use\n2:30 Cognitive Surrender — Why You Follow Faulty AI\n4:30 The Brain Evidence — MIT's EEG Study on LLM Users\n6:30 The Theory — Generative Capacity Erosion Hypothesis\n8:30 The Moderator — Metacognition Predicts AI Benefit or Harm\n10:00 Structural Asymmetry — Why AI Is Different From Calculators\n11:30 The Payoff — 6 Peer-Reviewed Findings\n12:00 Next — The Metacognition Test (Subscribe)\n\n---\n\nSOURCES (all linked)\n\n1. Shaw & Nave (2026) — Cognitive Surrender — https://osf.io/preprints/psyarxiv/yk25n_v1\n2. Kosmyna et al., MIT Media Lab (2025) — Your Brain on ChatGPT — https://arxiv.org/abs/2506.08872\n3. Frontiers in Psychology (2026) — Not all cognitive offloading is equal — https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2026.1878629/full\n4. Gupta & Shabista, AAAI (2026) — Generative Capacity Erosion Hypothesis — https://ojs.aaai.org/index.php/AAAI-SS/article/view/42603\n5. APA Monitor (2026) — How AI is reshaping human skills and thinking — https://www.apa.org/monitor/2026/07-08/ai-job-skills-thinking\n6. TIME (2026) — Are We Losing Our Minds to AI? — https://time.com/article/2026/04/30/ai-thinking-cognitive-offloading/\n7. Anthropic (2026) — 81k Interviews — https://www.anthropic.com/features/81k-interviews\n\n---\n\nLIMITATIONS NOTED\n\nNo longitudinal data. MIT study used ChatGPT specifically. Cognitive surrender tested in lab only. Self-reported offloading modes. No clinical harm evidence.\n\n---\n\nSubscribe for the metacognition test that predicts whether AI helps or hurts you.",
+  "tags": [
+    "cognitive offloading",
+    "AI brain",
+    "cognitive surrender",
+    "AI psychology",
+    "MIT study",
+    "Wharton research",
+    "AI critical thinking",
+    "metacognition",
+    "AI addiction",
+    "psychology of AI"
+  ],
+  "chapters": [
+    {"time": "0:00", "title": "The Hook — 1,372 People Followed Wrong AI"},
+    {"time": "0:08", "title": "The Stakes — 3 Studies You Cannot Self-Detect"},
+    {"time": "0:30", "title": "The Offloading Spectrum — Dependent vs Autonomous AI Use"},
+    {"time": "2:30", "title": "Cognitive Surrender — Why You Follow Faulty AI"},
+    {"time": "4:30", "title": "The Brain Evidence — MIT's EEG Study on LLM Users"},
+    {"time": "6:30", "title": "The Theory — Generative Capacity Erosion Hypothesis"},
+    {"time": "8:30", "title": "The Moderator — Metacognition Predicts AI Benefit or Harm"},
+    {"time": "10:00", "title": "Structural Asymmetry — Why AI Is Different From Calculators"},
+    {"time": "11:30", "title": "The Payoff — 6 Peer-Reviewed Findings"},
+    {"time": "12:00", "title": "Next — The Metacognition Test (Subscribe)"}
+  ],
+  "cards": [
+    {
+      "time": "12:00",
+      "type": "video",
+      "title": "The Metacognition Test",
+      "description": "Next video: the metacognition test that predicts whether AI helps or hurts you."
+    }
+  ],
+  "thumbnail_recommendation": "v1_80_wrong.png — '80% WRONG' text on dark background. Highest curiosity gap. Matches hook exactly.",
+  "seo_notes": {
+    "primary_keyword": "cognitive offloading",
+    "secondary_keywords": ["AI brain", "cognitive surrender", "AI psychology", "metacognition"],
+    "title_pattern": "Concrete number + counterintuitive finding (hooks the Wharton study)",
+    "description_pattern": "Hook restated → stakes → chapter list → sources → limitations → CTA",
+    "tag_strategy": "Mix of mechanism names (cognitive offloading, metacognition) and authority signals (MIT study, Wharton research)"
+  }
+}

@@ -1,0 +1,16 @@
+1
+00:00:00,000 --> 00:00:03,000
+You might think: I would never follow wrong AI advice. The brain data says otherwise.
+
+2
+00:00:01,100 --> 00:00:05,100
+MIT EEG study: 54 participants. Three conditions. Brain-only, Search, LLM.
+
+3
+00:00:04,100 --> 00:00:08,100
+In session four, LLM users switched to brain-only. Connectivity remained under-engaged.
+
+4
+00:00:07,033 --> 00:00:10,033
+LLM users struggled to quote their own essays minutes later. The words did not feel like theirs.
+

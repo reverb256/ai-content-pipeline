@@ -1,0 +1,11 @@
+# This file is used internally by FFMPEG.
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene07_Moderator/3802445054_118632827_223132457.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene07_Moderator/2779314190_4235033027_1528874650.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene07_Moderator/2779314190_2848274078_3229848768.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene07_Moderator/2779314190_2975317524_3793305095.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene07_Moderator/2779314190_3240229490_1578088458.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene07_Moderator/2779314190_2665766806_2929777208.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene07_Moderator/2779314190_4039060768_2377816037.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene07_Moderator/2779314190_2171298886_3479518981.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene07_Moderator/2779314190_3964352128_2765601500.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene07_Moderator/2779314190_3307651465_2358810818.mp4'

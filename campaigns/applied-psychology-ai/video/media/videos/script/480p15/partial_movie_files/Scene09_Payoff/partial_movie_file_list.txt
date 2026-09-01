@@ -1,0 +1,12 @@
+# This file is used internally by FFMPEG.
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene09_Payoff/3802445054_257091545_223132457.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene09_Payoff/2779314190_3479819189_2153992176.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene09_Payoff/2779314190_755065739_3874626435.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene09_Payoff/2779314190_2951077072_3838459384.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene09_Payoff/2779314190_1843012361_3143939829.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene09_Payoff/2779314190_1373626257_2742708079.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene09_Payoff/2779314190_499328632_4122925828.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene09_Payoff/2779314190_19323371_2014409083.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene09_Payoff/2779314190_3036512748_547631172.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene09_Payoff/2779314190_3869845945_1767624697.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene09_Payoff/2779314190_2010148571_2358810818.mp4'
