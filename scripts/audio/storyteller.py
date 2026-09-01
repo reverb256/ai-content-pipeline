@@ -68,6 +68,8 @@ DEFAULT_CHATTERBOX_API = "http://10.1.1.130:8004"
 VALID_EMOTIONS = {
     "happy", "sad", "angry", "fearful", "disgusted",
     "surprised", "calm", "fluent", "whisper",
+    "tense", "excited", "hesitant", "exhausted", "defiant",
+    "urgent", "amused", "hopeful", "sorrowful", "cold", "warm",
 }
 VALID_SFX = {"spacious_echo", "auditorium_echo", "lofi_telephone", "robotic"}
 
@@ -586,6 +588,17 @@ _EMOTION_VOICE_DESC = {
     "calm": "a steady, even voice, composed and unhurried",
     "fluent": "a smooth, natural voice, clear and relaxed",
     "whisper": "a hushed whisper, intimate and secretive",
+    "tense": "a taut, strained voice, measured and tight",
+    "excited": "a fast, bright voice, eager and forward",
+    "hesitant": "a halting, uncertain voice, soft and tentative",
+    "exhausted": "a slow, dragged voice, fading and weary",
+    "defiant": "a hard, unyielding voice, chin-up and resolute",
+    "urgent": "a quick, pressing voice, sharp and insistent",
+    "amused": "a light, smiling voice, playful and knowing",
+    "hopeful": "a warm, lifted voice, bright and open",
+    "sorrowful": "a heavy, grieving voice, slow and aching",
+    "cold": "a flat, distant voice, emotionless and precise",
+    "warm": "a gentle, kind voice, soft and reassuring",
 }
 
 
