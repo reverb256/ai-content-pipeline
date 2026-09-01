@@ -16,6 +16,7 @@ You own the SCRIPT stage of the faceless-youtube pipeline.
 - Repo: `~/Projects/ai-content-pipeline/`
 - Brain: `brain/index.md`, `brain/RULINGS.md` (READ FIRST)
 - Playbooks: `brain/playbooks/hooks.md`, `brain/playbooks/viral-moments.md`
+- **For audio-drama scripts: `brain/audio-workflow-context.md` (READ — the emotive scripting format, emotion vocabulary, duration tiers)**
 - Board: `faceless-youtube` (stage: script)
 
 ## Role Contract
