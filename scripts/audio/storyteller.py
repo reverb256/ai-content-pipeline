@@ -553,6 +553,7 @@ def main(argv: list[str] | None = None) -> int:
     work = Path(tempfile.mkdtemp(prefix=f"storyteller-{story.title[:12]}-"))
     try:
         seg_audio: list[Path] = []
+        used_providers: set[str] = set()
         for i, seg in enumerate(story.segments, start=1):
             raw = work / f"seg-{i:02d}-raw.mp3"
             voice = seg.voice or story.voice
@@ -566,6 +567,7 @@ def main(argv: list[str] | None = None) -> int:
                     log(f"seg {i}/{len(story.segments)}: VoxCPM ({seg.emotion})…")
                     voxcpm_tts(seg.text, raw, voice_desc=voice_desc)
                     provider = "voxcpm"
+                    used_providers.add("voxcpm")
                 except RuntimeError as e:
                     log(f"seg {i}: VoxCPM failed ({e}); falling back")
                     use_voxcpm = False
@@ -578,6 +580,7 @@ def main(argv: list[str] | None = None) -> int:
                         seg.sound_effect, speed, raw, key, args.api_url,
                     )
                     provider = "minimax"
+                    used_providers.add("minimax")
                 except RuntimeError as e:
                     log(f"seg {i}: MiniMax failed ({e}); falling back")
                     use_minimax = False  # do not retry MiniMax for later segments
@@ -587,6 +590,7 @@ def main(argv: list[str] | None = None) -> int:
                 chatterbox_tts(seg.text, seg.voice or story.fallback_voice,
                                raw, chatterbox_api)
                 provider = "chatterbox"
+                used_providers.add("chatterbox")
             if not provider:
                 raise RuntimeError(f"no provider produced seg {i} ({seg.scene})")
 
@@ -601,7 +605,7 @@ def main(argv: list[str] | None = None) -> int:
                 f"{seg.sound_effect or 'room-tone'} ({ffprobe_duration(mixed):.1f}s)")
 
         duration = assemble(seg_audio, out)
-        providers = sorted({p for p in ("minimax", "chatterbox") if p})
+        providers = sorted(used_providers)
         log(f"done: {out} ({duration:.1f}s, {len(story.segments)} segments, "
             f"providers: {providers})")
         return 0
