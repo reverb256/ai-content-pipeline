@@ -4,6 +4,9 @@ voice: English_expressive_narrator
 fallback_voice: Connor.wav
 model: speech-2.8-hd
 speed: 1.0
+cast:
+  Mara: "woman in her late 30s, steady, weary, quiet authority"
+  Elias: "older man, warm, cracked voice, distant"
 ---
 
 # FORMAT DOCUMENTATION
@@ -25,12 +28,18 @@ The storyteller parses this markup:
    `[emotion]` or `[emotion | sound_effect=... | voice=... | speed=...]`
    - emotion: happy | sad | angry | fearful | disgusted | surprised | calm | fluent | whisper
    - sound_effect: spacious_echo | auditorium_echo | lofi_telephone | robotic
-   - voice: per-scene MiniMax voice override
+   - voice: per-scene voice override
    - speed: per-scene speed override (0.5-2.0)
 
-4. Blank lines separate takes. Non-blank lines are spoken text.
+4. **Speaker lines** (multi-character): `Speaker: dialogue` or
+   `Speaker (emotion): dialogue`. The default speaker is the Narrator.
+   Speakers map to the `cast:` frontmatter block (voice description per
+   character for VoxCPM Voice Design), so a character's voice persists
+   across every line and every episode.
 
-5. Story text without any heading becomes an implicit "intro" scene.
+5. Blank lines separate takes. Non-blank lines are spoken text.
+
+6. Story text without any heading becomes an implicit "intro" scene.
 
 Run it:
     python3 scripts/audio/storyteller.py scripts/audio/example-story.md -o /tmp/last-signal.mp3
@@ -41,44 +50,39 @@ Run it:
 
 [calm]
 
-The console beeped once. Then it stopped. Mara pressed her palm to the cold
-glass and listened. Nothing came back.
+Narrator: The console beeped once. Then it stopped. Mara pressed her palm to
+the cold glass and listened. Nothing came back.
 
-[angry | sound_effect=spacious_echo]
+Mara (angry): Who left this running?
 
-"Who left this running?" she snapped. The silence answered her. The silence
-had always answered her.
+Narrator: The silence answered her. The silence had always answered her.
 
 # Scene 2 — The Message
 
 [sad | speed=0.9]
 
-On the third day, the signal returned. Not a voice. A pattern. Old radio
-etiquette, tapped out in the dark by someone who still believed someone was
-listening. Mara wrote back. She did not know why she bothered.
+Narrator: On the third day, the signal returned. Not a voice. A pattern. Old
+radio etiquette, tapped out in the dark by someone who still believed someone
+was listening.
 
-[fearful | sound_effect=lofi_telephone]
+Elias (fearful): You are not alone out here.
 
-The reply came faster than it should have. Six words, spaced like a breath:
-"You are not alone out here." She stared at the screen until her eyes
-burned. She had not told it where she was. She had told no one.
+Narrator: She stared at the screen until her eyes burned. She had not told it
+where she was. She had told no one.
 
 # Scene 3 — The Return
 
 [whisper | speed=0.85]
 
-Outside, the wind died. The station hummed its one low note. Somewhere in
-the dark, something had begun to move toward the light.
+Narrator: Outside, the wind died. The station hummed its one low note.
+Somewhere in the dark, something had begun to move toward the light.
 
-[calm]
-
-Mara smiled. She had been waiting for company a long time.
+Mara (calm): I've been waiting for company a long time.
 
 # Scene 4 — The Close
 
 [fluent]
 
-The log ended there. What you heard tonight is the last transmission from
-Station Seven, recovered and restored. If you found your way here, you are
-not alone either. Subscribe to follow the archive. The next signal is
-already in the dark, waiting to be heard.
+Narrator: The log ended there. What you heard tonight is the last
+transmission from Station Seven, recovered and restored. If you found your
+way here, you are not alone either.

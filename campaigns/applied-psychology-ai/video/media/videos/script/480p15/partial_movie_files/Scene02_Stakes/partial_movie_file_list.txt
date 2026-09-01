@@ -1,0 +1,12 @@
+# This file is used internally by FFMPEG.
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene02_Stakes/3802445054_4037272872_223132457.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene02_Stakes/2779314190_3880968470_4130597098.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene02_Stakes/2779314190_1654836917_1278522518.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene02_Stakes/2779314190_941615173_3551867295.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene02_Stakes/2779314190_2237072740_2912069839.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene02_Stakes/2779314190_941615173_583488988.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene02_Stakes/2779314190_987004493_2037036718.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene02_Stakes/2779314190_941615173_4065836667.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene02_Stakes/2779314190_1631736287_1575181203.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene02_Stakes/2779314190_2089760193_1392706610.mp4'
+file 'file:/home/j_kro/Projects/ai-content-pipeline/campaigns/applied-psychology-ai/video/media/videos/script/480p15/partial_movie_files/Scene02_Stakes/2779314190_2665627515_2358810818.mp4'
