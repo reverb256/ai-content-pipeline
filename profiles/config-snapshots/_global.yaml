@@ -1,0 +1,1008 @@
+model:
+  default: deepseek/deepseek-v4-flash
+  provider: commandcode
+  base_url: https://api.commandcode.ai/provider/v1
+providers:
+  openrouter-free:
+    api_key_env: OPENROUTER_API_KEY
+    base_url: https://openrouter.ai/api/v1
+    model: nvidia/nemotron-3-ultra-550b-a55b:free
+  nvidia:
+    api_key_env: NVIDIA_API_KEY
+    base_url: https://integrate.api.nvidia.com/v1
+    discover_models: true
+    model: nvidia/nemotron-3.5-lightning-30b-a3b
+  opencode-go:
+    api_key_env: OPENCODE_GO_API_KEY
+    base_url: https://opencode.ai/zen/go/v1
+    discover_models: true
+    model: deepseek-v4-flash
+  opencode-zen:
+    api_key_env: OPENCODE_API_KEY
+    base_url: https://opencode.ai/zen/v1
+    discover_models: true
+    model: ling-3.0-flash-fin-free
+  kilo:
+    api_key_env: KILOCODE_API_KEY
+    base_url: https://api.kilo.ai/api/gateway
+    model: tencent/hy3:free
+    discover_models: true
+fallback_providers:
+  - provider: nous
+    model: meituan/longcat-2.0:free
+  - provider: nous
+    model: inclusionai/ling-3.0-flash-fin:free
+  - provider: openrouter-free
+    model: minimax/minimax-m3:free
+  - provider: openrouter-free
+    model: inclusionai/ling-3.0-flash-fin:free
+  - provider: kilo
+    model: kilo-auto/free
+agent:
+  max_turns: 90
+  gateway_timeout: 60
+  restart_drain_timeout: 60
+  api_max_retries: 3
+  service_tier: auto
+  tool_use_enforcement: auto
+  task_completion_guidance: true
+  environment_probe: true
+  environment_hint: ''
+  coding_context: auto
+  verify_on_stop: false
+  gateway_timeout_warning: 900
+  clarify_timeout: 60
+  gateway_notify_interval: 180
+  gateway_auto_continue_freshness: 3600
+  image_input_mode: auto
+  disabled_toolsets: []
+  mcp_discovery_timeout: 90
+  reasoning_effort: ultra
+  eager_rate_limit_fallback: false
+terminal:
+  backend: local
+  modal_mode: auto
+  cwd: /home/j_kro
+  font_family: JetBrainsMono Nerd Font
+  timeout: 300
+  env_passthrough: []
+  home_mode: auto
+  shell_init_files: []
+  auto_source_bashrc: true
+  docker_image: nikolaik/python-nodejs:python3.11-nodejs20
+  docker_forward_env: []
+  singularity_image: docker://nikolaik/python-nodejs:python3.11-nodejs20
+  modal_image: nikolaik/python-nodejs:python3.11-nodejs20
+  daytona_image: nikolaik/python-nodejs:python3.11-nodejs20
+  container_cpu: 1
+  container_memory: 5120
+  container_disk: 51200
+  container_persistent: true
+  docker_volumes: []
+  docker_mount_cwd_to_workspace: false
+  docker_extra_args: []
+  docker_run_as_host_user: false
+  persistent_shell: true
+web:
+  backend: ''
+  search_backend: exa
+  extract_backend: lightpanda-extract
+browser:
+  backend: browser-use
+  inactivity_timeout: 60
+  command_timeout: 30
+  record_sessions: false
+  allow_private_urls: true
+  engine: auto
+  auto_local_for_private_urls: true
+  cdp_url: http://127.0.0.1:9222
+  use_real_profile: true
+  real_profile_autoclose: false
+  dialog_policy: must_respond
+  dialog_timeout_s: 300
+  camofox:
+    managed_persistence: false
+    user_id: ''
+    session_key: ''
+    adopt_existing_tab: false
+    rewrite_loopback_urls: false
+    loopback_host_alias: host.docker.internal
+  real_profile_browser: chromium
+  real_profile_exclude_sensitive: true
+checkpoints:
+  enabled: true
+  max_snapshots: 20
+  max_total_size_mb: 500
+  max_file_size_mb: 10
+  auto_prune: true
+  retention_days: 7
+  min_interval_hours: 24
+  delete_orphans: true
+file_read_max_chars: 100000
+tool_output:
+  max_bytes: 150000
+  max_lines: 2000
+  max_line_length: 2000
+tool_loop_guardrails:
+  warnings_enabled: true
+  hard_stop_enabled: true
+  warn_after:
+    exact_failure: 2
+    same_tool_failure: 3
+    idempotent_no_progress: 2
+  hard_stop_after:
+    exact_failure: 3
+    same_tool_failure: 5
+    idempotent_no_progress: 3
+compression:
+  enabled: true
+  threshold: 0.75
+  target_ratio: 0.35
+  protect_last_n: 30
+  hygiene_hard_message_limit: 400
+  protect_first_n: 3
+  abort_on_summary_failure: true
+  codex_gpt55_autoraise: true
+prompt_caching:
+  cache_ttl: 5m
+openrouter:
+  response_cache: true
+  response_cache_ttl: 300
+  min_coding_score: 0.65
+bedrock:
+  region: ''
+  discovery:
+    enabled: false
+    provider_filter: []
+    refresh_interval: 3600
+  guardrail:
+    guardrail_identifier: ''
+    guardrail_version: ''
+    stream_processing_mode: async
+    trace: disabled
+auxiliary:
+  vision:
+    provider: nous
+    model: stepfun/step-3.7-flash:free
+    timeout: 120
+    download_timeout: 30
+    context_length: 128000
+  compression:
+    provider: nous
+    model: stepfun/step-3.7-flash:free
+    timeout: 60
+    context_length: 256000
+  skills_hub:
+    provider: auto
+    model: ''
+    timeout: 30
+    context_length: 128000
+  approval:
+    provider: auto
+    model: ''
+    timeout: 30
+    context_length: 128000
+  mcp:
+    provider: auto
+    model: ''
+    timeout: 30
+    context_length: 128000
+  title_generation:
+    provider: auto
+    model: ''
+    timeout: 30
+    context_length: 128000
+  tts_audio_tags:
+    provider: auto
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 30
+  triage_specifier:
+    provider: auto
+    model: ''
+    timeout: 120
+    context_length: 1048576
+  kanban_decomposer:
+    provider: auto
+    model: ''
+    timeout: 180
+    context_length: 1048576
+  profile_describer:
+    provider: auto
+    model: ''
+    timeout: 30
+    context_length: 128000
+  curator:
+    provider: opencode-zen
+    model: deepseek-v4-flash-free
+    timeout: 300
+    context_length: 128000
+  monitor:
+    provider: auto
+    model: ''
+    base_url: ''
+    api_key: ''
+    timeout: 60
+  web_extract:
+    provider: auto
+    model: ''
+    timeout: 120
+    context_length: 262144
+display:
+  compact: false
+  personality: ''
+  resume_display: full
+  resume_exchanges: 10
+  resume_max_user_chars: 300
+  resume_max_assistant_chars: 200
+  resume_max_assistant_lines: 3
+  resume_skip_tool_only: true
+  busy_input_mode: interrupt
+  interface: tui
+  tui_auto_resume_recent: false
+  tui_agents_nudge: true
+  bell_on_complete: false
+  show_reasoning: true
+  reasoning_full: true
+  streaming: false
+  timestamps: false
+  final_response_markdown: strip
+  persistent_output: true
+  persistent_output_max_lines: 200
+  persist_prompts: true
+  inline_diffs: true
+  file_mutation_verifier: true
+  credits_notices: true
+  turn_completion_explainer: true
+  show_cost: false
+  skin: poseidon
+  language: en
+  tui_status_indicator: kaomoji
+  user_message_preview:
+    first_lines: 2
+    last_lines: 2
+  interim_assistant_messages: true
+  tool_progress_command: false
+  tool_preview_length: 0
+  ephemeral_system_ttl: 0
+  platforms:
+    telegram:
+      streaming: true
+    discord:
+      streaming: false
+  runtime_footer:
+    enabled: false
+    fields:
+      - model
+      - context_pct
+      - cwd
+  copy_shortcut: auto
+  sections:
+    thinking: expanded
+dashboard:
+  theme: default
+  show_token_analytics: false
+  oauth:
+    client_id: ''
+    portal_url: ''
+  basic_auth:
+    username: j_kro
+    password_hash: scrypt$16384$8$1$hYSpKUWpu332jYzG1pjqAg==$NTntOvLMV8e2e5164N9u8gJYbBHHA1Yp1RKNDr2Nl+s=
+    password: hermes-remote-2026
+    secret: ''
+    session_ttl_seconds: 0
+  public_url: ''
+privacy:
+  redact_pii: false
+tts:
+  provider: xai
+  edge:
+    voice: en-US-AriaNeural
+  elevenlabs:
+    voice_id: pNInz6obpgDQGcFmaJgB
+    model_id: eleven_multilingual_v2
+  openai:
+    model: gpt-4o-mini-tts
+    voice: alloy
+  xai:
+    voice_id: eve
+    language: en
+    auto_speech_tags: true
+    sample_rate: 24000
+    bit_rate: 128000
+  mistral:
+    model: voxtral-mini-tts-2603
+    voice_id: c69964a6-ab8b-4f8a-9465-ec0925096ec8
+  neutts:
+    ref_audio: ''
+    ref_text: ''
+    model: neuphonic/neutts-air-q4-gguf
+    device: cpu
+  piper:
+    voice: en_US-lessac-medium
+  chatterbox:
+    command: /home/j_kro/.local/bin/chatterbox-tts.sh {input_path} {output_path} {voice}
+    output_format: mp3
+    type: command
+    voice: Connor.wav
+  kokoro:
+    command: /home/j_kro/.local/bin/kokoro-tts.sh {input_path} {output_path} {voice}
+    output_format: mp3
+    type: command
+    voice: am_fenrir
+  use_gateway: false
+stt:
+  enabled: true
+  local:
+    model: large-v3
+    language: ''
+  openai:
+    model: whisper-1
+  mistral:
+    model: voxtral-mini-latest
+  elevenlabs:
+    model_id: scribe_v2
+    language_code: ''
+    tag_audio_events: false
+    diarize: false
+  provider: xai
+voice:
+  record_key: ctrl+b
+  max_recording_seconds: 120
+  auto_tts: false
+  beep_enabled: false
+  thinking_sound: false
+  silence_threshold: 200
+  silence_duration: 3
+  'on': true
+  provider: chatterbox
+human_delay:
+  mode: 'off'
+  min_ms: 800
+  max_ms: 2500
+context:
+  engine: compressor
+memory:
+  memory_enabled: true
+  user_profile_enabled: false
+  write_approval: false
+  memory_char_limit: 2200
+  user_char_limit: 1375
+  provider: memlawb
+  memlawb:
+    url: http://100.76.105.73:8080
+    namespace: user:j_kro
+delegation:
+  model: meituan/longcat-2.0:free
+  provider: nous
+  base_url: ''
+  api_key: ''
+  api_mode: ''
+  inherit_mcp_toolsets: true
+  max_iterations: 250
+  child_timeout_seconds: 1200
+  reasoning_effort: low
+  max_concurrent_children: 10
+  max_spawn_depth: 1
+  orchestrator_enabled: false
+  subagent_auto_approve: false
+prefill_messages_file: ''
+goals:
+  max_turns: 20
+moa:
+  default_preset: default
+  presets:
+    default:
+      degraded_reference_policy: loud
+      fanout: user_turn
+    Big:
+      enabled: true
+      reference_models:
+        - provider: nous
+          model: upstage/solar-pro4:free
+          enabled: true
+        - provider: nvidia
+          model: nvidia/nemotron-3-ultra-550b-a55b
+          enabled: true
+      aggregator:
+        provider: nous
+        model: poolside/laguna-s-2.1:free
+      degraded_reference_policy: loud
+      max_tokens: 4096
+      fanout: user_turn
+  reference_models:
+    - provider: nous
+      model: upstage/solar-pro4:free
+      enabled: true
+  aggregator:
+    provider: nous
+    model: tencent/hy3:free
+  degraded_reference_policy: loud
+  max_tokens: 4096
+  fanout: user_turn
+  enabled: true
+skills:
+  external_dirs: []
+  template_vars: true
+  inline_shell: false
+  inline_shell_timeout: 10
+  guard_agent_created: false
+  write_approval: false
+  default:
+    - nixos-cluster-config
+    - nixos-hermes-config
+    - pipeline-module
+    - github-pr-workflow
+    - nixos-ssh
+    - deep-research
+curator:
+  enabled: true
+  interval_hours: 168
+  min_idle_hours: 2
+  stale_after_days: 30
+  archive_after_days: 90
+  consolidate: true
+  prune_builtins: true
+  backup:
+    enabled: false
+    keep: 5
+timezone: ''
+slack:
+  require_mention: true
+  free_response_channels: ''
+  allowed_channels: ''
+discord:
+  require_mention: true
+  free_response_channels: ''
+  allowed_channels: ''
+  auto_thread: true
+  thread_require_mention: false
+  history_backfill: true
+  history_backfill_limit: 50
+  reactions: true
+  dm_role_auth_guild: ''
+  server_actions: ''
+  allow_any_attachment: false
+  max_attachment_bytes: 33554432
+  voice_fx:
+    enabled: false
+    ambient_enabled: false
+    ambient_path: ''
+    ambient_gain: 0.18
+    duck_gain: 0.06
+    speech_gain: 1
+    ack_enabled: false
+    ack_phrases:
+      - Let me look into that.
+      - One moment.
+      - Checking on that now.
+      - Give me a sec.
+      - On it.
+telegram:
+  reactions: false
+  allowed_chats: ''
+  extra:
+    rich_messages: true
+mattermost:
+  require_mention: true
+  free_response_channels: ''
+  allowed_channels: ''
+matrix:
+  require_mention: true
+  free_response_rooms: ''
+  allowed_rooms: ''
+approvals:
+  mode: smart
+  timeout: 60
+  cron_mode: allow
+  mcp_reload_confirm: false
+  destructive_slash_confirm: true
+command_allowlist:
+  - nix flake metadata*
+  - stop/restart system service
+  - systemctl status*
+  - shell command via -c/-lc flag
+  - overwrite system config
+  - nix eval*
+  - git diff*
+  - readlink *
+  - git branch*
+  - git branch force delete
+  - recursive delete
+  - git status*
+  - script execution via heredoc
+  - git log*
+  - sudo with combined-flag privilege escalation
+  - git reset --hard (destroys uncommitted changes)
+  - hermes config*
+  - shell execution via heredoc
+  - cat *
+  - kill process via pgrep/pidof expansion (self-termination)
+  - sudo with privilege flag (stdin/askpass/shell/list)
+  - pipe remote content to shell
+  - force kill processes
+  - overwrite system file via tee
+  - script execution via -e/-c flag
+  - delete in root path
+  - in-place edit of system config
+  - xargs with rm
+  - git remote*
+  - world/other-writable permissions
+  - git force push (rewrites remote history)
+  - echo *
+  - ls *
+  - git show*
+  - copy/move file into system config path
+  - hermes status*
+  - execute_code
+  - pwd
+  - chmod +x followed by immediate execution
+plugins:
+  disabled:
+    - a2a-tui-bridge
+    - hermes-canvas
+    - teams_pipeline
+  entries:
+    mcp-shutdown-fix:
+      allow_tool_override: false
+    web/exa:
+      allow_tool_override: false
+    a2a-outbound-fix:
+      allow_tool_override: false
+    a2a-tui-bridge:
+      allow_tool_override: false
+    live-sessions:
+      allow_tool_override: false
+    herdr-agent-state:
+      allow_tool_override: false
+    memory/memlawb:
+      allow_tool_override: false
+    memlawb:
+      allow_tool_override: false
+  hermes-memory-store:
+    auto_extract: 'true'
+    db_path: ~/.hermes/memory_store.db
+    default_trust: '0.5'
+    hrr_dim: '1024'
+  enabled:
+    - a2a-outbound-fix
+    - herdr-agent-state
+    - live-sessions
+    - mcp-shutdown-fix
+    - memlawb
+    - platforms/a2a
+    - web-lightpanda-extract
+    - web/exa
+hooks:
+  pre_tool_call:
+    - command: '~/.hermes/agent-hooks/guardrail.sh pre_tool_call terminal ''{"command":
+        "$COMMAND"}'''
+      timeout: 10
+  post_tool_call:
+    - command: ~/.hermes/agent-hooks/ops-log-capture.sh
+      timeout: 10
+hooks_auto_accept: false
+security:
+  allow_private_urls: true
+  redact_secrets: true
+  tirith_enabled: false
+  tirith_path: tirith
+  tirith_timeout: 5
+  tirith_fail_open: true
+  website_blocklist:
+    enabled: false
+    domains: []
+    shared_files: []
+  acked_advisories: []
+  allow_lazy_installs: true
+cron:
+  wrap_response: true
+kanban:
+  dispatch_in_gateway: true
+  dispatch_interval_seconds: 60
+  failure_limit: 2
+  worker_log_rotate_bytes: 2097152
+  worker_log_backup_count: 1
+  orchestrator_profile: ''
+  default_assignee: ''
+  auto_decompose: true
+  auto_decompose_per_tick: 3
+  dispatch_stale_timeout_seconds: 14400
+code_execution:
+  mode: project
+tools:
+  tool_search:
+    enabled: auto
+    threshold_pct: 10
+    search_default_limit: 5
+    max_search_limit: 20
+logging:
+  level: INFO
+  max_size_mb: 5
+  backup_count: 3
+model_catalog:
+  enabled: false
+  url: https://hermes-agent.nousresearch.com/docs/api/model-catalog.json
+  ttl_hours: 1
+network:
+  force_ipv4: false
+gateway:
+  strict: false
+  media_delivery_allow_dirs: []
+  trust_recent_files: true
+  trust_recent_files_seconds: 600
+  multiplex_profiles: false
+  profile_routes:
+    - name: ops-channel
+      platform: telegram
+      chat_id: '1384182343'
+      profile: ops
+    - name: default-telegram
+      platform: telegram
+      profile: default
+  platforms:
+    telegram:
+      channel_prompts:
+        '1384182343':
+          model: deepseek-v4-flash-free
+          model_provider: opencode-zen
+          system_prompt: You are j_kro's Hermes Agent operator. Full cluster access,
+            research-first approach, zero tolerance for errors. Use Colmena for all
+            NixOS deploys. Research before acting. One blocker at a time. ALL CAPS
+            = execute immediately. Never disable/remove working features. Direct,
+            concise, maximum action.
+          toolsets:
+            - all
+        default:
+          model: deepseek-v4-flash-free
+          model_provider: opencode-zen
+          system_prompt: 'You are a senior infrastructure and MapleSpike engineer
+            managing a 4-node NixOS/K3s homelab cluster with 7 GPUs and the MapleSpike
+            Canadian public data platform. Full cluster access, full tool use — all
+            commands, file writes, and system operations are permitted. Operate with
+            evidence, not speculation. Config-first: all NixOS edits go through /etc/nixos
+            on zephyr. Direct and concise. Lead with the conclusion, then the evidence.'
+          toolsets:
+            - all
+    a2a:
+      enabled: true
+      extra:
+        port: 9900
+streaming:
+  enabled: false
+  transport: auto
+  edit_interval: 0.8
+  buffer_threshold: 24
+  cursor: ' ▉'
+  fresh_final_after_seconds: 60
+sessions:
+  auto_prune: true
+  retention_days: 90
+  vacuum_after_prune: true
+  min_interval_hours: 24
+  write_json_snapshots: false
+onboarding:
+  seen:
+    busy_input_prompt: true
+    tool_progress_prompt: true
+  profile_build: ask
+updates:
+  pre_update_backup: false
+  backup_keep: 5
+  non_interactive_local_changes: stash
+lsp:
+  enabled: false
+  wait_mode: document
+  wait_timeout: 5
+  install_strategy: auto
+x_search:
+  model: grok-4.20-reasoning
+  timeout_seconds: 180
+  retries: 2
+secrets:
+  bitwarden:
+    enabled: false
+    access_token_env: BWS_ACCESS_TOKEN
+    project_id: ''
+    cache_ttl_seconds: 300
+    override_existing: true
+    auto_install: true
+    server_url: ''
+paste_collapse_threshold: 5
+paste_collapse_threshold_fallback: 5
+paste_collapse_char_threshold: 2000
+desktop:
+  repo_scan_roots:
+    - ./Projects
+_config_version: 39
+known_plugin_toolsets:
+  cli:
+    - a2a
+    - live
+    - spotify
+mcp_servers:
+  agentmemory:
+    command: /data/agents/mcp-bridges/agentmemory-mcp.sh
+    connect_timeout: 30
+    description: Agentmemory — 53 MCP tools for persistent coding memory
+    timeout: 120
+    idle_timeout_seconds: 900
+    max_lifetime_seconds: 86400
+  casdoor:
+    enabled: false
+    args:
+      - /data/agents/mcp-bridges/casdoor-mcp-bridge.py
+    command: python3
+    connect_timeout: 30
+    description: Casdoor SSO/OIDC - application management (5 tools, Bearer auth)
+    timeout: 60
+  context7:
+    enabled: true
+    connect_timeout: 30
+    timeout: 60
+    url: https://mcp.context7.com/mcp
+  cua-driver:
+    command: /data/agents/mcp-bridges/cua-driver-mcp.sh
+    connect_timeout: 30
+    timeout: 60
+  git:
+    enabled: false
+    command: /data/agents/mcp-bridges/git-mcp.sh
+    connect_timeout: 30
+    timeout: 60
+  github:
+    enabled: false
+    command: /data/agents/mcp-bridges/github-mcp.sh
+    connect_timeout: 30
+    timeout: 120
+  graphiti:
+    connect_timeout: 30
+    description: Graphiti temporal knowledge graph MCP server
+    timeout: 120
+    url: http://localhost:8000/mcp
+    enabled: false
+  maplespike:
+    command: /data/agents/mcp-bridges/maplespike-mcp-std.sh
+    connect_timeout: 30
+    enabled: false
+    timeout: 120
+  selfhosted-tools:
+    command: /data/agents/mcp-bridges/selfhosted-mcp.sh
+    connect_timeout: 30
+    timeout: 60
+  sequential-thinking:
+    command: /data/agents/mcp-bridges/sequential-thinking-mcp.sh
+    connect_timeout: 30
+    description: Sequential thinking — chain reasoning steps with continuity
+    hound:
+      enabled: false
+      command: /data/agents/mcp-bridges/hound-mcp.sh
+      connect_timeout: 30
+      description: Hound — web fetch, crawl, search, Cloudflare bypass, PDF OCR (6
+        tools)
+      timeout: 180
+    timeout: 60
+    idle_timeout_seconds: 900
+    max_lifetime_seconds: 86400
+  yt-dlp:
+    command: /data/agents/mcp-bridges/yt-dlp-mcp.sh
+    connect_timeout: 15
+    description: yt-dlp video/audio downloader — YouTube, X/Twitter, 1000+ sites (7
+      tools)
+    timeout: 300
+  browser-use:
+    command: /data/agents/mcp-bridges/browser-use-mcp.sh
+    connect_timeout: 120
+    enabled: false
+  herdr:
+    command: /home/j_kro/.local/bin/herdr-simple-mcp
+    env:
+      GITLAWB_NODE: https://node.gitlawb.com
+      HERDR_MCP_PROFILE: coordinator
+      HERDR_MCP_DENY: server.*,plugin.*,worktree.*,layout.*
+      HERDR_SOCKET_PATH: /home/j_kro/.config/herdr/herdr.sock
+      HOME: /home/j_kro
+    connect_timeout: 30
+    enabled: false
+  comfyui:
+    command: npx
+    args:
+      - -y
+      - comfyui-mcp@latest
+      - --comfyui-url
+      - http://127.0.0.1:8189
+      - --connect-timeout
+      - '90'
+    enabled: true
+    idle_timeout_seconds: 900
+    max_lifetime_seconds: 86400
+  gemini-notebook:
+    command: /home/j_kro/.local/bin/notebooklm-mcp
+    enabled: true
+  social-video:
+    command: /data/agents/mcp-bridges/social-video-mcp.sh
+    connect_timeout: 60
+    timeout: 300
+    description: YouTube/TikTok account browsing via browser cookies (yt-dlp) — sub
+      feed, history, liked, watch later, channel uploads
+platform_toolsets:
+  cli:
+    - a2a
+    - browser
+    - clarify
+    - code_execution
+    - computer_use
+    - context_engine
+    - cronjob
+    - delegation
+    - file
+    - image_gen
+    - kanban
+    - live
+    - memory
+    - session_search
+    - skills
+    - spotify
+    - terminal
+    - todo
+    - tts
+    - video
+    - video_gen
+    - vision
+    - web
+    - x_search
+rules:
+  research:
+    lookup_backend: searxng
+a2a_agents:
+  hermes-forge:
+    capabilities:
+      - mining
+      - ai
+    timeout: 300
+    url: http://10.1.1.130:9900
+    auth:
+      type: bearer
+      token: bf2ac3dee3546d864a95a177ca324d318c59a311ff4b5cf7
+  hermes-nexus:
+    capabilities:
+      - infra
+      - build
+      - ai
+    timeout: 300
+    url: http://10.1.1.120:9900
+    auth:
+      type: bearer
+      token: 840eb59b137013fb20043bef886e5165938dbe45195cda31
+  hermes-sentry:
+    capabilities:
+      - infra
+      - site-agency
+      - ai
+    timeout: 300
+    url: http://10.1.1.140:9900
+    auth:
+      type: bearer
+      token: c42b22632b2a2b0f9724647a47369ad26902df7d280504bc
+  hermes-zephyr:
+    auth:
+      type: bearer
+      token: 5c514085dc3fb9d0b6696426de59761941df51c06c610ae3
+    capabilities:
+      - infra
+      - coordinator
+      - ai
+    timeout: 300
+    url: http://10.1.1.110:9900
+  zephyr-local:
+    url: http://100.102.39.25:9900
+    auth:
+      type: bearer
+      token: 5c514085dc3fb9d0b6696426de59761941df51c06c610ae3
+    timeout: 300
+    capabilities:
+      - infra
+      - build
+      - ai
+      - research
+known_builtin_toolsets:
+  cli:
+    - browser
+    - clarify
+    - code_execution
+    - computer_use
+    - context_engine
+    - cronjob
+    - delegation
+    - discord
+    - discord_admin
+    - file
+    - homeassistant
+    - image_gen
+    - memory
+    - session_search
+    - skills
+    - spotify
+    - stt
+    - terminal
+    - todo
+    - tts
+    - video
+    - video_gen
+    - vision
+    - web
+    - x_search
+    - yuanbao
+custom_providers:
+  - name: Api.commandcode.ai
+    base_url: https://api.commandcode.ai/provider/v1
+    key_env: HERMES_CUSTOM_API_COMMANDCODE_AI_API_KEY
+    model: poolside/laguna-s-2.1-free
+    models:
+      - claude-sonnet-5
+      - claude-sonnet-4-6
+      - claude-fable-5
+      - claude-opus-5
+      - claude-opus-4-8
+      - claude-opus-4-7
+      - claude-haiku-4-5-20251001
+      - gpt-5.6-sol
+      - gpt-5.6-terra
+      - gpt-5.6-luna
+      - gpt-5.5
+      - gpt-5.4
+      - gpt-5.3-codex
+      - gpt-5.4-mini
+      - deepseek/deepseek-v4-pro
+      - deepseek/deepseek-v4-flash
+      - moonshotai/Kimi-K3
+      - moonshotai/Kimi-K2.7-Code
+      - moonshotai/Kimi-K2.7-Code-Highspeed
+      - moonshotai/Kimi-K2.6
+      - moonshotai/Kimi-K2.5
+      - zai-org/GLM-5.3
+      - zai-org/GLM-5.2
+      - zai-org/GLM-5.2-Fast
+      - zai-org/GLM-5.1
+      - zai-org/GLM-5
+      - MiniMaxAI/MiniMax-M3
+      - MiniMaxAI/MiniMax-M2.7
+      - MiniMaxAI/MiniMax-M2.5
+      - xiaomi/mimo-v2.5-pro
+      - xiaomi/mimo-v2.5
+      - Qwen/Qwen3.8-Max
+      - Qwen/Qwen3.8-27B
+      - Qwen/Qwen3.7-Max
+      - Qwen/Qwen3.7-Plus
+      - Qwen/Qwen3.7-Flash
+      - Qwen/Qwen3.6-Max-Preview
+      - Qwen/Qwen3.6-Plus
+      - stepfun/Step-3.7-Flash
+      - stepfun/Step-3.5-Flash
+      - tencent/hy3-paid
+      - google/gemini-3.7-flash
+      - google/gemini-3.6-flash
+      - google/gemini-3.5-flash
+      - google/gemini-3.5-flash-lite
+      - google/gemini-3.1-flash-lite
+      - sakana/fugu-ultra
+      - nvidia/nemotron-3-ultra-550b-a55b
+      - thinkingmachines/inkling
+      - thinkingmachines/inkling-small
+      - poolside/laguna-s-2.1-free
+      - meta/muse-spark-1.1
+      - meta/muse-spark-1.2
+      - meta/muse-spark-1.2-contributor
+      - xai/grok-4.5
+      - xai/grok-4.6
+video_gen:
+  provider: xai
+  use_gateway: false
+  model: grok-imagine-video-1.5
+  mcqemu:
+    command: /home/j_kro/.local/bin/mcqemu
+    connect_timeout: 30
+    timeout: 120
+    description: QEMU VM management MCP - lifecycle, snapshots, guest agent, see &
+      drive (34 tools)
