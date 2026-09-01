@@ -106,6 +106,7 @@ dispatch_stage() {
     analyze)   bot="analyst";     prompt="Run the analyze stage for kanban task $card. Pull performance, produce keep/test/stop. Post to kanban." ;;
     review)    bot="default";     prompt="You are SPOC (chief of staff). Run the critic/review pass on kanban task $card (board $BOARD). Read the card's latest artifact (research/script/audio/video), judge it: does it meet the definition of done? Is it original (not template-slop)? Does it match the voice/brain rules? If it passes, advance it: run scripts/automation/advance-stage.sh $card <next-stage>. If it fails, comment with the specific critique and keep the card at its current stage (do NOT advance). You review; you do not redo the work." ;;
     story)     bot="storyteller"; prompt="Run the story/audio-drama stage for kanban task $card. Read the story script (or write one from the opportunity), run storyteller.py (scripts/audio/storyteller.py) to synthesize the audio drama with VoxCPM TTS (self-hosted). Save the finished audio + comment with the output path." ;;
+    audio)     bot="storyteller"; prompt="Run the audio-drama stage for kanban task $card. Read the story script (or write one from the opportunity), run storyteller.py (scripts/audio/storyteller.py) to synthesize the audio drama with VoxCPM TTS (self-hosted). Save the finished audio + comment with the output path." ;;
     *) log "unknown stage $stage for card $card"; return ;;
   esac
   log "dispatching $bot for card $card (stage $stage)"
