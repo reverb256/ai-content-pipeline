@@ -16,6 +16,55 @@ Quality is engineered, not vibed. Every stage must have:
    with a pass threshold, and reworks on failure (bounded retries).
 4. FED-BACK LESSONS — every correction becomes a rule in the spec so the
    failure does not repeat (RULINGS.md + playbooks).
+5. MAKER-CHECKER TRUST — the bot that did the work is the WORST judge of
+   the work. A claim is done only with independent evidence + a checker
+   who did not make the claim. Completion is a disputed claim, not a
+   self-grade. (Source: Grok Build /goal, Lauren Tan pstack, Compound
+   Engineering, H. Floyd field notes — the trust doctrine.)
+
+## 1b. The trust model
+
+```
+A claim is not done.
+A claim + independent evidence + a checker who did not make the claim
+is done.
+```
+
+- The maker's "Done" is performance, not proof. The maker's todo list is
+  forgeable.
+- Evidence = tests/screenshots/source URLs/diffs produced by a DIFFERENT
+  profile, or harness facts the model cannot forge (file hashes, command
+  exit codes, URLs fetched, wall-clock, which profile produced what).
+- Gate/Reviewer can KILL the handoff. A producer never grades its own exam.
+- Every artifact ships with a sidecar: `artifact.evidence.json` written
+  from the runtime, not the model. An artifact without its evidence file
+  is incomplete and will not route.
+
+### Laziness classifier — reject the package if any tell fires
+1. "I'll do that next" / "working on it" with no tool call in the same turn.
+2. Declares complete with no artifact path.
+3. Cites its own earlier draft as a source.
+4. "I verified" with no attached command/screenshot/test log/URL.
+5. Invented background work that contradicts wall-clock.
+6. Plan skipped ("this is simple") on multi-step work.
+7. Thin coverage: 1 source for a factual claim, 1 test for a feature.
+8. Scope shrink to make the job easier (dropped the hard requirement).
+9. "Looks good / professional / solid" as a quality sentence.
+10. Asking permission for an obvious reversible step to burn a turn.
+
+### Contract block every brief must carry
+Outcome / Not-done-if (3 falsifiers) / Sources allowed / Tools allowed /
+Deliverable path / Evidence path / Handoff schema (Objective, Artifact,
+Evidence, Unknowns, Status, Next) / DONE means / Outside the fence.
+
+### Review gate default
+- Default vote is REJECT. Must cite a rule that failed or a missing
+  evidence pointer. Cannot praise. Score 1-10, kill line at 8.
+- First-round rejects are success. If Gate never rejects, Gate is lazy.
+- Lessons compound to the RIGHT layer: wrong fact → fix source of truth;
+  right facts used badly → fix bot description; wrote too far → tighten fence.
+- Never let the learning loop grade itself: a separate reviewer or human
+  promotes a skill, not the closed loop.
 
 ## 2. What the research proves
 

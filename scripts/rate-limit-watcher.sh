@@ -12,7 +12,7 @@ REPORT="$REPORT_DIR/$STAMP.md"
 # Count errors in the last 6 hours (approximate window via log tail)
 WINDOW=2000  # lines to scan (recent activity)
 ERRORS=$(tail -n $WINDOW "$LOG_DIR/agent.log" 2>/dev/null | grep -cE "RateLimitError|HTTP 429")
-QUOTA=$(tail -n $WINDOW "$LOG_DIR/agent.log" 2>/dev/null | grep -cE "HTTP 402|Add credits|quota")
+QUOTA=$(tail -n $WINDOW "$LOG_DIR/agent.log" 2>/dev/null | grep -cE "HTTP 402: Add credits|status.: 402|quota exceeded|Insufficient balance|\"status\": 402")
 AUTH=$(tail -n $WINDOW "$LOG_DIR/agent.log" 2>/dev/null | grep -cE "HTTP 401|Invalid API key|AuthError")
 
 # Which providers are erroring most
