@@ -619,8 +619,11 @@ def voxcpm_tts(text: str, out: Path, voice_desc: str = "",
     wrapper = base / "voxcpm_generate.py"
     if not wrapper.exists():
         raise RuntimeError(f"voxcpm wrapper missing: {wrapper}")
+    py = _voxcpm_python()
+    if py == "uv":
+        raise RuntimeError("VoxCPM venv missing at ~/Projects/VoxCPM/.venv")
     cmd = [
-        sys.executable, str(wrapper),
+        py, str(wrapper),
         "--text", text,
         "--out", str(out),
         "--quality", quality,
@@ -637,10 +640,36 @@ def voxcpm_tts(text: str, out: Path, voice_desc: str = "",
     return out
 
 
+def _voxcpm_python() -> str:
+    """Path to the VoxCPM project venv python (the only interpreter with voxcpm).
+
+    VoxCPM requires torch + voxcpm installed in ~/Projects/VoxCPM/.venv;
+    the hermes venv does NOT have voxcpm (verified 2026-09-01). Prefer the
+    venv python directly; fall back to `uv run --project` if the venv path
+    is missing.
+    """
+    project = Path(os.environ.get("VOXCPM_PROJECT", Path.home() / "Projects/VoxCPM"))
+    venv_py = project / ".venv" / "bin" / "python"
+    if venv_py.exists():
+        return str(venv_py)
+    return "uv"
+
+
 def voxcpm_available() -> bool:
     try:
-        import voxcpm  # noqa: F401
-        return True
+        py = _voxcpm_python()
+        if py == "uv":
+            # no venv -> not available
+            return False
+        import subprocess as _sp
+
+        proc = _sp.run(
+            [py, "-c", "import voxcpm, torch"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        return proc.returncode == 0
     except Exception:
         return False
 
