@@ -1346,6 +1346,10 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     out = args.out or (Path("out") / f"{story.title.replace(' ', '-').lower()}.mp3")
+    # If -o points at a directory, append the default filename — ffmpeg needs
+    # a file path with a format-bearing extension, not a bare dir.
+    if out.is_dir():
+        out = out / f"{story.title.replace(' ', '-').lower()}.mp3"
     out.parent.mkdir(parents=True, exist_ok=True)
 
     work = Path(tempfile.mkdtemp(prefix=f"storyteller-{story.title[:12]}-"))
