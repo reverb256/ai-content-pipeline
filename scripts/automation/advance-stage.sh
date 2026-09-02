@@ -31,10 +31,12 @@ fi
 run_gate() {
   local stage="$1" camp="$2"
   case "$stage" in
-    script)   [ -x "$GATES/gate_script.py" ] && python3 "$GATES/gate_script.py" "$camp" ;;
-    voice)    [ -x "$GATES/gate_voice.py" ]  && python3 "$GATES/gate_voice.py" "$camp" ;;
-    visuals)  [ -x "$GATES/gate_visuals.py" ] && python3 "$GATES/gate_visuals.py" "$camp" ;;
-    *)        echo "gate: no mechanical gate for stage '$stage' (pass-through)" ;;
+    script)    [ -x "$GATES/gate_script.py" ]    && python3 "$GATES/gate_script.py" "$camp" ;;
+    research)  [ -x "$GATES/gate_evidence.py" ]  && python3 "$GATES/gate_evidence.py" "$camp" ;;
+    voice)     [ -x "$GATES/gate_voice.py" ]     && python3 "$GATES/gate_voice.py" "$camp"
+               [ -x "$GATES/gate_loudness.py" ]  && python3 "$GATES/gate_loudness.py" "$camp" ;;
+    visuals)   [ -x "$GATES/gate_visuals.py" ]   && python3 "$GATES/gate_visuals.py" "$camp" ;;
+    *)         echo "gate: no mechanical gate for stage '$stage' (pass-through)" ;;
   esac
 }
 
