@@ -1149,24 +1149,141 @@ def sidechain_mix(speech: Path, beds: Path, out: Path,
     return out
 
 
+def _trim_segment_edges(path: Path, dst: Path,
+                        threshold_db: float = -50.0,
+                        min_keep: float = 0.30) -> Path:
+    """Soften a TTS clip's edges so deliberate gaps read as real pauses.
+
+    Measured on VoxCPM output: many segments run LOUD right up to the clip
+    edge (last-0.5s mean -19 to -30dB, no natural tail silence). Concatenating
+    those raw makes lines crash together. A short fade-out to digital silence
+    at the true end (and a tiny fade-in at the start) lets the *inserted*
+    gaps read as breathing room instead of the previous clip's noise bleeding
+    through. Aggressive silenceremove is NOT used: it ate first sentences on
+    multi-sentence clips (internal sentence gaps look like leading silence).
+    """
+    src_dur = ffprobe_duration(path)
+    fade_out = min(0.15, max(src_dur * 0.02, 0.06))  # 60-150ms tail fade
+    af = f"afade=t=in:d=0.03"
+    if fade_out > 0:
+        af += f",afade=t=out:st={max(src_dur - fade_out, 0):.3f}:d={fade_out:.3f}"
+    run(["ffmpeg", "-y", "-i", str(path), "-af", af,
+         "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", str(dst)])
+    d = ffprobe_duration(dst)
+    if d < min_keep:
+        return _copy_audio(path, dst)
+    return dst
+
+
+# Pacing knobs (seconds). Tuned for natural dialogue rhythm, not metronome.
+GAP_SAME_SPEAKER = 0.28   # back-to-back lines from one character
+GAP_NEW_SPEAKER = 0.42    # a different character answers
+GAP_NARRATOR = 0.55       # narrator beats land slower
+GAP_AFTER_EMOTION = 0.30  # emotional delivery breathes a touch longer
+
+
+def _concat_with_pacing(segments: list[Segment], work: Path,
+                        base_gap: float = 0.32) -> Path:
+    """Concatenate speech segments with intentional, varied inter-line gaps.
+
+    Trim each clip's natural silence edges first, then join with gaps that
+    depend on speaker change and narration, so dialogue breathes instead of
+    machine-gunning at a uniform interval.
+    """
+    if not segments:
+        raise RuntimeError("no speech segments to concatenate")
+    items: list[Path] = []
+    for i, seg in enumerate(segments, start=1):
+        if not seg.audio_path or not Path(seg.audio_path).exists():
+            continue
+        trimmed = work / f"trim-{i:03d}.wav"
+        _trim_segment_edges(Path(seg.audio_path), trimmed)
+        items.append(trimmed)
+        # gap AFTER this segment (before the next), decided by who speaks next
+        if i < len(segments):
+            nxt = segments[i]
+            cur = segments[i - 1]
+            if cur.speaker.lower() in PROMPT_NAMES or nxt.speaker.lower() in PROMPT_NAMES:
+                gap = GAP_NARRATOR
+            elif cur.speaker != nxt.speaker:
+                gap = GAP_NEW_SPEAKER
+            else:
+                gap = GAP_SAME_SPEAKER
+            if cur.emotion in ("angry", "fearful", "sad", "whisper"):
+                gap = max(gap, GAP_AFTER_EMOTION)
+            gap_file = work / f"gap-{i:03d}.wav"
+            render_pause(gap, work, name=f"gap-{i:03d}")
+            items.append(gap_file)
+    if not items:
+        raise RuntimeError("no usable speech audio after trimming")
+    td = Path(tempfile.mkdtemp(prefix="storyteller-paced-"))
+    try:
+        listf = td / "list.txt"
+        listf.write_text("\n".join(f"file '{p}'" for p in items) + "\n")
+        out = work / "speech-paced.wav"
+        run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(listf),
+             "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", str(out)])
+        return out
+    finally:
+        shutil.rmtree(td, ignore_errors=True)
+
+
+def _scene_trailing_pause(sc: Scene) -> float:
+    """Return the total trailing pause duration for a scene (from pause cues)."""
+    total = 0.0
+    for cue in sc.cues:
+        if cue.kind == "pause":
+            total += cue.duration
+    return total
+
+
 def render_scene(sc: Scene, work: Path, stem: Path | None,
                  duck_db: float = 12.0) -> Path:
-    """Render one scene: concatenate its speech segments, duck the stem."""
-    speech_paths = [Path(s.audio_path) for s in sc.segments if s.audio_path]
-    if not speech_paths:
+    """Render one scene: pace the speech segments, duck the stem."""
+    speech_segs = [s for s in sc.segments if s.audio_path]
+    if not speech_segs:
         # no dialogue — the stem alone is the scene (e.g. an opening bed)
         if stem is None or not stem or not Path(stem).exists():
             raise RuntimeError(f"scene '{sc.title}' has no audio")
         return _copy_audio(Path(stem), work / f"{_slug(sc.title)}-scene.wav")
-    speech = _concat_paths(speech_paths)
 
     scene_name = _slug(sc.title)
+    speech = _concat_with_pacing(speech_segs, work)
+
+    # Real inter-scene gap: use the story's explicit [pause: N] when present,
+    # otherwise fall back to SCENE_GAP. Do NOT stack both (double-counting
+    # made boundaries hang).
+    trailing = _scene_trailing_pause(sc)
+    if trailing <= 0.0:
+        trailing = SCENE_GAP
+    if trailing > 0.0:
+        gap = work / f"{scene_name}-trail.wav"
+        speech = _append_silence(speech, gap, trailing, work)
+
     # An empty Path or non-existent stem means no beds — speech with fades only
     if stem is None or not stem or not Path(stem).exists():
         out = work / f"{scene_name}-scene.wav"
         return _fade(speech, out, duration=ffprobe_duration(speech))
     out = work / f"{scene_name}-scene.wav"
     return sidechain_mix(speech, Path(stem), out, duck_db=duck_db)
+
+
+def _append_silence(src: Path, dst: Path, seconds: float, work: Path) -> Path:
+    """Append `seconds` of pure silence to the end of src."""
+    if seconds <= 0:
+        return src
+    sil = work / "tail-silence.wav"
+    run(["ffmpeg", "-y", "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
+         "-t", f"{seconds:.3f}", "-c:a", "pcm_s16le", str(sil)])
+    td = Path(tempfile.mkdtemp(prefix="storyteller-trail-"))
+    try:
+        listf = td / "list.txt"
+        listf.write_text(f"file '{src}'\nfile '{sil}'\n")
+        run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(listf),
+             "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", str(dst)])
+        return dst
+    finally:
+        shutil.rmtree(td, ignore_errors=True)
 
 
 def render_pause(duration: float, work: Path, name: str = "pause") -> Path:
