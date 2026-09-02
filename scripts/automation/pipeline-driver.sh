@@ -25,7 +25,40 @@ mkdir -p "$(dirname "$LOG")"
 # Raise via env: MAX_CONCURRENT_BOTS=2 bash pipeline-driver.sh
 MAX_CONCURRENT="${MAX_CONCURRENT_BOTS:-1}"
 
+# Rate-limit respect knobs
+# MAX_DISPATCH_PER_TICK: how many cards to advance per run (default 2). Free-tier
+#   providers can't sustain more without hitting 60/min caps. The pipeline is
+#   throughput-limited by design — 2 cards/tick = 2 bots/call each = ~4-6 model
+#   calls per 30min, well under any cap.
+MAX_DISPATCH="${MAX_DISPATCH_PER_TICK:-2}"
+# MIN_TICK_GAP: if the last run dispatched cards within this many seconds, skip
+#   this tick (gives the model calls time to drain). Default 120s.
+MIN_TICK_GAP="${MIN_TICK_GAP:-120}"
+# COOLDOWN_FILE: when a 429 is detected, mark time so subsequent ticks back off.
+COOLDOWN_FILE="$REPO/performance/.driver-cooldown"
+
 log() { echo "$(date -Is) $1" >> "$LOG"; }
+
+# Respect: skip this tick if the previous dispatch happened < MIN_TICK_GAP ago.
+recent_dispatch() {
+  local last
+  last=$(grep "dispatch" "$LOG" 2>/dev/null | tail -1 | grep -oE "^[0-9T:.+-]+" || true)
+  [ -z "$last" ] && return 1
+  local last_epoch now_epoch
+  last_epoch=$(date -d "$last" +%s 2>/dev/null || echo 0)
+  now_epoch=$(date +%s)
+  [ $((now_epoch - last_epoch)) -lt "$MIN_TICK_GAP" ]
+}
+
+# Work around: if we recently hit a 429 (cooldown marker), skip dispatch.
+in_cooldown() {
+  [ -f "$COOLDOWN_FILE" ] || return 1
+  local marker now_epoch marker_epoch
+  marker=$(cat "$COOLDOWN_FILE" 2>/dev/null || echo 0)
+  now_epoch=$(date +%s)
+  marker_epoch=$((marker))
+  [ $((now_epoch - marker_epoch)) -lt 300 ]  # 5 min cooldown
+}
 
 # Count bots currently running (any hermes -p <bot> chat in the crew)
 running_bots() {
@@ -64,15 +97,17 @@ dispatch_stage() {
   case "$stage" in
     opportunity) bot="researcher"; prompt="Run the research stage for kanban task $card. Read the opportunity card, build the evidence package (3-7 verified claims with URLs), save to the campaign folder, then advance the card: run scripts/automation/advance-stage.sh $card research." ;;
     research)  bot="researcher";  prompt="Run the research stage. Read the opportunity card (kanban task $card), build the evidence package (3-7 verified claims with URLs), save to the campaign folder, then advance the card: run scripts/automation/advance-stage.sh $card script. Comment on the kanban task with the result." ;;
-    script)    bot="scriptwriter"; prompt="Run the script stage for kanban task $card. Read the evidence package, write the retention-optimized TTS-paced script with per-section visual notes. Save + comment." ;;
-    voice)     bot="voicebot";    prompt="Run the voice stage for kanban task $card. Check pick-provider.sh voice, generate narration from the script. Save audio + log tier." ;;
-    visuals)   bot="videobot";    prompt="Run the visuals stage for kanban task $card. Check pick-provider.sh video, render the video (manim or fallback). Save MP4 + log tier." ;;
-    thumbnail) bot="thumbnailbot"; prompt="Run the thumbnail stage for kanban task $card. Generate 2-3 thumbnail variants. Save + comment." ;;
-    seo)       bot="seobot";      prompt="Run the SEO stage for kanban task $card. Write title/description/tags/chapters from the script. Save metadata JSON." ;;
-    upload)    bot="publishbot";  prompt="Run the upload stage for kanban task $card. Upload the finished video as PRIVATE (review gate). Do NOT make public without human approval. Report the video ID." ;;
-    analyze)   bot="analyst";     prompt="Run the analyze stage for kanban task $card. Pull performance, produce keep/test/stop. Post to kanban." ;;
+    script)    bot="scriptwriter"; prompt="Run the script stage for kanban task $card. Read the evidence package, write the retention-optimized TTS-paced script with per-section visual notes. Save + comment. Then advance the card: run scripts/automation/advance-stage.sh $card voice." ;;
+    voice)     bot="voicebot";    prompt="Run the voice stage for kanban task $card. Check pick-provider.sh voice, generate narration from the script. Save audio + log tier. Then advance the card: run scripts/automation/advance-stage.sh $card visuals." ;;
+    visuals)   bot="videobot";    prompt="Run the visuals stage for kanban task $card. Check pick-provider.sh video, render the video (manim or fallback). Save MP4 + log tier. Then advance the card: run scripts/automation/advance-stage.sh $card thumbnail." ;;
+    thumbnail) bot="thumbnailbot"; prompt="Run the thumbnail stage for kanban task $card. Generate 2-3 thumbnail variants. Save + comment. CRITICAL: after saving thumbnails and commenting with paths + tier, you MUST advance the card: run scripts/automation/advance-stage.sh $card seo. Do NOT finish without running that advance command — leaving the card at stage thumbnail causes the driver to re-dispatch you every tick (infinite loop)." ;;
+    seo)       bot="seobot";      prompt="Run the SEO stage for kanban task $card. Write title/description/tags/chapters from the script. Save metadata JSON. Then advance the card: run scripts/automation/advance-stage.sh $card upload." ;;
+    upload)    bot="publishbot";  prompt="Run the upload stage for kanban task $card. Upload the finished video as PRIVATE (review gate). Do NOT make public without human approval. Report the video ID. Then advance the card: run scripts/automation/advance-stage.sh $card analyze." ;;
+    analyze)   bot="analyst";     prompt="Run the analyze stage for kanban task $card. Pull performance, produce keep/test/stop. Post to kanban. Then advance the card: run scripts/automation/advance-stage.sh $card done." ;;
     review)    bot="default";     prompt="You are SPOC (chief of staff). Run the critic/review pass on kanban task $card (board $BOARD). Read the card's latest artifact (research/script/audio/video), judge it: does it meet the definition of done? Is it original (not template-slop)? Does it match the voice/brain rules? If it passes, advance it: run scripts/automation/advance-stage.sh $card <next-stage>. If it fails, comment with the specific critique and keep the card at its current stage (do NOT advance). You review; you do not redo the work." ;;
-    story)     bot="storyteller"; prompt="Run the story/audio-drama stage for kanban task $card. Read the story script (or write one from the opportunity), run storyteller.py (scripts/audio/storyteller.py) to synthesize the audio drama with VoxCPM TTS (self-hosted). Save the finished audio + comment with the output path." ;;
+    story)     bot="storyteller"; prompt="Run the story/audio-drama stage for kanban task $card. Read the story script (or write one from the opportunity), run storyteller.py (scripts/audio/storyteller.py) to synthesize the audio drama with VoxCPM TTS (self-hosted). Save the finished audio + comment with the output path. Then advance the card: run scripts/automation/advance-stage.sh $card visuals." ;;
+    audio)     bot="storyteller"; prompt="Run the audio-drama stage for kanban task $card. Read the story script (or write one from the opportunity), run storyteller.py (scripts/audio/storyteller.py) to synthesize the audio drama with VoxCPM TTS (self-hosted). Save the finished audio + comment with the output path. Then advance the card: run scripts/automation/advance-stage.sh $card visuals." ;;
+    audio-drama) bot="storyteller"; prompt="Run the audio-drama stage for kanban task $card. Read the story script (or write one from the opportunity), run storyteller.py (scripts/audio/storyteller.py) to synthesize the audio drama with VoxCPM TTS (self-hosted). CRITICAL: -o MUST be an output FILE path ending in .mp3 (e.g. campaigns/<name>/audio/foo.mp3), NEVER a directory path. After synthesis, advance the card: bash scripts/automation/advance-stage.sh $card visuals. Then comment with the audio path, duration, provider, and handoff." ;;
     *) log "unknown stage $stage for card $card"; return ;;
   esac
   log "dispatching $bot for card $card (stage $stage)"
@@ -83,6 +118,15 @@ dispatch_stage() {
 }
 
 log "pipeline driver run start"
+# Respect + work-around gates
+if in_cooldown; then
+  log "cooldown active (429 recently) — skipping tick"
+  exit 0
+fi
+if recent_dispatch; then
+  log "recent dispatch within ${MIN_TICK_GAP}s — skipping tick"
+  exit 0
+fi
 dispatched=0
 for card in $(get_ready_cards); do
   # Respect the concurrency cap: stop dispatching once we're at the limit.
@@ -90,6 +134,11 @@ for card in $(get_ready_cards); do
   running=$(running_bots)
   if [ "$running" -ge "$MAX_CONCURRENT" ]; then
     log "concurrency cap reached ($running/$MAX_CONCURRENT) — stopping dispatch"
+    break
+  fi
+  # Respect the per-tick dispatch cap (free-tier throughput limit)
+  if [ "$dispatched" -ge "$MAX_DISPATCH" ]; then
+    log "per-tick dispatch cap reached ($dispatched/$MAX_DISPATCH) — stopping dispatch"
     break
   fi
   stage=$(stage_of "$card")

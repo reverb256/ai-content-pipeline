@@ -68,6 +68,8 @@ DEFAULT_CHATTERBOX_API = "http://10.1.1.130:8004"
 VALID_EMOTIONS = {
     "happy", "sad", "angry", "fearful", "disgusted",
     "surprised", "calm", "fluent", "whisper",
+    "tense", "excited", "hesitant", "exhausted", "defiant",
+    "urgent", "amused", "hopeful", "sorrowful", "cold", "warm",
 }
 VALID_SFX = {"spacious_echo", "auditorium_echo", "lofi_telephone", "robotic"}
 
@@ -586,6 +588,17 @@ _EMOTION_VOICE_DESC = {
     "calm": "a steady, even voice, composed and unhurried",
     "fluent": "a smooth, natural voice, clear and relaxed",
     "whisper": "a hushed whisper, intimate and secretive",
+    "tense": "a taut, strained voice, measured and tight",
+    "excited": "a fast, bright voice, eager and forward",
+    "hesitant": "a halting, uncertain voice, soft and tentative",
+    "exhausted": "a slow, dragged voice, fading and weary",
+    "defiant": "a hard, unyielding voice, chin-up and resolute",
+    "urgent": "a quick, pressing voice, sharp and insistent",
+    "amused": "a light, smiling voice, playful and knowing",
+    "hopeful": "a warm, lifted voice, bright and open",
+    "sorrowful": "a heavy, grieving voice, slow and aching",
+    "cold": "a flat, distant voice, emotionless and precise",
+    "warm": "a gentle, kind voice, soft and reassuring",
 }
 
 
@@ -606,8 +619,11 @@ def voxcpm_tts(text: str, out: Path, voice_desc: str = "",
     wrapper = base / "voxcpm_generate.py"
     if not wrapper.exists():
         raise RuntimeError(f"voxcpm wrapper missing: {wrapper}")
+    py = _voxcpm_python()
+    if py == "uv":
+        raise RuntimeError("VoxCPM venv missing at ~/Projects/VoxCPM/.venv")
     cmd = [
-        sys.executable, str(wrapper),
+        py, str(wrapper),
         "--text", text,
         "--out", str(out),
         "--quality", quality,
@@ -624,10 +640,36 @@ def voxcpm_tts(text: str, out: Path, voice_desc: str = "",
     return out
 
 
+def _voxcpm_python() -> str:
+    """Path to the VoxCPM project venv python (the only interpreter with voxcpm).
+
+    VoxCPM requires torch + voxcpm installed in ~/Projects/VoxCPM/.venv;
+    the hermes venv does NOT have voxcpm (verified 2026-09-01). Prefer the
+    venv python directly; fall back to `uv run --project` if the venv path
+    is missing.
+    """
+    project = Path(os.environ.get("VOXCPM_PROJECT", Path.home() / "Projects/VoxCPM"))
+    venv_py = project / ".venv" / "bin" / "python"
+    if venv_py.exists():
+        return str(venv_py)
+    return "uv"
+
+
 def voxcpm_available() -> bool:
     try:
-        import voxcpm  # noqa: F401
-        return True
+        py = _voxcpm_python()
+        if py == "uv":
+            # no venv -> not available
+            return False
+        import subprocess as _sp
+
+        proc = _sp.run(
+            [py, "-c", "import voxcpm, torch"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        return proc.returncode == 0
     except Exception:
         return False
 
