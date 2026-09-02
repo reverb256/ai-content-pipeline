@@ -21,7 +21,7 @@
 ### 24GB (RTX 3090 — zephyr, the workhorse)
 | Model | Quant | VRAM | Speed | Use |
 |---|---|---|---|---|
-| **Qwen 3.6 27B** | Q4_K_M | ~17GB | 25-35 t/s | **Daily driver** — best overall; agentic, reasoning, 262K ctx native (use 16-32K) |
+| **Qwen 3.8 27B** | Q4_K_M | ~17GB | 25-35 t/s | **Daily driver** — best overall; agentic, reasoning, 262K ctx native (use 16-32K); replaced Qwen3.6-27B (Aug 2026 community consensus) |
 | Qwen3.5 35B-A3B (MoE) | Q4_K_M | ~20GB | ~110 t/s | Fast interactive chat (only 3B active/token) |
 | Gemma 4 26B-A4B | Q4_K_M | ~16GB | ~71 t/s | Multimodal (vision input) |
 | Qwen 2.5 14B | Q8_0 | ~16GB | ~35 t/s | Near-lossless quality when text-quality > speed |
