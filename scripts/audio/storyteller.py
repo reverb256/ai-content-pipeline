@@ -391,6 +391,9 @@ def parse_story(path: Path) -> Story:
             scene.cues.append(cue)
             continue
         # a speaker line or a plain narrative line
+        # skip horizontal rules (---) which are scene dividers, not narrative
+        if re.match(r"^-{3,}\s*$", stripped):
+            continue
         speaker, emotion, body = _speaker_of(stripped)
         if speaker and body:
             seg = Segment(
