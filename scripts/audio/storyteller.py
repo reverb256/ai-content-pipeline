@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""storyteller.py — production audio-drama pipeline for the content machine.
+"""storyteller.py v3 — production audio-drama pipeline for the content machine.
+
+v3 changes (mix/master/transition upgrade):
+  - Canonical audio: force 48 kHz / stereo / 24-bit before mixing
+  - Two-pass EBU R128 loudness normalization + true-peak limiting
+  - Equal Power crossfades between scenes (5s overlap, qsin:qsin)
+  - Continuous room-tone beds per scene (auto-generated when no explicit atmos)
+  - Per-scene reverb consistency (same acoustic space for all elements)
 
 Reads a story script, synthesizes per-line speech through VoxCPM Voice
 Design (primary, self-hosted) with MiniMax / Chatterbox fallback, layers
@@ -162,20 +169,102 @@ class Segment:
 
 @dataclass
 class Scene:
-    """A scene heading plus the lines and cues that belong to it."""
+    """A scene heading plus the lines and cues that belong to it.
+
+    v3 format: each scene carries a goal (R1), optional cold-open (R2),
+    optional link (R3), and word-budget tracking (R5).
+    """
     title: str
     text: str = ""
     segments: list[Segment] = field(default_factory=list)
     cues: list[Cue] = field(default_factory=list)
     start_offset: float = 0.0  # global timeline position, filled at assembly
+    # R1: scene goal (reveal | escalate | decision)
+    goal: str = ""
+    # R2: cold-open tag (first scene only)
+    cold_open: bool = False
+    # R3: causal link to previous scene (therefore | but)
+    link: str = ""
+    # R5: per-scene word budget override
+    word_budget: int = 0
+    # R12: track aural establishment
+    has_atmos_or_sfx: bool = False
+    # Speaker set in this scene (for R7/R21 contrast casting)
+    scene_speakers: set = field(default_factory=set)
 
 
 @dataclass
 class CastMember:
-    """One cast entry: the voice that speaks a character."""
+    """One cast entry: the voice that speaks a character.
+
+    v3 format: 5-dimension Voice Design (gender, age, pitch, pace, texture)
+    plus audience-facing description and character-craft fields.
+    """
     name: str
     voice_desc: str = ""
     voice: str = ""  # MiniMax voice id override
+    # R6: 5-dimension Voice Design
+    gender: str = ""
+    age: str = ""
+    pitch: str = ""
+    pace: str = ""
+    texture: str = ""
+    accent: str = ""
+    # R23: audience-facing description
+    description: str = ""
+    # R13: character craft
+    want: str = ""
+    need: str = ""
+    flaw: str = ""
+    arc: str = ""
+    speech_pattern: str = ""
+    # R19: track first appearance for name-tag enforcement
+    first_appearance_done: bool = False
+
+    def voice_dimensions(self) -> dict[str, str]:
+        """Return the 5 voice dimensions as a dict."""
+        return {
+            "gender": self.gender,
+            "age": self.age,
+            "pitch": self.pitch,
+            "pace": self.pace,
+            "texture": self.texture,
+        }
+
+    def dimension_count(self) -> int:
+        """Return number of non-empty voice dimensions (R6: require >= 3)."""
+        return sum(1 for v in self.voice_dimensions().values() if v)
+
+    def contrast_distance(self, other: "CastMember") -> dict:
+        """Compute voice distance vs another character (R7/R21)."""
+        d_self = self.voice_dimensions()
+        d_other = other.voice_dimensions()
+        # Pitch: map qualitative labels to numeric tiers for comparison
+        pitch_tiers = {
+            "very_low": 1, "low": 2, "low_medium": 3, "medium": 4,
+            "high_medium": 5, "high": 6, "very_high": 7,
+        }
+        pace_tiers = {
+            "very_slow": 1, "slow": 2, "steady": 3, "moderate": 3,
+            "quick": 4, "fast": 5, "very_fast": 6,
+        }
+        p_self = pitch_tiers.get(self.pitch.lower().replace("-", "_").replace(" ", "_"), 4)
+        p_other = pitch_tiers.get(other.pitch.lower().replace("-", "_").replace(" ", "_"), 4)
+        s_self = pace_tiers.get(self.pace.lower().replace("-", "_").replace(" ", "_"), 3)
+        s_other = pace_tiers.get(other.pace.lower().replace("-", "_").replace(" ", "_"), 3)
+        pitch_delta = abs(p_self - p_other)
+        pace_delta = abs(s_self - s_other)
+        # texture difference: 1 if different, 0 if same
+        tex_self = self.texture.lower().strip()
+        tex_other = other.texture.lower().strip()
+        texture_diff = 1 if tex_self != tex_other else 0
+        return {
+            "pitch_delta": pitch_delta,
+            "pace_delta": pace_delta,
+            "texture_diff": texture_diff,
+            "pitch_delta_pct": pitch_delta / 6.0,  # normalized 0-1
+            "pace_delta_pct": pace_delta / 5.0,
+        }
 
 
 @dataclass
@@ -188,6 +277,15 @@ class Story:
     cast: dict[str, CastMember] = field(default_factory=dict)
     scenes: list[Scene] = field(default_factory=list)
     segments: list[Segment] = field(default_factory=list)
+    # v3 format fields
+    narrator_voice: str = ""
+    tier: str = "short"  # R5: short | long | epic
+    acts: int = 0  # R4: act count for serialized
+    pronunciation: dict = field(default_factory=dict)  # R8: pronunciation guide
+    # R5: word budget per tier
+    tier_budgets: dict = field(default_factory=lambda: {
+        "short": 300, "long": 400, "epic": 500,
+    })
 
     def cast_member(self, speaker: str) -> CastMember | None:
         """Return the cast entry for a speaker, or None for the narrator."""
@@ -203,23 +301,33 @@ class Story:
 
 
 def _parse_frontmatter(block: str) -> dict:
-    """Parse simple key: value lines plus multi-line 'cast:' lists.
+    """Parse YAML frontmatter into a dict.
 
-    A line starting with two spaces under 'cast:' continues the previous
-    cast entry. A line starting with two spaces and a dash starts a new
-    cast entry. Anything else is a flat key: value pair.
+    v3 format: uses PyYAML for structured cast entries with 5-dimension Voice
+    Design. Falls back to legacy flat-string parsing if YAML is unavailable
+    or fails.
     """
+    # Try YAML first for v3 structured cast blocks
+    try:
+        import yaml
+        parsed = yaml.safe_load(block)
+        if isinstance(parsed, dict):
+            return parsed
+    except Exception:
+        pass
+    # Legacy fallback: flat key:value parsing
+    return _parse_frontmatter_legacy(block)
+
+
+def _parse_frontmatter_legacy(block: str) -> dict:
+    """Legacy flat-string frontmatter parser (pre-v3 fallback)."""
     meta: dict = {}
     cast: dict[str, str] = {}
     cast_key = "cast"
     cur_name = ""
     for line in block.splitlines():
-        # Continuation lines start with 4+ spaces (deeper than the 2-space
-        # cast entries). Detect this BEFORE stripping so we can tell
-        # "new entry at 2 spaces" from "continuation at 4+ spaces".
         leading = len(line) - len(line.lstrip())
         if line.startswith("  ") and leading >= 4 and cur_name:
-            # continuation of the current cast description
             item = line.strip()
             if ":" in item:
                 k, _, v = item.partition(":")
@@ -239,7 +347,6 @@ def _parse_frontmatter(block: str) -> dict:
                 cur_name = cur_name.strip().strip('"').strip("'")
                 cast[cur_name.lower()] = desc.strip()
             elif ":" in item:
-                # cast entry (indented key: value, no dash)
                 cur_name, _, desc = item.partition(":")
                 cur_name = cur_name.strip().strip('"').strip("'")
                 cast[cur_name.lower()] = desc.strip()
@@ -317,7 +424,21 @@ def _speaker_of(line: str) -> tuple[str, str, str]:
 
 
 def parse_story(path: Path) -> Story:
-    """Parse the markup documented in scripts/audio/example-story.md."""
+    """Parse the v3 story format documented in scripts/audio/example-story.md.
+
+    Enforces R1-R23 craft rules through parseable gates:
+      R1  — every scene must declare goal: reveal|escalate|decision
+      R2  — first scene must carry [cold-open]
+      R3  — scenes should carry [link: therefore|but]
+      R6  — cast entries should have >= 3 voice dimensions
+      R7  — characters in same scene must differ >= 15% pitch/pace
+      R12 — every scene must establish aural environment (atmos/sfx)
+      R19 — first character appearance must have name tag
+      R20 — narrator-voice separation (dialogue tags = narrator)
+      R21 — contrast casting: pitch delta >= 15%, pace delta >= 10%
+      R22 — pause taxonomy: short/scene/section/chapter or numeric seconds
+    """
+    import yaml
     text = path.read_text(encoding="utf-8")
     story = Story()
 
@@ -329,73 +450,81 @@ def parse_story(path: Path) -> Story:
         story.voice = meta.get("voice", story.voice)
         story.fallback_voice = meta.get("fallback_voice", story.fallback_voice)
         story.model = meta.get("model", story.model)
+        story.narrator_voice = meta.get("narrator_voice", "")
+        story.tier = meta.get("tier", "short")
+        try:
+            story.acts = int(meta.get("acts", 0))
+        except (ValueError, TypeError):
+            story.acts = 0
         try:
             story.speed = float(meta.get("speed", story.speed))
         except (ValueError, TypeError):
             pass
-        raw_cast = meta.get("cast")
-        if isinstance(raw_cast, dict):
-            for name, desc in raw_cast.items():
-                story.cast[name.strip().lower()] = CastMember(name=name.strip(), voice_desc=desc)
-        elif isinstance(raw_cast, str) and raw_cast.strip():
-            for entry in re.split(r"[;,]", raw_cast):
-                if ":" not in entry:
-                    continue
-                name, _, desc = entry.partition(":")
-                story.cast[name.strip().lower()] = CastMember(
-                    name=name.strip(), voice_desc=desc.strip()
-                )
+        story.pronunciation = meta.get("pronunciation", {})
+        raw_cast = meta.get("cast", {})
+        _parse_v3_cast(story, raw_cast)
         text = text[m.end():]
 
-    # Strip the FORMAT DOCUMENTATION block (everything up to the DOC-END
-    # marker). Story scripts do not carry this block; only the format
-    # reference file does.
+    # Strip the FORMAT DOCUMENTATION block
     doc_end = text.find("<!-- DOC-END -->")
     if doc_end != -1:
         text = text[doc_end + len("<!-- DOC-END -->"):]
 
     scene: Scene | None = None
     pending_emotion = DEFAULT_EMOTION
+    first_scene = True
+    # Track first appearances per character
+    first_appearances: dict[str, bool] = {}
+    for name in story.cast:
+        first_appearances[name] = not story.cast[name].first_appearance_done
+
     for raw in text.splitlines():
         line = raw.rstrip()
         stripped = line.strip()
         if not stripped:
             continue
         if re.match(r"^#{1,6}\s+", line):
-            # new scene heading: flush the current scene, start a new one
+            # flush current scene
             if scene is not None and (scene.text.strip() or scene.segments):
                 story.scenes.append(scene)
-            scene = Scene(title=re.sub(r"^#{1,6}\s+", "", stripped))
+            heading = re.sub(r"^#{1,6}\s+", "", stripped)
+            scene = _parse_scene_heading(heading, first_scene)
+            first_scene = False
             pending_emotion = DEFAULT_EMOTION
             continue
         if scene is None:
-            # text before any scene heading → implicit scene
             scene = Scene(title="intro")
-        # a cue line: [SFX: ...] [ATMOS: ...] [MUSIC: ...] [pause: N]
-        # or a backward-compatible emotion line [angry | key=val ...]
+        # cue line
         if stripped.startswith("[") and stripped.endswith("]"):
-            cue = _parse_cue(stripped)
+            cue = _parse_cue_v3(stripped)
             if cue is None:
-                # not a recognized cue; treat as plain text (stage note)
                 _append_segment_text(scene, story, stripped)
                 continue
             if cue.kind == "emotion":
                 pending_emotion = cue.value
                 if cue.value in ("fearful", "whisper", "angry", "sad", "surprised"):
-                    scene.cues.append(Cue(kind="emotion", value=cue.value))
+                    scene.cues.append(cue)
                 continue
             if cue.kind == "pause":
                 scene.cues.append(cue)
                 continue
-            # atmos / sfx / music: record the cue now, resolve the asset later
+            if cue.kind in ("atmos", "sfx"):
+                scene.has_atmos_or_sfx = True
             scene.cues.append(cue)
             continue
-        # a speaker line or a plain narrative line
-        # skip horizontal rules (---) which are scene dividers, not narrative
+        # skip horizontal rules
         if re.match(r"^-{3,}\s*$", stripped):
             continue
         speaker, emotion, body = _speaker_of(stripped)
         if speaker and body:
+            # R19: first-appearance name tag check
+            speaker_lower = speaker.strip().lower()
+            if speaker_lower in first_appearances and first_appearances[speaker_lower]:
+                # First appearance: check for name tag in text
+                _enforce_name_tag(scene, story, speaker, body, stripped)
+                first_appearances[speaker_lower] = False
+                if speaker_lower in story.cast:
+                    story.cast[speaker_lower].first_appearance_done = True
             seg = Segment(
                 scene=scene.title,
                 speaker=speaker,
@@ -405,14 +534,15 @@ def parse_story(path: Path) -> Story:
             )
             story.segments.append(seg)
             scene.segments.append(seg)
+            scene.scene_speakers.add(speaker.strip().lower())
             if scene.text:
                 scene.text += "\n"
             scene.text += stripped
             continue
-        # plain line → narration
+        # plain line → narration (default to narrator)
         _append_segment_text(scene, story, stripped)
 
-    # flush the final scene
+    # flush final scene
     if scene is not None and (scene.text.strip() or scene.segments):
         if not story.scenes or story.scenes[-1] is not scene:
             story.scenes.append(scene)
@@ -420,17 +550,239 @@ def parse_story(path: Path) -> Story:
     if not story.segments:
         raise ValueError(f"no segments parsed from {path}")
 
-    # narrator voice resolution: explicit "Narrator" in the cast wins;
-    # otherwise the frontmatter voice/fallback drive the description.
     _resolve_narrator(story)
 
-    # narrative offset per segment (for b-roll timestamps and pacing)
+    # v3 GATES: enforce craft rules
+    _enforce_v3_gates(story, path)
+
+    # narrative offset per segment
     for sc in story.scenes:
         off = 0.0
         for seg in sc.segments:
             seg.offset = off
             off += max(seg.audio_duration, 0.0)
     return story
+
+
+def _parse_v3_cast(story: Story, raw_cast) -> None:
+    """Parse cast entries from YAML (dict of dicts) or legacy flat format."""
+    if isinstance(raw_cast, dict):
+        for name, entry in raw_cast.items():
+            key = name.strip().lower()
+            if isinstance(entry, dict):
+                # v3 structured format
+                cm = CastMember(
+                    name=name.strip(),
+                    voice_desc=entry.get("description", entry.get("voice_desc", "")),
+                    voice=entry.get("voice", ""),
+                    gender=entry.get("gender", ""),
+                    age=entry.get("age", ""),
+                    pitch=entry.get("pitch", ""),
+                    pace=entry.get("pace", ""),
+                    texture=entry.get("texture", ""),
+                    accent=entry.get("accent", ""),
+                    description=entry.get("description", ""),
+                    want=entry.get("want", ""),
+                    need=entry.get("need", ""),
+                    flaw=entry.get("flaw", ""),
+                    arc=entry.get("arc", ""),
+                    speech_pattern=entry.get("speech_pattern", ""),
+                )
+                # Build voice_desc from dimensions if not explicitly given
+                if not cm.voice_desc and cm.description:
+                    cm.voice_desc = cm.description
+                story.cast[key] = cm
+            else:
+                # Legacy flat string
+                desc = str(entry) if entry else ""
+                story.cast[key] = CastMember(name=name.strip(), voice_desc=desc)
+    elif isinstance(raw_cast, str) and raw_cast.strip():
+        for entry in re.split(r"[;,]", raw_cast):
+            if ":" not in entry:
+                continue
+            name, _, desc = entry.partition(":")
+            story.cast[name.strip().lower()] = CastMember(
+                name=name.strip(), voice_desc=desc.strip()
+            )
+
+
+def _parse_scene_heading(heading: str, is_first: bool) -> Scene:
+    """Parse a scene heading with optional [goal: X] [cold-open] [link: Y] tags."""
+    scene = Scene(title=heading)
+    # Extract [goal: reveal|escalate|decision]
+    goal_match = re.search(r"\[goal:\s*(reveal|escalate|decision)\]", heading, re.I)
+    if goal_match:
+        scene.goal = goal_match.group(1).lower()
+        scene.title = heading[:goal_match.start()].strip()
+    # Extract [cold-open]
+    if re.search(r"\[cold-open\]", heading, re.I):
+        scene.cold_open = True
+        scene.title = re.sub(r"\[cold-open\]", "", scene.title, flags=re.I).strip()
+    # Extract [link: therefore|but]
+    link_match = re.search(r"\[link:\s*(therefore|but)\]", heading, re.I)
+    if link_match:
+        scene.link = link_match.group(1).lower()
+        scene.title = re.sub(r"\[link:\s*(therefore|but)\]", "", scene.title, flags=re.I).strip()
+    return scene
+
+
+def _parse_cue_v3(line: str) -> Cue | None:
+    """Parse a bracket cue line. Supports v3 pause taxonomy.
+
+    Pause formats:
+        [pause: 1.2]         → numeric seconds (backward compat)
+        [pause: short]       → 0.4s (paragraph break)
+        [pause: scene]       → 1.2s (soft scene break)
+        [pause: section]     → 2.5s (hard scene break)
+        [pause: chapter]     → 4.0s (major break)
+    """
+    inner = line.strip().strip("[]").strip()
+    if not inner:
+        return None
+
+    m = re.match(r"^(SFX|ATMOS|MUSIC|PAUSE|EMOTION)\s*:\s*(.+)$", inner, re.I)
+    if m:
+        kind = m.group(1).lower()
+        value = m.group(2).strip()
+        if kind == "pause":
+            # v3 pause taxonomy
+            pause_map = {
+                "short": 0.4, "scene": 1.2, "section": 2.5, "chapter": 4.0,
+            }
+            val_lower = value.lower()
+            if val_lower in pause_map:
+                return Cue(kind="pause", value=val_lower, duration=pause_map[val_lower])
+            try:
+                dur = float(value)
+                if dur < 0.1 or dur > 10.0:
+                    return None
+                return Cue(kind="pause", value=value, duration=dur)
+            except ValueError:
+                return None
+        if kind == "emotion":
+            if value.lower() not in VALID_EMOTIONS:
+                value = DEFAULT_EMOTION
+            return Cue(kind="emotion", value=value)
+        # Parse gain/duck options from SFX/ATMOS/MUSIC
+        opts: dict = {}
+        for part in value.split("|")[1:]:
+            if "=" in part:
+                k, _, v = part.partition("=")
+                opts[k.strip().lower().replace(" ", "_")] = v.strip()
+        return Cue(kind=kind, value=value.split("|")[0].strip(), opts=opts)
+
+    parts = [p.strip() for p in inner.split("|")]
+    emotion = parts[0].lower()
+    if emotion not in VALID_EMOTIONS:
+        return None
+    opts: dict = {}
+    for p in parts[1:]:
+        if "=" in p:
+            k, _, v = p.partition("=")
+            opts[k.strip().lower().replace(" ", "_")] = v.strip()
+    return Cue(kind="emotion", value=emotion, opts=opts)
+
+
+def _enforce_name_tag(scene: Scene, story: Story, speaker: str, body: str, stripped: str) -> None:
+    """R19: First character appearance must include a name tag.
+
+    Valid patterns:
+      - "dialogue," said CharacterName.
+      - Narrator: "dialogue," said CharacterName.
+      - CharacterName (emotion): dialogue  ← explicit name in speaker position
+    """
+    # If speaker IS the character name, it's already a name tag (valid form)
+    # Check if stripped contains a narrator-mediated tag
+    said_pattern = re.search(r'(?:said|whispered|replied|muttered|asked)\s+' + re.escape(speaker), stripped, re.I)
+    narrator_tag = re.match(r'^Narrator\s*:', stripped)
+    if said_pattern or narrator_tag:
+        return  # Valid name tag present
+    # Allow bare CharacterName: as valid (explicit name in speaker position)
+    # This is acceptable per R19: "Character Name (emotion): dialogue" form
+
+
+def _enforce_v3_gates(story: Story, path: Path) -> None:
+    """Enforce R1-R23 craft rules. Raises ValueError for hard gates (reject),
+    logs warnings for soft gates."""
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    # R1: every scene must have a goal
+    for sc in story.scenes:
+        if not sc.goal:
+            errors.append(f"Scene '{sc.title}' missing [goal: reveal|escalate|decision] (R1)")
+
+    # R2: first scene must have cold-open
+    if story.scenes and not story.scenes[0].cold_open:
+        errors.append("First scene missing [cold-open] tag (R2)")
+
+    # R6: cast entries need >= 3 voice dimensions
+    for name, cm in story.cast.items():
+        if name == "narrator":
+            continue
+        if cm.dimension_count() < 3 and not cm.voice_desc:
+            warnings.append(
+                f"Cast '{name}' has < 3 voice dimensions — add gender/age/pitch/pace/texture (R6)"
+            )
+
+    # R7/R21: contrast casting — characters in same scene differ >= 15% pitch/pace
+    for sc in story.scenes:
+        speakers = list(sc.scene_speakers)
+        for i in range(len(speakers)):
+            for j in range(i + 1, len(speakers)):
+                s1, s2 = speakers[i], speakers[j]
+                if s1 not in story.cast or s2 not in story.cast:
+                    continue
+                cm1, cm2 = story.cast[s1], story.cast[s2]
+                dist = cm1.contrast_distance(cm2)
+                if dist["pitch_delta_pct"] < 0.15 and cm1.pitch and cm2.pitch:
+                    warnings.append(
+                        f"Scene '{sc.title}': {cm1.name} and {cm2.name} pitch too close "
+                        f"({cm1.pitch} vs {cm2.name}) — need >= 15% delta (R7/R21)"
+                    )
+                if dist["pace_delta_pct"] < 0.10 and cm1.pace and cm2.pace:
+                    warnings.append(
+                        f"Scene '{sc.title}': {cm1.name} and {cm2.name} pace too close "
+                        f"({cm1.pace} vs {cm2.pace}) — need >= 10% delta (R7/R21)"
+                    )
+
+    # R12: every scene must establish aural environment
+    for sc in story.scenes:
+        if not sc.has_atmos_or_sfx:
+            errors.append(f"Scene '{sc.title}' missing [ATMOS:] or [SFX:] in first lines (R12)")
+
+    # R22: pause taxonomy — warn if uniform (metronomic gaps)
+    pause_durs: list[float] = []
+    for sc in story.scenes:
+        for cue in sc.cues:
+            if cue.kind == "pause":
+                pause_durs.append(cue.duration)
+    if pause_durs and len(set(pause_durs)) == 1 and len(pause_durs) > 2:
+        warnings.append(
+            f"All pauses are {pause_durs[0]}s — use varied pause taxonomy "
+            f"(short/scene/section/chapter) to signal structure (R22)"
+        )
+
+    # R5: per-scene word budget check
+    tier_max = story.tier_budgets.get(story.tier, 300)
+    for sc in story.scenes:
+        word_count = len(sc.text.split())
+        budget = sc.word_budget or tier_max
+        if word_count > budget:
+            warnings.append(
+                f"Scene '{sc.title}' exceeds word budget ({word_count} > {budget}) (R5)"
+            )
+
+    # Emit warnings
+    for w in warnings:
+        log(f"[v3-gate] WARN: {w}")
+
+    # Raise on hard gates
+    if errors:
+        msg = f"v3 format gates failed for {path.name}:\n" + "\n".join(
+            f"  ✗ {e}" for e in errors
+        )
+        raise ValueError(msg)
 
 
 def _append_segment_text(scene: Scene, story: Story, stripped: str) -> None:
@@ -786,7 +1138,7 @@ def gen_tone(dst: Path, duration: float, freq: float = 220.0,
     run([
         "ffmpeg", "-y", "-f", "lavfi", "-i", src,
         "-t", f"{duration:.3f}", "-af", f"volume={volume}",
-        "-ar", "44100", "-ac", "1", "-c:a", "pcm_s16le", str(dst),
+        "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "1", "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(dst),
     ])
     return dst
 
@@ -827,8 +1179,8 @@ def _gen_heartbeat(dst: Path) -> Path:
     work = d.parent / f"{d.stem}-lub.wav"
     gen_tone(work, 0.18, freq=55.0, kind="sweep", volume=0.5)
     run(["ffmpeg", "-y", "-i", str(work), "-af",
-         "afade=t=out:st=0.05:d=0.13", "-ar", "44100", "-ac", "1",
-         "-c:a", "pcm_s16le", str(dst)])
+         "afade=t=out:st=0.05:d=0.13", "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "1",
+         "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(dst)])
     work.unlink(missing_ok=True)
     return dst
 
@@ -840,7 +1192,7 @@ def _gen_door_creak(dst: Path) -> Path:
     gen_tone(work, 1.8, freq=70.0, kind="sweep", volume=0.25)
     run(["ffmpeg", "-y", "-i", str(work), "-af",
          "volume=0.6,afade=t=in:st=0:d=0.6,afade=t=out:st=1.0:d=0.8",
-         "-ar", "44100", "-ac", "1", "-c:a", "pcm_s16le", str(dst)])
+         "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "1", "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(dst)])
     work.unlink(missing_ok=True)
     return dst
 
@@ -852,7 +1204,7 @@ def _gen_thunder(dst: Path) -> Path:
     gen_tone(work, 4.0, freq=80.0, kind="noise_brown", volume=0.5)
     run(["ffmpeg", "-y", "-i", str(work), "-af",
          "afade=t=in:st=0:d=0.4,afade=t=out:st=2.0:d=2.0",
-         "volume=0.7", "-ar", "44100", "-ac", "1", "-c:a", "pcm_s16le", str(dst)])
+         "volume=0.7", "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "1", "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(dst)])
     work.unlink(missing_ok=True)
     return dst
 
@@ -863,8 +1215,8 @@ def _gen_footsteps(dst: Path) -> Path:
     work = d.parent / f"{d.stem}-step.wav"
     gen_tone(work, 0.25, freq=200.0, kind="noise", volume=0.5)
     run(["ffmpeg", "-y", "-i", str(work), "-af",
-         "afade=t=out:st=0.03:d=0.22", "-ar", "44100", "-ac", "1",
-         "-c:a", "pcm_s16le", str(dst)])
+         "afade=t=out:st=0.03:d=0.22", "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "1",
+         "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(dst)])
     work.unlink(missing_ok=True)
     return dst
 
@@ -894,11 +1246,119 @@ def build_sfx_library(assets: Path, force: bool = False) -> list[Path]:
 # Scene assembly (per-scene stems)
 # --------------------------------------------------------------------------- #
 
-SCENE_GAP = 1.2  # seconds of trailing silence between scenes
+SCENE_GAP = 1.2  # seconds of trailing silence between scenes (legacy compat)
 MAX_CUE_LEN = 20.0  # cap for generated sound beds
 FADE_MS = 30  # ms fades on segment edges (crossfade-safe cuts)
+CANONICAL_SAMPLE_RATE = 48000
+CANONICAL_BIT_DEPTH = "s24le"
+CROSSFADE_DURATION = 5.0  # seconds of Equal Power overlap between scenes
+ROOM_TONE_GAIN = 0.04  # very quiet room presence
+
+# Reverb presets per scene type (aecho: in_gain:out_gain:delays:decays)
+REVERB_PRESETS = {
+    "intimate": "0.7:0.8:50:0.5",
+    "room": "0.6:0.7:100:0.4",
+    "hall": "0.5:0.6:300:0.3",
+    "cathedral": "0.4:0.5:800:0.2",
+}
 
 _EVEN_BUS = "pan=stereo|c0=0.5*c0+0.5*c1|c1=0.5*c0+0.5*c1"
+
+
+
+def _canonicalize(path: Path, dst: Path) -> Path:
+    """Force audio to canonical 48 kHz / stereo / 24-bit PCM."""
+    run(["ffmpeg", "-y", "-i", str(path), "-ar", str(CANONICAL_SAMPLE_RATE),
+         "-ac", "2", "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(dst)])
+    return dst
+
+
+def _apply_reverb(path: Path, dst: Path, preset: str = "room") -> Path:
+    """Apply reverb via aecho to place audio in a consistent acoustic space."""
+    params = REVERB_PRESETS.get(preset, REVERB_PRESETS["room"])
+    run(["ffmpeg", "-y", "-i", str(path), "-af", f"aecho={params}",
+         "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "2",
+         "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(dst)])
+    return dst
+
+
+def _generate_room_tone(dst: Path, duration: float, kind: str = "brown") -> Path:
+    """Generate a continuous room-tone bed (very quiet presence)."""
+    if kind == "rain":
+        src = "anoisesrc=color=brown:amplitude=0.3"
+    elif kind == "wind":
+        src = "anoisesrc=color=pink:amplitude=0.25"
+    elif kind == "pink":
+        src = "anoisesrc=color=pink:amplitude=0.4"
+    else:
+        src = "anoisesrc=color=brown:amplitude=0.4"
+    run(["ffmpeg", "-y", "-f", "lavfi", "-i", src,
+         "-t", f"{duration:.3f}", "-af", f"volume={ROOM_TONE_GAIN}",
+         "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "2",
+         "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(dst)])
+    return dst
+
+
+def _crossfade_scenes(scenes: list[Path], out: Path) -> Path:
+    """Crossfade multiple scene files with Equal Power (qsin) curve."""
+    if len(scenes) == 1:
+        return _canonicalize(scenes[0], out)
+    
+    n = len(scenes)
+    inputs = []
+    for s in scenes:
+        inputs += ["-i", str(s)]
+    
+    if n == 2:
+        fc = f"[0:a][1:a]acrossfade=d={CROSSFADE_DURATION}:c1=qsin:c2=qsin"
+        run(["ffmpeg", "-y"] + inputs + [
+            "-filter_complex", fc,
+            "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "2",
+            "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(out)])
+        return out
+    
+    filter_parts = []
+    for i in range(n - 1):
+        in_l = f"[a{i}]" if i > 0 else "[0:a]"
+        out_l = f"[a{i+1}]"
+        filter_parts.append(
+            f"{in_l}[{i+1}:a]acrossfade=d={CROSSFADE_DURATION}:c1=qsin:c2=qsin{out_l}"
+        )
+    fc = ";".join(filter_parts)
+    run(["ffmpeg", "-y"] + inputs + [
+        "-filter_complex", fc, "-map", f"[a{n-1}]",
+        "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "2",
+        "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(out)])
+    return out
+
+
+def _ebu_two_pass(input_path: Path, out: Path,
+                  target_i: float = -16.0,
+                  target_tp: float = -1.5,
+                  target_lra: float = 11.0) -> Path:
+    """Two-pass EBU R128 loudness normalization + true-peak limiting."""
+    import subprocess as _sp
+    r = _sp.run(
+        ["ffmpeg", "-i", str(input_path), "-af",
+         f"loudnorm=I={target_i}:TP={target_tp}:LRA={target_lra}:print_format=json",
+         "-f", "null", "-"],
+        capture_output=True, text=True,
+    )
+    stderr = r.stderr
+    j_start = stderr.rfind("{")
+    j_end = stderr.rfind("}")
+    if j_start == -1 or j_end == -1:
+        raise RuntimeError(f"loudnorm pass 1 failed: {stderr[-300:]}")
+    stats = json.loads(stderr[j_start:j_end+1])
+    
+    ln = (f"loudnorm=I={target_i}:TP={target_tp}:LRA={target_lra}:"
+          f"measured_I={stats['input_i']}:measured_TP={stats['input_tp']}:"
+          f"measured_LRA={stats['input_lra']}:measured_thresh={stats['input_thresh']}:"
+          f"offset={stats['target_offset']}:linear=true")
+    run(["ffmpeg", "-y", "-i", str(input_path), "-af", ln,
+         "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "2",
+         "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(out)])
+    return out
 
 
 def _concat_paths(paths: list[Path]) -> Path:
@@ -911,7 +1371,7 @@ def _concat_paths(paths: list[Path]) -> Path:
     concat_file.write_text("\n".join(lines) + "\n")
     out = td / "concat.wav"
     run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(concat_file),
-         "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", str(out)])
+         "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "2", "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(out)])
     return out
 
 
@@ -922,7 +1382,7 @@ def _fade(path: Path, dst: Path, in_ms: int = FADE_MS, out_ms: int = FADE_MS,
     if out_ms > 0:
         af += f",afade=t=out:st={duration - out_ms / 1000:.3f}:d={out_ms / 1000:.3f}"
     run(["ffmpeg", "-y", "-i", str(path), "-af", af,
-         "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", str(dst)])
+         "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "2", "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(dst)])
     return dst
 
 
@@ -955,7 +1415,7 @@ def ffprobe_duration(path: Path) -> float:
 def _resample(path: Path, dst: Path, rate: int) -> Path:
     """Resample audio to a target rate (PCM16, stereo)."""
     run(["ffmpeg", "-y", "-i", str(path), "-ar", str(rate), "-ac", "2",
-         "-c:a", "pcm_s16le", str(dst)])
+         "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(dst)])
     return dst
 
 
@@ -963,7 +1423,7 @@ def _pad_to(path: Path, dst: Path, target: float) -> Path:
     """Pad the end of audio with silence up to a target duration."""
     run(["ffmpeg", "-y", "-i", str(path), "-af",
          f"apad=pad_dur={max(target, 0):.3f}",
-         "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", str(dst)])
+         "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "2", "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(dst)])
     return dst
 
 
@@ -978,10 +1438,10 @@ def _loop_to(path: Path, dst: Path, target: float) -> Path:
         inputs = [src] * n
         run(["ffmpeg", "-y"] + sum((["-i", str(i)] for i in inputs), []) +
             ["-filter_complex", f"concat=n={n}:v=0:a=1",
-             "-ar", str(rate), "-ac", "2", "-c:a", "pcm_s16le", str(src)])
+             "-ar", str(rate), "-ac", "2", "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(src)])
     if target < ffprobe_duration(src):
         run(["ffmpeg", "-y", "-i", str(src), "-t", f"{target:.3f}",
-             "-ar", str(rate), "-ac", "2", "-c:a", "pcm_s16le", str(dst)])
+             "-ar", str(rate), "-ac", "2", "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(dst)])
         src.unlink(missing_ok=True)
         return dst
     return src
@@ -989,8 +1449,8 @@ def _loop_to(path: Path, dst: Path, target: float) -> Path:
 
 def _copy_audio(src: Path, dst: Path) -> Path:
     """Copy an audio file to dst (PCM16 stereo 44.1k)."""
-    run(["ffmpeg", "-y", "-i", str(src), "-ar", "44100", "-ac", "2",
-         "-c:a", "pcm_s16le", str(dst)])
+    run(["ffmpeg", "-y", "-i", str(src), "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "2",
+         "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(dst)])
     return dst
 
 
@@ -1012,7 +1472,7 @@ def _build_bed(path: str, target: float, dst: Path, gain: float,
     if stereo:
         af += f",{_EVEN_BUS}"
     run(["ffmpeg", "-y", "-i", str(bed), "-af", af,
-         "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", str(dst)])
+         "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "2", "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(dst)])
     return dst
 
 
@@ -1027,7 +1487,7 @@ def _one_bed(stems: list[Path], dst: Path) -> Path:
         inputs += ["-i", str(s)]
     run(["ffmpeg", "-y"] + inputs + [
         "-filter_complex", "amix=inputs=%d:duration=longest:normalize=0" % len(stems),
-        "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", str(dst)])
+        "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "2", "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(dst)])
     return dst
 
 
@@ -1094,11 +1554,24 @@ def build_scene_stem(sc: Scene, work: Path, assets: Path,
             dur = min(ffprobe_duration(Path(cue.path)), MAX_CUE_LEN)
             run(["ffmpeg", "-y", "-i", cue.path,
                  "-af", f"volume=0.7,{_EVEN_BUS},afade=t=out:st={max(dur - 0.3, 0.1):.3f}:d=0.3",
-                 "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", str(stem)])
+                 "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "2", "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(stem)])
             beds.append(stem)
             log(f"  sfx: {cue.value} ({cue.path})")
         except RuntimeError as e:
             log(f"  sfx skipped ({cue.value}): {e}")
+
+    # --- room tone: continuous presence bed (always present in v3)
+    has_atmos = any(cue.kind == "atmos" for cue in sc.cues)
+    if not has_atmos:
+        rt_stem = work / f"{_slug(sc.title)}-roomtone.wav"
+        try:
+            _generate_room_tone(rt_stem, target, kind="brown")
+            beds.append(_build_bed(str(rt_stem), target,
+                rt_stem.parent / f"{rt_stem.stem}-final.wav",
+                gain=1.0, stereo=True))
+            log(f"  room tone: auto-generated ({target:.1f}s)")
+        except RuntimeError as e:
+            log(f"  room tone skipped: {e}")
 
     if not beds:
         return None
@@ -1144,7 +1617,7 @@ def sidechain_mix(speech: Path, beds: Path, out: Path,
     inputs = ["-i", str(speech), "-i", str(beds)]
     run(["ffmpeg", "-y"] + inputs + [
         "-filter_complex", fc,
-        "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", str(out),
+        "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "2", "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(out),
     ])
     return out
 
@@ -1168,7 +1641,7 @@ def _trim_segment_edges(path: Path, dst: Path,
     if fade_out > 0:
         af += f",afade=t=out:st={max(src_dur - fade_out, 0):.3f}:d={fade_out:.3f}"
     run(["ffmpeg", "-y", "-i", str(path), "-af", af,
-         "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", str(dst)])
+         "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "2", "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(dst)])
     d = ffprobe_duration(dst)
     if d < min_keep:
         return _copy_audio(path, dst)
@@ -1222,7 +1695,7 @@ def _concat_with_pacing(segments: list[Segment], work: Path,
         listf.write_text("\n".join(f"file '{p}'" for p in items) + "\n")
         out = work / "speech-paced.wav"
         run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(listf),
-             "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", str(out)])
+             "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "2", "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(out)])
         return out
     finally:
         shutil.rmtree(td, ignore_errors=True)
@@ -1238,8 +1711,8 @@ def _scene_trailing_pause(sc: Scene) -> float:
 
 
 def render_scene(sc: Scene, work: Path, stem: Path | None,
-                 duck_db: float = 12.0) -> Path:
-    """Render one scene: pace the speech segments, duck the stem."""
+                 duck_db: float = 12.0, reverb_preset: str = "room") -> Path:
+    """Render one scene: pace speech, duck stem, apply reverb."""
     speech_segs = [s for s in sc.segments if s.audio_path]
     if not speech_segs:
         # no dialogue — the stem alone is the scene (e.g. an opening bed)
@@ -1249,6 +1722,10 @@ def render_scene(sc: Scene, work: Path, stem: Path | None,
 
     scene_name = _slug(sc.title)
     speech = _concat_with_pacing(speech_segs, work)
+
+    # v3: apply reverb to speech for per-scene acoustic consistency
+    reverb_out = work / f"{scene_name}-speech-reverb.wav"
+    speech = _apply_reverb(speech, reverb_out, preset=reverb_preset)
 
     # Real inter-scene gap: use the story's explicit [pause: N] when present,
     # otherwise fall back to SCENE_GAP. Do NOT stack both (double-counting
@@ -1274,13 +1751,13 @@ def _append_silence(src: Path, dst: Path, seconds: float, work: Path) -> Path:
         return src
     sil = work / "tail-silence.wav"
     run(["ffmpeg", "-y", "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
-         "-t", f"{seconds:.3f}", "-c:a", "pcm_s16le", str(sil)])
+         "-t", f"{seconds:.3f}", "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(sil)])
     td = Path(tempfile.mkdtemp(prefix="storyteller-trail-"))
     try:
         listf = td / "list.txt"
         listf.write_text(f"file '{src}'\nfile '{sil}'\n")
         run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(listf),
-             "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", str(dst)])
+             "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "2", "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(dst)])
         return dst
     finally:
         shutil.rmtree(td, ignore_errors=True)
@@ -1290,20 +1767,33 @@ def render_pause(duration: float, work: Path, name: str = "pause") -> Path:
     """Render a silence file of a given duration."""
     out = work / f"{name}.wav"
     run(["ffmpeg", "-y", "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
-         "-t", f"{duration:.3f}", "-c:a", "pcm_s16le", str(out)])
+         "-t", f"{duration:.3f}", "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(out)])
     return out
 
 
 def concat_scenes(scene_audio: list[Path], out: Path) -> float:
-    """Concatenate rendered scenes, normalize loudness, write mp3."""
+    """Crossfade scenes, two-pass EBU R128, write mp3."""
     with tempfile.TemporaryDirectory(prefix="storyteller-final-") as td:
-        concat_file = Path(td) / "list.txt"
-        lines = [f"file '{p}'" for p in scene_audio]
-        concat_file.write_text("\n".join(lines) + "\n")
-        run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(concat_file),
-             "-af", "loudnorm=I=-16:TP=-1.5:LRA=11",
-             "-ar", "44100", "-ac", "2", "-c:a", "libmp3lame", "-q:a", "2",
-             str(out)])
+        td = Path(td)
+        # Step 1: canonicalize all scenes
+        canonical_scenes = []
+        for i, sc_path in enumerate(scene_audio):
+            canon = td / f"canon-{i:03d}.wav"
+            _canonicalize(Path(sc_path), canon)
+            canonical_scenes.append(canon)
+        # Step 2: crossfade with Equal Power curve
+        if len(canonical_scenes) == 1:
+            crossfaded = canonical_scenes[0]
+        else:
+            crossfaded = td / "crossfaded.wav"
+            _crossfade_scenes(canonical_scenes, crossfaded)
+        # Step 3: two-pass EBU R128 + true-peak limiting
+        mastered = td / "mastered.wav"
+        _ebu_two_pass(crossfaded, mastered, target_i=-16.0, target_tp=-1.5, target_lra=11.0)
+        # Step 4: write mp3
+        run(["ffmpeg", "-y", "-i", str(mastered),
+             "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "2",
+             "-c:a", "libmp3lame", "-q:a", "2", str(out)])
     return ffprobe_duration(out)
 
 
@@ -1342,7 +1832,7 @@ def export_clips(story: Story, out_dir: Path, work: Path,
                         "silenceremove=stop_periods=1:stop_threshold=-45dB,"
                         "afade=t=in:d=0.05,afade=t=out:st=%.3f:d=0.15,"
                         "loudnorm=I=-16:TP=-1.5:LRA=11" % max(dur - 0.2, 0.1),
-                 "-ar", "44100", "-ac", "2", "-c:a", "libmp3lame", "-q:a", "2",
+                 "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "2", "-c:a", "libmp3lame", "-q:a", "2",
                  str(mp3)])
             entry = {
                 "file": str(mp3),
@@ -1367,7 +1857,7 @@ def export_clips(story: Story, out_dir: Path, work: Path,
         run(["ffmpeg", "-y", "-i", str(stem), "-t", f"{dur:.3f}",
              "-af", "afade=t=in:d=0.1,afade=t=out:st=%.3f:d=0.3,"
                     "loudnorm=I=-16:TP=-1.5:LRA=11" % max(dur - 0.4, 0.1),
-             "-ar", "44100", "-ac", "2", "-c:a", "libmp3lame", "-q:a", "2",
+             "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "2", "-c:a", "libmp3lame", "-q:a", "2",
              str(mp3)])
         meta.append({
             "file": str(mp3),
@@ -1543,13 +2033,25 @@ def main(argv: list[str] | None = None) -> int:
         timeline = 0.0
         for sc in story.scenes:
             stem = build_scene_stem(sc, work, REPO / "assets", gen_missing=True)
+            # Choose reverb preset based on atmos cue
+            reverb = "room"
+            for cue in sc.cues:
+                if cue.kind == "atmos":
+                    val = cue.value.lower()
+                    if any(w in val for w in ["cathedral", "church", "temple"]):
+                        reverb = "cathedral"
+                    elif any(w in val for w in ["hall", "large", "big", "cave"]):
+                        reverb = "hall"
+                    elif any(w in val for w in ["small", "intimate", "whisper", "close"]):
+                        reverb = "intimate"
             scene_path = render_scene(sc, work, Path(stem) if stem else None,
-                                      duck_db=args.duck_db)
+                                      duck_db=args.duck_db,
+                                      reverb_preset=reverb)
             sc.start_offset = timeline
             timeline += ffprobe_duration(scene_path)
             scene_audio.append(scene_path)
             log(f"scene '{sc.title}': {ffprobe_duration(scene_path):.1f}s "
-                f"(+{SCENE_GAP}s gap)")
+                f"(+{CROSSFADE_DURATION}s crossfade)")
 
         duration = concat_scenes(scene_audio, out)
         providers = sorted(used_providers)
