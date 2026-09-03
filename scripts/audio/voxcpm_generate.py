@@ -9,16 +9,34 @@ Usage:
                         [--voice-desc "(A young woman, gentle voice)"]
 """
 import argparse
+import os
 import sys
 from pathlib import Path
 
 # ═══════════════════════════════════════════════════════════════════════════
-# HARD RULE (j_kro 2026-09-03): VoxCPM MUST run on GPU. NEVER CPU.
-# torch device order: cuda:0 = RTX 3090 (25GB, AI), cuda:1 = RTX 3060 Ti (miner).
-# Pin to the 3090. CPU fallback is DISABLED — CPU TTS blew up 11GB of RAM.
+# HARD RULE (j_kro 2026-09-03): VoxCPM MUST run on the 3090. NEVER CPU.
+# FIX THE ORDERING (j_kro ALL CAPS): index-based pins are UNRELIABLE — CUDA's
+# default enumeration (fastest-first) differs from nvidia-smi (PCI order), so
+# CUDA_VISIBLE_DEVICES=0 meant the MINER (3060 Ti) in a restricted env → renders
+# hit the busy miner → CPU fallback → 24GB RAM blowups.
+# FIX: force PCI_BUS_ID order (matches nvidia-smi) + select the 3090 BY NAME.
 # ═══════════════════════════════════════════════════════════════════════════
-import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # 0 = the 3090 in torch's ordering
+import subprocess
+import re
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+_3090_IDX = None
+try:
+    _smi = subprocess.run(
+        ["nvidia-smi", "--query-gpu=index,name", "--format=csv,noheader"],
+        capture_output=True, text=True, timeout=10).stdout
+    for _line in _smi.strip().splitlines():
+        _i, _name = [p.strip() for p in _line.split(",")]
+        if "3090" in _name:
+            _3090_IDX = _i
+            break
+except Exception:
+    pass
+os.environ["CUDA_VISIBLE_DEVICES"] = _3090_IDX or "0"  # nvidia-smi idx of the 3090 (PCI order = nvidia-smi order)
 os.environ["VLLM_USE_DEVICE"] = "cuda"
 os.environ["TORCH_DEVICE"] = "cuda"
 # ─────────────────────────────────────────────────────────────────────────────
@@ -54,7 +72,11 @@ def main() -> None:
     # the Python path (F16 weights); q8/q4 are served by VoxCPM.cpp later.
     model_id = "openbmb/VoxCPM2"
     print(f"loading {model_id} (quality={args.quality})...", file=sys.stderr)
-    model = VoxCPM.from_pretrained(model_id, load_denoiser=False)
+    # optimize=False is MANDATORY (OpenBMB upstream, issues #107/#125/#269):
+    # torch.compile + CUDA graphs break under multi-process/multi-thread load on
+    # the same GPU → CPU fallback → 24GB RAM blowups (seen repeatedly 2026-09-03).
+    # Upstream: "same performance on 3090 with or without torch.compile".
+    model = VoxCPM.from_pretrained(model_id, load_denoiser=False, optimize=False)
 
     text = args.text
     if args.voice_desc:
