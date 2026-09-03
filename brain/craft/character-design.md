@@ -7,7 +7,22 @@
 
 Every character gets ONE canonical sheet at `brain/craft/characters/<name>/README.md`.
 
-### YAML Template
+### Required Fields
+
+| Field | Purpose | Example |
+|-------|---------|---------|
+| `name` | Canonical identifier | Mara Voss |
+| `role` | Narrative function | protagonist / antagonist / supporting |
+| `archetype` | 2-3 word shorthand | weary commander |
+| `want` | External goal (drives plot) | Keep the station running |
+| `need` | Internal truth (drives arc) | Let go of control |
+| `flaw` | Limiting belief (creates conflict) | Cannot delegate without suspicion |
+| `voice_params` | Reusable voice config (§3) | base_desc, pitch, rate, timbre, emotion_presets |
+| `visual_signature` | Reusable visual anchors (§2) | key_anchor, color_palette, clothing |
+| `backstory_lite` | 3-5 bullets — only what affects behavior | — |
+| `relationships` | Map + tone per other character | — |
+
+### YAML Template (reusable)
 
 ```yaml
 character:
@@ -45,15 +60,6 @@ character:
     - { to: "Elias", type: "mentor", tone: "warm but distant" }
     - { to: "The Station", type: "antagonist", tone: "adversarial" }
 ```
-
-| Field | Purpose |
-|-------|---------|
-| `role/archetype` | Narrative function + shorthand |
-| `want/need/flaw` | Drives plot, arc, conflict |
-| `voice_params` | Reusable voice config (§3) |
-| `visual_signature` | Reusable visual anchors (§2) |
-| `backstory_lite` | 3-5 bullets — only what affects behavior |
-| `relationships` | Map + tone per other character |
 
 ---
 
@@ -121,26 +127,9 @@ Map Big-5 axes to dialogue patterns:
 | **Agreeableness** | Softens disagreement, asks permission | Direct, challenges, interrupts |
 | **Neuroticism** | Repeats worries, self-doubt | Steady, unbothered, dismissive |
 
-### Example Profile
+### Catchphrase Discipline
 
-```yaml
-personality:
-  openness: 0.7
-  conscientiousness: 0.9
-  extraversion: 0.3
-  agreeableness: 0.4
-  neuroticism: 0.5
-decision_tendencies:
-  under_stress: "retreats to technical analysis, avoids emotional talk"
-  when_challenged: "goes quiet, then delivers a precise counter"
-  when_trusting: "speaks more, uses first names, softer tone"
-catchphrases:
-  - "That's not how this works."   # max 1x per episode
-  - "I've seen this before."       # max 1x per episode
-  - "Run it again."                # max 1x per episode
-```
-
-**Catchphrase discipline**: Max ONE use per episode per character. Never consecutive episodes.
+Max ONE use per episode per character. Never consecutive episodes. Overuse kills distinctiveness.
 
 ---
 
@@ -151,15 +140,6 @@ catchphrases:
 | Short video (1-3 min) | Micro-arc | 1 emotional shift | Single scene |
 | Long video (5-15 min) | Mini-arc | 2-3 beats | One narrative turn |
 | Audio drama (episodic) | Full arc | 5+ beats | Season-long |
-
-### Micro-Arc (Short Video)
-
-```
-Setup → Tension → Shift
-Character   Want    Realization
-in status   blocked or reversal
-quo
-```
 
 ### Full Arc Tracking (Audio Drama)
 
@@ -207,10 +187,6 @@ brain/craft/
 - Added `defiant` emotion preset to voice.yaml
 - Updated arc beat 3: failure cause changed from "sabotage" to "micromanaging"
 - Reason: Sabotage contradicted Elias's loyalty established in ep 2
-
-## 2026-09-01 — j_kro (MAJOR)
-- Initial character creation
-- Trained LoRA on 34 reference images
 ```
 
 ### Versioning
