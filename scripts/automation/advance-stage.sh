@@ -36,6 +36,21 @@ run_gate() {
     voice)     [ -x "$GATES/gate_voice.py" ]     && python3 "$GATES/gate_voice.py" "$camp"
                [ -x "$GATES/gate_loudness.py" ]  && python3 "$GATES/gate_loudness.py" "$camp" ;;
     visuals)   [ -x "$GATES/gate_visuals.py" ]   && python3 "$GATES/gate_visuals.py" "$camp" ;;
+    analyze)   [ -x "$GATES/gate_analyze.py" ]   && python3 "$GATES/gate_analyze.py" "$camp" ;;
+    review)    # Review gate: determine which producing stage's artifact is being reviewed
+               local review_stage=""
+               for rs in script visuals voice thumbnail seo angle research; do
+                 if [ -f "$camp/review/${rs}.review.json" ]; then
+                   review_stage="$rs"
+                   break
+                 fi
+               done
+               if [ -n "$review_stage" ]; then
+                 [ -x "$GATES/gate_review.py" ] && python3 "$GATES/gate_review.py" "$camp" "$review_stage"
+               else
+                 echo "gate: no review artifact found in $camp/review/"
+                 return 1
+               fi ;;
     *)         echo "gate: no mechanical gate for stage '$stage' (pass-through)" ;;
   esac
 }
