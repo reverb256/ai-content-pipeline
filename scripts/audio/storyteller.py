@@ -2278,6 +2278,20 @@ def main(argv: list[str] | None = None) -> int:
                         help="spatial reverb preset (default room; 'none' disables)")
     args = parser.parse_args(argv)
 
+    # ── LANE LOCK (j_kro 2026-09-03) ──────────────────────────────────────
+    # Only ONE storyteller/voxcpm render may run at a time across ALL profiles.
+    # storyteller + voicebot both fired renders → 11GB×2 RAM → OOM (2026-09-03).
+    import fcntl
+    _lane_fd = open("/tmp/gpu-lanes/voxcpm-render.lock", "a+")
+    try:
+        fcntl.flock(_lane_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        log("FATAL: voxcpm-render lane is BUSY — another storyteller.py render is running. "
+            "Two voxcpm renders at once blow up RAM (j_kro rule 2026-09-03). "
+            "Wait for the other render to finish, then re-run.")
+        return 3
+    log("lane-lock: acquired voxcpm-render (exclusive)")
+
     check_ffmpeg()
 
     # SFX library builder mode: write default sounds and exit
