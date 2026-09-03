@@ -171,11 +171,11 @@ ffmpeg -i out.mp4 -vf "select='eq(n,0)+eq(n,125)'" -vsync vfr \
 
 # 2) Blackdetect: reject if >5% near-black
 ffmpeg -i out.mp4 -vf blackdetect=d=0.1:pix_th=0.00 -f null - 2>&1 | \
-  grep -c black_duration | awk '{print ($1>0)?"FLAG black segments":"PASS"}'
+  grep -c black_duration | awk '{print ($1>0)?"FLAG black":"PASS"}'
 
 # 3) Freezedetect: reject if any freeze > 2s
 ffmpeg -i out.mp4 -vf freezedetect=n=-60dB:d=2 -f null - 2>&1 | \
-  grep -c freeze | awk '{print ($1>0)?"FAIL frozen segment":"PASS"}'
+  grep -c freeze | awk '{print ($1>0)?"FAIL frozen":"PASS"}'
 
 # 4) Resolution gate: reject < 1280x720
 ffprobe -v error -select_streams v:0 -show_entries stream=width,height \
@@ -194,14 +194,14 @@ ffmpeg -i out.mp4 -vf "select='gt(scene,0.35)',showinfo" -f null - 2>&1 | \
 ## 8. AI-Gen Specific — FLUX / ComfyUI video
 
 ### Model capabilities
-| Capability | FLUX (image) | Video models (Wan, Hunyuan) |
-|------------|-------------|----------------------------|
+| Capability | FLUX | Video (Wan, Hunyuan) |
+|------------|------|----------------------|
 | Texture/material | Excellent | Good |
-| Lighting/mood | Excellent | Good (explicit prompt needed) |
-| Composition | Good | Moderate (needs negatives) |
-| Hands/faces | Moderate (risk zone) | Poor-moderate (flag for review) |
-| Temporal consistency | N/A | Moderate (loop/seam artifacts) |
-| Camera movement | N/A | Good if prompt specifies |
+| Lighting/mood | Excellent | Good |
+| Composition | Good | Moderate |
+| Hands/faces | Moderate | Poor-moderate (flag) |
+| Temporal consistency | N/A | Moderate |
+| Camera movement | N/A | Good if prompted |
 
 ### Prompt structure (deterministic)
 ```
@@ -212,7 +212,7 @@ ffmpeg -i out.mp4 -vf "select='gt(scene,0.35)',showinfo" -f null - 2>&1 | \
 
 ### Seed discipline
 - **Lock seed** for same composition across variations.
-- **Seed sweep**: run N..N+10 identical prompts. Pick best frame; that seed = master.
+- **Seed sweep**: run N..N+10 identical prompts. Pick best; that seed = master.
 - **Document**: log seed per frame in `campaigns/<name>/video/seed_manifest.json`.
 - **Model version pinning**: log exact model hash. Different revision = different output.
 
@@ -254,11 +254,7 @@ ffmpeg -i out.mp4 -vf "select='gt(scene,0.35)',showinfo" -f null - 2>&1 | \
 
 ---
 
-## 10. Sources
-- brain/QUALITY_DOCTRINE.md — anti-slideshow rule, retention data
-- brain/stage-specs/visuals.md — videobot contract, 45-word beat constant
-- brain/stage-specs/script.md — visual notes per section
-- github.com/NesDevr/video-factory — per-slot pacing, scored review gates
-- github.com/Saganaki22/ContentMachine — scene planning, model-aware pacing
-- ffmpeg.org/ffmpeg-filters.html — blackdetect, freezedetect, select, scene
-- xe.com/colors — color wheel / palette construction
+Sources: brain/QUALITY_DOCTRINE.md, brain/stage-specs/visuals.md,
+brain/stage-specs/script.md, github.com/NesDevr/video-factory,
+github.com/Saganaki22/ContentMachine, ffmpeg.org/ffmpeg-filters.html,
+xe.com/colors
