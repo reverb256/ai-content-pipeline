@@ -1104,8 +1104,18 @@ def _resolve_sound(assets: Path, kind: str, value: str) -> str:
     """Return the path to a sound asset, or '' when the library misses.
 
     Looks in assets/<kind>/<name>.wav and assets/<kind>/<name>.mp3. The
-    generator (--gen-sfx) writes the same location.
+    generator (--gen-sfx) writes the same location. Atmos uses the fuzzy
+    resolver (room_tone_resolver) so [ATMOS: rain on tin roof] finds
+    assets/atmos/rain-on-window.wav.
     """
+    if kind == "atmos":
+        try:
+            from tools.room_tone_resolver import resolve_atmos  # type: ignore
+            hit = resolve_atmos(value, assets / "atmos")
+            if hit:
+                return hit
+        except ImportError:
+            pass  # fall through to exact match
     stem = _sfx_name(value) if kind == "sfx" else _slug(value)
     for ext in (".wav", ".mp3", ".flac", ".ogg"):
         p = assets / kind / f"{stem}{ext}"
@@ -1213,8 +1223,8 @@ def _gen_thunder(dst: Path) -> Path:
     work = d.parent / f"{d.stem}-rumble.wav"
     gen_tone(work, 4.0, freq=80.0, kind="noise_brown", volume=0.5)
     run(["ffmpeg", "-y", "-i", str(work), "-af",
-         "afade=t=in:st=0:d=0.4,afade=t=out:st=2.0:d=2.0",
-         "volume=0.7", "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "1", "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(dst)])
+         "afade=t=in:st=0:d=0.4,afade=t=out:st=2.0:d=2.0,volume=0.7",
+         "-ar", str(CANONICAL_SAMPLE_RATE), "-ac", "1", "-c:a", f"pcm_{CANONICAL_BIT_DEPTH}", str(dst)])
     work.unlink(missing_ok=True)
     return dst
 
@@ -1658,15 +1668,36 @@ def build_scene_stem(sc: Scene, work: Path, assets: Path,
             log(f"  sfx skipped ({cue.value}): {e}")
 
     # --- room tone: continuous presence bed (always present in v3)
+    # When a scene has no explicit atmos cue, use a real room-tone bed from
+    # the library if one exists (assets/atmos/roomtone-*.wav); only fall back
+    # to generated brown noise when the library is empty. Also covers scenes
+    # whose declared atmos resolves to nothing (unknown cue value) — a bed of
+    # silence is worse than a neutral room tone.
     has_atmos = any(cue.kind == "atmos" for cue in sc.cues)
-    if not has_atmos:
+    resolved_atmos = bool(atmoses)
+    if (not has_atmos) or (has_atmos and not resolved_atmos):
         rt_stem = work / f"{_slug(sc.title)}-roomtone.wav"
+        reason = "no atmos cue" if not has_atmos else "declared atmos unresolved"
         try:
-            _generate_room_tone(rt_stem, target, kind="brown")
-            beds.append(_build_bed(str(rt_stem), target,
-                rt_stem.parent / f"{rt_stem.stem}-final.wav",
-                gain=1.0, stereo=True))
-            log(f"  room tone: auto-generated ({target:.1f}s)")
+            default_rt = ""
+            try:
+                from tools.room_tone_resolver import default_atmos_path  # type: ignore
+                default_rt = default_atmos_path(assets / "atmos")
+            except ImportError:
+                pass
+            if default_rt:
+                beds.append(_build_bed(
+                    default_rt, target,
+                    rt_stem.parent / f"{rt_stem.stem}-final.wav",
+                    gain=1.0, lowpass=4000, stereo=True,
+                ))
+                log(f"  room tone: {Path(default_rt).name} ({target:.1f}s; {reason})")
+            else:
+                _generate_room_tone(rt_stem, target, kind="brown")
+                beds.append(_build_bed(str(rt_stem), target,
+                    rt_stem.parent / f"{rt_stem.stem}-final.wav",
+                    gain=1.0, stereo=True))
+                log(f"  room tone: auto-generated ({target:.1f}s)" + (f"; {reason}" if has_atmos and not resolved_atmos else ""))
         except RuntimeError as e:
             log(f"  room tone skipped: {e}")
 
@@ -2235,6 +2266,9 @@ def main(argv: list[str] | None = None) -> int:
                              "Writes stems-index.json with file paths, durations, "
                              "and kinds. Editors can re-mix or drop voice-stem.wav "
                              "onto a video timeline without rebuilding the bed.")
+    parser.add_argument("--reverb-preset", default="room",
+                        choices=["intimate", "room", "hall", "cathedral", "none"],
+                        help="spatial reverb preset (default room; 'none' disables)")
     args = parser.parse_args(argv)
 
     check_ffmpeg()
@@ -2299,6 +2333,8 @@ def main(argv: list[str] | None = None) -> int:
 
         seg_audio: list[Path] = []
         used_providers: set[str] = set()
+        # R12: treat a bare "none" preset as reverb-disabled
+        reverb_preset = None if args.reverb_preset == "none" else args.reverb_preset
         for i, seg in enumerate(story.segments, start=1):
             raw = work / f"seg-{i:02d}-raw.mp3"
             voice = seg.voice or story.voice
@@ -2361,10 +2397,10 @@ def main(argv: list[str] | None = None) -> int:
         for sc in story.scenes:
             # Default reverb before atmos-based selection so
             # build_scene_stem gets a valid preset on the first call.
-            reverb = "room"
+            reverb = reverb_preset or "room"
             stem = build_scene_stem(sc, work, REPO / "assets",
                                         gen_missing=True,
-                                        reverb_preset=reverb)
+                                        reverb_preset=reverb_preset or "room")
             # Override preset based on atmos cue for per-scene
             # acoustic consistency (§1.5).
             for cue in sc.cues:
@@ -2378,7 +2414,7 @@ def main(argv: list[str] | None = None) -> int:
                         reverb = "intimate"
             scene_path = render_scene(sc, work, Path(stem) if stem else None,
                                       duck_db=args.duck_db,
-                                      reverb_preset=reverb)
+                                      reverb_preset=(reverb or "room"))
             sc.start_offset = timeline
             timeline += ffprobe_duration(scene_path)
             scene_audio.append(scene_path)
