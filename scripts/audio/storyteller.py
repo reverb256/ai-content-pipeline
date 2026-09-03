@@ -969,7 +969,7 @@ _EMOTION_VOICE_DESC = {
 
 def voxcpm_tts(text: str, out: Path, voice_desc: str = "",
                quality: str = VOXCPM_QUALITY, timeout: float = 300.0,
-               emotion: str = "") -> Path:
+               emotion: str = "", gpu: str = "") -> Path:
     """Synthesize via local VoxCPM (self-hosted, no API key, emotive).
 
     quality: f16 = full precision (best), q8 = Q8_0 (near-lossless),
@@ -977,9 +977,30 @@ def voxcpm_tts(text: str, out: Path, voice_desc: str = "",
     emotion: per-line emotion ('angry', 'fearful', ...). When present, the
              CFG scale is raised (2.8) so the Voice Design description is
              followed more strongly — emotion words must land in delivery.
+    gpu: fleet target "host:gpu_idx" (e.g. "forge:0") — dispatches through
+         fleet-vox.sh (pauses that host's miner, renders remotely, resumes).
+         Empty = local zephyr 3090 (CUDA_VISIBLE_DEVICES=0).
     Uses a small wrapper script that calls the voxcpm Python API; the model
     loads once and stays cached per process. Raises RuntimeError on failure.
     """
+    # ── FLEET GPU ROUTING (j_kro 2026-09-03, miner-pause AUTHORIZED) ──────
+    if gpu:
+        base = Path(__file__).resolve().parent
+        fleet = base / "fleet-vox.sh"
+        if not fleet.exists():
+            raise RuntimeError(f"fleet-vox.sh missing: {fleet}")
+        host, _, idx = gpu.partition(":")
+        cmd = ["bash", str(fleet), "--host", host, "--gpu", idx or "0",
+               "--text", text, "--out", str(out), "--quality", quality]
+        if voice_desc:
+            cmd += ["--voice-desc", voice_desc]
+        log(f"FLEET-GPU: voxcpm_tts → {host} GPU {idx or '0'} via fleet-vox.sh")
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        if proc.returncode != 0:
+            raise RuntimeError(f"fleet voxcpm failed on {host}: {proc.stderr[-500:] or proc.stdout[-300:]}")
+        if not out.exists() or out.stat().st_size < 1000:
+            raise RuntimeError("fleet voxcpm produced no/small audio")
+        return out
     base = Path(__file__).resolve().parent
     wrapper = base / "voxcpm_generate.py"
     if not wrapper.exists():
@@ -2249,6 +2270,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--provider", choices=["auto", "voxcpm", "minimax", "chatterbox"],
                         default="auto",
                         help="force a provider; auto tries VoxCPM then MiniMax then Chatterbox")
+    parser.add_argument("--gpu", default="",
+                        help="fleet GPU target 'host:idx' (e.g. forge:0, nexus:0) to render "
+                             "voxcpm on a fleet GPU — pauses that host's miner, renders, "
+                             "resumes (j_kro authorized). Empty = local 3090.")
     parser.add_argument("--no-effects", action="store_true",
                         help="skip ffmpeg room-tone processing (concat raw scenes)")
     parser.add_argument("--keep", action="store_true",
@@ -2368,7 +2393,7 @@ def main(argv: list[str] | None = None) -> int:
                     log(f"seg {i}/{len(story.segments)}: VoxCPM "
                         f"[{seg.speaker}|{seg.emotion}]…")
                     voxcpm_tts(seg.text, raw, voice_desc=voice_desc,
-                               emotion=seg.emotion or "")
+                               emotion=seg.emotion or "", gpu=args.gpu)
                     provider = "voxcpm"
                     used_providers.add("voxcpm")
                 except RuntimeError as e:
