@@ -16,7 +16,10 @@ storyteller
 - `brain/QUALITY_DOCTRINE.md` + `brain/RULINGS.md`.
 
 ## OUTPUT
-- `campaigns/<name>/audio/<name>.mp3` — the finished mix.
+- `campaigns/<name>/audio/<name>.mp3` — the finished mix (voice + beds, sidechain-ducked).
+- `campaigns/<name>/audio/<name>-stems/` — per-kind stems when `--export-stems` is used:
+  `voice-stem.wav`, `music/`, `atmos/`, `sfx/`, `roomtone/`, `stems-index.json`.
+  Editors can drop `voice-stem.wav` onto a video timeline without rebuilding the bed.
 - Kanban comment: output path, duration, provider, word count, gate result.
 
 ## SPEC (measurable)
@@ -28,14 +31,22 @@ storyteller
    order. No truncated scenes, no skipped characters.
 3. **Real pacing (the 2026-09-02 fix).** Scene boundaries have REAL pauses:
    the story's `[pause: N]` cues are honored as silence (1.0-3.0s), scene
-   gaps are not metronomic-uniform. The final audio's silence structure is
+   gaps are not metronome-uniform. The final audio's silence structure is
    VARIED (internal sentence pauses ~0.3s, dialogue exchanges ~0.4-0.6s,
    scene breaks ≥1.0s) — not a wall of identical ~0.4s gaps.
 4. **CLI correctness.** `-o` MUST be a file path ending `.mp3` — NEVER a
    directory (known hang: storyteller waits on ffmpeg concat when -o is a
    dir). Run via `uv run --project /home/j_kro/Projects/VoxCPM python3
    scripts/audio/storyteller.py`.
-5. **Loudness.** Normalized (storyteller.py applies loudnorm). Not clipping.
+5. **Sidechain ducking.** Music/beds duck under dialogue by `--duck-db`
+   dB (default 12). Verified: speech key → silent key → sidechaincompress
+   → beds duck → amix → alimiter. Per-scene reverb applied before the
+   sidechain so the acoustic space is consistent across voice and beds.
+6. **Stem separation** (opt-in via `--export-stems`). When enabled, per-kind
+   stems (voice, music, atmos, sfx, roomtone) land next to the master mp3
+   and `stems-index.json` is written. `gate_stems.py` verifies every
+   referenced stem exists and voice-stem duration tracks the master within
+   2s.
 
 ## MECHANICAL GATE (BLOCKS — run before commenting done)
 ```bash
@@ -47,14 +58,19 @@ ffprobe -v error -show_entries format=duration -of csv=p=0 \
 ffmpeg -i campaigns/<name>/audio/<name>.mp3 \
   -af silencedetect=noise=-35dB:d=0.25 -f null - 2>&1 | \
   grep silence_duration | awk '{print $NF}' | \
-  python3 -c "import sys; d=[float(x) for x in sys.stdin];
+  python3 -c "import sys; d=[float(x) for x in sys.stdin];\
 print('PASS varied' if any(x>=0.9 for x in d) and len(d)>5 else 'FAIL uniform/no-scene-pauses')"
 # PASS only if there is at least one >=0.9s pause (scene boundary) AND the
 # gaps are not all identical. Uniform ~0.4s everywhere = FAIL (the pacing
 # bug from 2026-09-02).
+# 4) Stems (when --export-stems was used) — voice-stem + per-kind stems:
+python3 scripts/gates/gate_stems.py campaigns/<name>/audio
+# 5) NIM Omni audio-QA (auto-listen + verify emotion/intros/audibility)
+python3 scripts/gates/gate_nim_omni_qa.py campaigns/<name>
 ```
 FAIL → re-render with fixed pacing (scripts/audio/storyteller.py now inserts
 real scene pauses per [pause:] cues). Do NOT advance a metronomic file.
+NIM Omni QA FAIL → review/nim_omni_qa.review.json has evidence; fix and re-render.
 
 ## SCORED REVIEW (1-10, min pass 7)
 1. **Pacing** — varied rhythm, scene breaths present, not robotic-uniform.

@@ -34,19 +34,22 @@ run_gate() {
     script)    [ -x "$GATES/gate_script.py" ]    && python3 "$GATES/gate_script.py" "$camp" ;;
     research)  [ -x "$GATES/gate_evidence.py" ]  && python3 "$GATES/gate_evidence.py" "$camp" ;;
     voice)     [ -x "$GATES/gate_voice.py" ]     && python3 "$GATES/gate_voice.py" "$camp"
-               [ -x "$GATES/gate_loudness.py" ]  && python3 "$GATES/gate_loudness.py" "$camp" ;;
+               [ -x "$GATES/gate_loudness.py" ]  && python3 "$GATES/gate_loudness.py" "$camp"
+               [ -x "$GATES/gate_ambience.py" ]  && python3 "$GATES/gate_ambience.py" "$camp"
+               [ -x "$GATES/gate_stems.py" ]    && python3 "$GATES/gate_stems.py"    "$camp/out" ;;
     visuals)   [ -x "$GATES/gate_visuals.py" ]   && python3 "$GATES/gate_visuals.py" "$camp" ;;
     analyze)   [ -x "$GATES/gate_analyze.py" ]   && python3 "$GATES/gate_analyze.py" "$camp" ;;
+    preaudit)  [ -x "$GATES/gate_preaudit.py" ]  && python3 "$GATES/gate_preaudit.py" "$camp" ;;
     review)    # Review gate: determine which producing stage's artifact is being reviewed
-               local review_stage=""
+               REVIEW_STAGE=""
                for rs in script visuals voice thumbnail seo angle research; do
                  if [ -f "$camp/review/${rs}.review.json" ]; then
-                   review_stage="$rs"
+                   REVIEW_STAGE="$rs"
                    break
                  fi
                done
-               if [ -n "$review_stage" ]; then
-                 [ -x "$GATES/gate_review.py" ] && python3 "$GATES/gate_review.py" "$camp" "$review_stage"
+               if [ -n "$REVIEW_STAGE" ]; then
+                 [ -x "$GATES/gate_review.py" ] && python3 "$GATES/gate_review.py" "$camp" "$REVIEW_STAGE"
                else
                  echo "gate: no review artifact found in $camp/review/"
                  return 1
@@ -75,6 +78,41 @@ if ! gate_output="$(run_gate "$CURRENT_STAGE" "$CAMPAIGN" 2>&1)"; then
 fi
 echo "$gate_output"
 echo "GATE PASSED — advancing $CARD to $STAGE"
+
+# --- THREE-VALUED GATE (review stage only) ---
+# For the review stage, we also run the three-valued gate which can return:
+# PASS (0): advance, RETRY (1): retry up to N, HOLD (2): escalate to human
+if [ "$CURRENT_STAGE" = "review" ] && [ -x "$GATES/gate_three_valued.py" ] && [ -n "${review_stage:-}" ]; then
+    echo "=== THREE-VALUED GATE: review stage ==="
+    RETRY_COUNT=0
+    MAX_RETRIES=3
+    TV_RC=0
+    TV_OUTPUT=""
+    while true; do
+        TV_OUTPUT=$(python3 "$GATES/gate_three_valued.py" "$CAMPAIGN" "$review_stage" --retry-count "$RETRY_COUNT" 2>&1) || TV_RC=$?
+        if [ "$TV_RC" -eq 0 ]; then
+            echo "THREE-VERDICT: PASS — advancing"
+            break
+        elif [ "$TV_RC" -eq 1 ]; then
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [ "$RETRY_COUNT" -ge "$MAX_RETRIES" ]; then
+                echo "THREE-VERDICT: RETRY exhausted — escalating to HOLD"
+                hermes kanban --board "$BOARD" comment "$CARD" "THREE-VALUE HOLD: review gate retry exhausted (${RETRY_COUNT}/${MAX_RETRIES}) — needs human escalation" >/dev/null 2>&1 || true
+                echo "card $CARD HELD at review — retry exhausted, human escalation needed"
+                exit 2
+            fi
+            echo "THREE-VERDICT: RETRY (${RETRY_COUNT}/${MAX_RETRIES}) — reviewer should re-review"
+            hermes kanban --board "$BOARD" comment "$CARD" "THREE-VALUE RETRY: review gate returned retry (${RETRY_COUNT}/${MAX_RETRIES}) — reviewer should re-review" >/dev/null 2>&1 || true
+            exit 1
+        elif [ "$TV_RC" -eq 2 ]; then
+            echo "THREE-VERDICT: HOLD — escalating to human"
+            hermes kanban --board "$BOARD" comment "$CARD" "THREE-VALUE HOLD: review gate returned HOLD — ambiguous scores need human review" >/dev/null 2>&1 || true
+            echo "card $CARD HELD at review — human escalation needed"
+            exit 2
+        fi
+        break
+    done
+fi
 
 # Update the card body's stage
 hermes kanban --board "$BOARD" comment "$CARD" "stage: $STAGE" 2>&1 | tail -1
