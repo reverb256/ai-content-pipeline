@@ -997,7 +997,14 @@ def voxcpm_tts(text: str, out: Path, voice_desc: str = "",
         cmd += ["--voice-desc", voice_desc]
     if emotion:
         cmd += ["--cfg-value", "2.8"]
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    # HARD RULE (j_kro 2026-09-03): VoxCPM MUST run on the 3090. Pin the env
+    # explicitly so the subprocess can never see the miner (cuda:0 in nvidia-smi)
+    # or fall back to CPU. torch CUDA_VISIBLE_DEVICES=0 = the 3090 on zephyr.
+    _env = dict(os.environ)
+    _env["CUDA_VISIBLE_DEVICES"] = "0"
+    _env["VLLM_USE_DEVICE"] = "cuda"
+    _env["TORCH_DEVICE"] = "cuda"
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env=_env)
     if proc.returncode != 0:
         raise RuntimeError(f"voxcpm failed: {proc.stderr[-500:]}")
     if not out.exists() or out.stat().st_size < 1000:
@@ -2434,9 +2441,15 @@ def main(argv: list[str] | None = None) -> int:
                 f"kinds={ {k: len(v) for k, v in stems['kinds'].items()} }")
 
         # Post-render NIM Omni audio-QA gate
+        # Single-point enforcement lives in the gate chain (advance-stage.sh
+        # + gate_preaudit.py → --evidence-only). This hook is informational:
+        # it populates review/nim_omni_qa.review.json once per render so the
+        # chain has fresh evidence to consume. The chain will BLOCK advance
+        # if the gate fails; this hook does NOT block the render itself
+        # (rendering already succeeded; NIM Omni verdict is a QA signal).
         qa_gate = REPO / "scripts" / "gates" / "gate_nim_omni_qa.py"
         if qa_gate.exists():
-            log(f"running NIM Omni audio-QA gate...")
+            log(f"running NIM Omni audio-QA gate (render-time, populates evidence)...")
             try:
                 qa_result = subprocess.run(
                     [sys.executable, str(qa_gate), str(out.parent)],
@@ -2446,10 +2459,9 @@ def main(argv: list[str] | None = None) -> int:
                     log(f"NIM Omni QA: PASS")
                 else:
                     log(f"NIM Omni QA: FAIL — {qa_result.stdout[-200:]}")
-                    # Don't fail the render — just warn. The gate file is written
-                    # for the review pipeline to catch.
+                    log(f"(render proceeds — gate chain will block on next advance)")
             except subprocess.TimeoutExpired:
-                log(f"NIM Omni QA: timeout (gate skipped)")
+                log(f"NIM Omni QA: timeout (gate skipped; chain will catch missing evidence)")
             except Exception as e:
                 log(f"NIM Omni QA: error ({e})")
         else:

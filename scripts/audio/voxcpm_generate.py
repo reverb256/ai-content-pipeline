@@ -12,6 +12,17 @@ import argparse
 import sys
 from pathlib import Path
 
+# ═══════════════════════════════════════════════════════════════════════════
+# HARD RULE (j_kro 2026-09-03): VoxCPM MUST run on GPU. NEVER CPU.
+# torch device order: cuda:0 = RTX 3090 (25GB, AI), cuda:1 = RTX 3060 Ti (miner).
+# Pin to the 3090. CPU fallback is DISABLED — CPU TTS blew up 11GB of RAM.
+# ═══════════════════════════════════════════════════════════════════════════
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # 0 = the 3090 in torch's ordering
+os.environ["VLLM_USE_DEVICE"] = "cuda"
+os.environ["TORCH_DEVICE"] = "cuda"
+# ─────────────────────────────────────────────────────────────────────────────
+
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
@@ -28,6 +39,15 @@ def main() -> None:
     except ImportError as e:
         print(f"voxcpm not installed: {e}", file=sys.stderr)
         sys.exit(1)
+
+    # HARD GPU CHECK — abort if CUDA unavailable (never silently run CPU)
+    import torch
+    if not torch.cuda.is_available():
+        print("FATAL: VoxCPM requires CUDA GPU. CPU inference is DISABLED by policy "
+              "(j_kro 2026-09-03: CPU TTS blew up 11GB RAM). Check nvidia drivers.",
+              file=sys.stderr)
+        sys.exit(2)
+    print(f"VoxCPM on GPU: {torch.cuda.get_device_name(0)}", file=sys.stderr)
 
     # Model id: F16 python path (HF original) is the default; GGUF quants
     # would use VoxCPM.cpp — for now, quality selects nothing different on
