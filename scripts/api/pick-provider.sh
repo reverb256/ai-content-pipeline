@@ -66,9 +66,10 @@ pick_llm() {
 }
 
 pick_image() {
-  local comfy=$(check_http "http://10.1.1.120:8188/system_stats" 2>/dev/null)
+  # ComfyUI on zephyr local (3090): probe 127.0.0.1:8188
+  local comfy=$(check_http "http://127.0.0.1:8188/system_stats" 2>/dev/null)
   if [ "$comfy" = "up" ]; then
-    echo "comfyui"; log "comfyui (nexus up)"
+    echo "comfyui"; log "comfyui (zephyr 3090 local, up)"
   else
     echo "xai"; log "xai image (comfyui $comfy)"
   fi
