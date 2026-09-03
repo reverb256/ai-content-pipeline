@@ -1018,11 +1018,14 @@ def voxcpm_tts(text: str, out: Path, voice_desc: str = "",
         cmd += ["--voice-desc", voice_desc]
     if emotion:
         cmd += ["--cfg-value", "2.8"]
-    # HARD RULE (j_kro 2026-09-03): VoxCPM MUST run on the 3090. Pin the env
-    # explicitly so the subprocess can never see the miner (cuda:0 in nvidia-smi)
-    # or fall back to CPU. torch CUDA_VISIBLE_DEVICES=0 = the 3090 on zephyr.
+    # HARD RULE (j_kro 2026-09-03): VoxCPM MUST run on the 3090. Do NOT set
+    # CUDA_VISIBLE_DEVICES here — voxcpm_generate.py selects the 3090 BY NAME
+    # (CUDA_DEVICE_ORDER=PCI_BUS_ID + nvidia-smi name match). A hardcoded index
+    # here caused renders to hit the MINER (wrong order) → CPU fallback → RAM
+    # blowups (2026-09-03). Only forward CUDA_DEVICE_ORDER so torch enumerates
+    # in nvidia-smi (PCI) order consistently.
     _env = dict(os.environ)
-    _env["CUDA_VISIBLE_DEVICES"] = "0"
+    _env["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     _env["VLLM_USE_DEVICE"] = "cuda"
     _env["TORCH_DEVICE"] = "cuda"
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env=_env)
