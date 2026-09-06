@@ -9,7 +9,12 @@
 set -euo pipefail
 
 REPO="${REPO:-$HOME/Projects/ai-content-pipeline}"
-BOTS=(scout researcher strategist writer distributor editor oracle scriptwriter voicebot videobot thumbnailbot seobot publishbot analyst)
+BOTS=()
+# Auto-discover: every profiles/<name>/role.md is deployed (avoids a stale
+# hardcoded list dropping new bots like caio/cco/coo/cro/storyteller).
+for _role in "$REPO"/profiles/*/role.md; do
+    [ -f "$_role" ] && BOTS+=("$(basename "$(dirname "$_role")")")
+done
 
 if [ $# -gt 0 ]; then
     BOTS=("$@")

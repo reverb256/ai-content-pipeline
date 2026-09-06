@@ -38,6 +38,16 @@ pick_video() {
 }
 
 pick_voice() {
+  # Priority: working LOCAL engines first, paid fallback last.
+  # VoxCPM on zephyr 3090 is the verified local TTS (F16, ~5.5 it/s).
+  local vox="down"
+  if [ -f "$HOME/Projects/ai-content-pipeline/scripts/audio/voxcpm_generate.py" ]; then
+    vox="up"
+  fi
+  if [ "$vox" = "up" ]; then
+    echo "voxcpm"; log "voxcpm (local zephyr 3090, up)"
+    return
+  fi
   # Chatterbox on forge (or wherever it runs): probe the API
   local cb=$(check_http "http://10.1.1.130:8004/get_reference_files" 2>/dev/null)
   if [ "$cb" = "up" ]; then
@@ -45,7 +55,7 @@ pick_voice() {
   else
     # Fall back to Hermes's configured TTS (xai currently)
     local tts_provider=$(hermes config get tts.provider 2>/dev/null | tr -d '"' || echo "xai")
-    echo "$tts_provider"; log "tts fallback: $tts_provider (chatterbox $cb)"
+    echo "$tts_provider"; log "tts fallback: $tts_provider (voxcpm $vox, chatterbox $cb)"
   fi
 }
 
@@ -56,9 +66,10 @@ pick_llm() {
 }
 
 pick_image() {
-  local comfy=$(check_http "http://10.1.1.120:8188/system_stats" 2>/dev/null)
+  # ComfyUI on zephyr local (3090): probe 127.0.0.1:8188
+  local comfy=$(check_http "http://127.0.0.1:8188/system_stats" 2>/dev/null)
   if [ "$comfy" = "up" ]; then
-    echo "comfyui"; log "comfyui (nexus up)"
+    echo "comfyui"; log "comfyui (zephyr 3090 local, up)"
   else
     echo "xai"; log "xai image (comfyui $comfy)"
   fi

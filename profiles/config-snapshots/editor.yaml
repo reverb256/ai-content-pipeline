@@ -1,0 +1,32 @@
+model:
+  default: meituan/longcat-2.0:free
+  provider: nous
+plugins:
+  enabled: []
+_config_version: 39
+agent: {}
+skills:
+  external_dirs:
+    - ~/.hermes/skills
+  model: meituan/longcat-2.0:free
+fallback_providers:
+  - provider: nous
+    model: meituan/longcat-2.0:free
+  - provider: nous
+    model: inclusionai/ling-3.0-flash-fin:free
+  - provider: openrouter-free
+    model: minimax/minimax-m3:free
+  - provider: openrouter-free
+    model: inclusionai/ling-3.0-flash-fin:free
+  - provider: kilo
+    model: kilo-auto/free
+providers:
+  openrouter-free:
+    base_url: https://openrouter.ai/api/v1
+    api_key_env: OPENROUTER_API_KEY
+    model: minimax/minimax-m3:free
+memory:
+  provider: memlawb
+  memlawb:
+    url: http://100.76.105.73:8080
+    namespace: user:j_kro

@@ -1,0 +1,79 @@
+{
+  "rubric_id": "media-literacy",
+  "name": "Media Literacy & Information Integrity Rubric",
+  "discipline": "media-literacy",
+  "stage": "review",
+  "version": "0.1.0",
+  "source_corpus": [
+    "brain/craft/media-literacy.md",
+    "brain/stage-specs/research.md",
+    "brain/stage-specs/review.md",
+    "brain/QUALITY_DOCTRINE.md"
+  ],
+  "mechanical_gates_that_precede": [
+    "scripts/gates/gate_source_trace.py",
+    "scripts/gates/gate_stat_verification.py",
+    "scripts/gates/gate_visual_authenticity.py"
+  ],
+  "scoring": {
+    "scale": "1-10",
+    "pass_threshold": 7,
+    "note": "Each criterion is scored 1-10 by each panel judge. Below-threshold criteria must produce a SPECIFIC diagnosis + fix (not vague judgment). Judges cite which corpus rule the artifact violates."
+  },
+  "criteria": [
+    {
+      "id": "source-quality-tier-adherence",
+      "name": "Source quality tier adherence (research)",
+      "what_good_looks_like": "Consequential claims, stats, and quotes trace to T1 (primary) or T2 (secondary) sources. T3 sources used only for lead generation, never cited alone. T4 (unverifiable) sources flagged as unknown, never claimed. Every stat has a methodology, sample size, and date.",
+      "evidence_required": "Source tier classification per claim; T1/T2 trace for all consequential claims; methodology and denominator present for every stat.",
+      "poor": "Stats without sources; T3/T4 sources cited as authority; 'studies show' with no link; methodology missing; denominator absent.",
+      "great": "Every claim traces to a verifiable primary or reputable secondary source; methodology and context transparent; unknowns stated honestly.",
+      "weight": 1.0
+    },
+    {
+      "id": "fabricated-stat-detection",
+      "name": "Fabricated-stat detection",
+      "what_good_looks_like": "No round-number claims without methodology ('studies show 73%' flagged and rejected). No 'many' or 'most' without a number. Single-source dramatic claims flagged and triangulated. Debunked recirculating stats caught via Snopes/Retraction Watch check.",
+      "evidence_required": "Stat origin traced to original study; triangulation (2+ independent sources for consequential claims); denominator checked; recirculating debunked stats flagged.",
+      "poor": "Round numbers with no methodology; vague quantifiers ('many', 'most') presented as evidence; single dramatic source uncritically repeated; debunked stats recirculate.",
+      "great": "Every number has a home; methodology read and reported; denominators reveal magnitude; inference labeled as inference, not proof.",
+      "weight": 1.0
+    },
+    {
+      "id": "authority-signal-honesty",
+      "name": "Authority signal honesty",
+      "what_good_looks_like": "Experts cited within their domain (no Nobel economist on nutrition). Follower count never used as authority proxy. Recency bias checked — field half-life considered. Authority claims verified against the expert's actual credentials and publication record.",
+      "evidence_required": "Expert domain matches claim domain; no conflation of popularity with accuracy; recency bias assessed; credentials verified.",
+      "poor": "Expert in field A speaking on field B presented as authority; high follower count used as credibility signal; outdated or foundational papers mischaracterized.",
+      "great": "Authority claims are domain-appropriate and verified; popularity never substitutes for expertise; temporal context of research acknowledged.",
+      "weight": 0.9
+    },
+    {
+      "id": "audience-cognition-alignment",
+      "name": "Audience-cognition alignment (editing respects viewer processing)",
+      "what_good_looks_like": "First 5 seconds contain tension, question, or unexpected claim (no logo, no 'hey guys'). Pattern interrupts every 60-90s. One idea per beat — narration explains what the eye cannot, visual shows what words cannot (no redundancy). Every scene carries one emotion directive. Cognitive load managed — no narration + visual + text competing for the same channel.",
+      "evidence_required": "Hook present in first 5s; pattern interrupt count ≥1 per 60-90s; no redundant narration/visual overlap; one emotion directive per scene; cognitive load audit passes.",
+      "poor": "First 5s are logo/intro; no pattern interrupts (passive viewing); narration reads the visual verbatim; flat affect; narration + text + visual all compete.",
+      "great": "Hook poses a question the content answers; pattern interrupts keep attention; narration and visual complement; emotion is intentional; cognitive load is managed.",
+      "weight": 1.0
+    },
+    {
+      "id": "visual-literacy-clarity",
+      "name": "Visual-literacy clarity (viewer decodes intended meaning)",
+      "what_good_looks_like": "No generic stock footage that could appear in 100 other videos. No AI-video uncanny valley (or disclosed if present). Every B-roll choice motivated by the narration — illustrates or complicates, never random. Mismatched B-roll (narration about servers, visual of coffee cup) eliminated. Imperfection signals authenticity.",
+      "evidence_required": "Original or properly licensed footage; AI generation disclosed; B-roll motivated by narration; no stock-feeling clips; no immersion-breaking visuals.",
+      "poor": "Generic stock footage; undisclosed AI generation; mismatched B-roll; over-produced polish that reads as inauthentic; visual breaks viewer trust.",
+      "great": "Every visual is motivated and authentic; viewer decodes the intended meaning without friction; AI disclosed; imperfection signals humanity.",
+      "weight": 0.9
+    },
+    {
+      "id": "no-manipulation-ethics",
+      "name": "No-manipulation ethics (persuasion vs. deception)",
+      "what_good_looks_like": "Hook promises a question the content answers (not clickbait). Thumbnail reflects a genuine moment or tension from the content (viewer who watches then sees thumbnail feels satisfied, not misled). Urgency is real, not false scarcity. Emotional appeal connects evidence to real human outcome, not manufactured outrage. AI disclosure clear. Selection/survivorship/framing bias countered or acknowledged. Counterexamples included.",
+      "evidence_required": "Hook promise fulfilled within 30s; thumbnail matches content; urgency is real; emotional appeal evidence-linked; AI disclosed; bias countermeasures present (counterexamples, both-frame stats, selection criteria stated).",
+      "poor": "Clickbait hook; thumbnail uses face/emotion/scene not in video; false scarcity; outrage disconnected from evidence; AI hidden; cherry-picked case studies; survivorship bias unaddressed.",
+      "great": "The viewer gets what was promised and can verify the promise; persuasion is honest; bias is acknowledged or countered; trust is earned, not extracted.",
+      "weight": 1.0
+    }
+  ]
+}

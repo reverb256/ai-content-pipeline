@@ -1,0 +1,67 @@
+{
+  "index_version": "0.1.0",
+  "purpose": "Maps content artifact types to the discipline rubrics a review panel should judge them against. The panel loads the rubric(s) for the artifact's type, scores each criterion 1-10, and the coordinator synthesizes.",
+  "artifact_types": {
+    "audio-drama": {
+      "rubrics": [
+        "audio-production-mix",
+        "story-narrative",
+        "voice-acting",
+        "character-design"
+      ],
+      "note": "A full audio drama is judged on its mix, its story, the voice performances, and character consistency."
+    },
+    "narration-voiceover": {
+      "rubrics": [
+        "voice-acting",
+        "audio-production-mix"
+      ],
+      "note": "A narration VO is judged on delivery + basic audio health (subset of mix criteria apply)."
+    },
+    "video-visuals": {
+      "rubrics": [
+        "cinematography-visuals",
+        "story-narrative",
+        "audio-production-mix"
+      ],
+      "note": "A video is judged on cinematography, its narrative (if story-led), and audio if present."
+    },
+    "clip-short": {
+      "rubrics": [
+        "cinematography-visuals",
+        "audio-production-mix"
+      ],
+      "note": "Short clips judged on visual craft + audio quality (hook/pacing criteria come from the clip stage-spec, applied by the panel)."
+    },
+    "script": {
+      "rubrics": [
+        "story-narrative",
+        "voice-acting"
+      ],
+      "note": "A script is judged on story structure + spoken-delivery readiness."
+    },
+    "character-bible": {
+      "rubrics": [
+        "character-design"
+      ],
+      "note": "A character bible/sheet is judged on the character-design rubric."
+    }
+  },
+  "rubric_files": {
+    "audio-production-mix": "brain/rubrics/audio-production-mix.json",
+    "story-narrative": "brain/rubrics/story-narrative.json",
+    "cinematography-visuals": "brain/rubrics/cinematography-visuals.json",
+    "voice-acting": "brain/rubrics/voice-acting.json",
+    "character-design": "brain/rubrics/character-design.json",
+    "media-literacy": "brain/rubrics/media-literacy.json",
+    "comfyui-determinism": "brain/rubrics/comfyui-determinism.json"
+  },
+  "review_protocol": {
+    "judge_count": "3+ (different model families)",
+    "independence": "Judges score independently, never seeing each other's scores until aggregation",
+    "aggregation": "Robust (geometric median preferred; disagreement = escalate to human)",
+    "knowledge_grounding": "Each judge receives the artifact + the rubric JSON (criteria with corpus numbers), NOT generic instructions",
+    "diagnosis_requirement": "Any criterion scored < 7 must produce a specific diagnosis citing the violated corpus rule + a concrete fix",
+    "learning_connection": "Recurring low-scored criteria across artifacts become proposed policy rules in the self-iteration engine policy store (human approves)"
+  }
+}

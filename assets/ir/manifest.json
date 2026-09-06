@@ -1,0 +1,46 @@
+{
+  "intimate": {
+    "name": "intimate",
+    "rt60_s": 0.08,
+    "hf_roll_hz": 5000,
+    "n_early_reflections": 3,
+    "tail_seconds": 0.104,
+    "sample_rate": 48000,
+    "channels": 2,
+    "bit_depth": 24,
+    "path": "/home/j_kro/Projects/ai-content-pipeline/assets/ir/intimate.wav"
+  },
+  "room": {
+    "name": "room",
+    "rt60_s": 0.45,
+    "hf_roll_hz": 3500,
+    "n_early_reflections": 4,
+    "tail_seconds": 0.585,
+    "sample_rate": 48000,
+    "channels": 2,
+    "bit_depth": 24,
+    "path": "/home/j_kro/Projects/ai-content-pipeline/assets/ir/room.wav"
+  },
+  "hall": {
+    "name": "hall",
+    "rt60_s": 1.6,
+    "hf_roll_hz": 2800,
+    "n_early_reflections": 5,
+    "tail_seconds": 2.08,
+    "sample_rate": 48000,
+    "channels": 2,
+    "bit_depth": 24,
+    "path": "/home/j_kro/Projects/ai-content-pipeline/assets/ir/hall.wav"
+  },
+  "cathedral": {
+    "name": "cathedral",
+    "rt60_s": 3.5,
+    "hf_roll_hz": 5200,
+    "n_early_reflections": 6,
+    "tail_seconds": 4.55,
+    "sample_rate": 48000,
+    "channels": 2,
+    "bit_depth": 24,
+    "path": "/home/j_kro/Projects/ai-content-pipeline/assets/ir/cathedral.wav"
+  }
+}

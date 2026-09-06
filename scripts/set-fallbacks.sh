@@ -8,6 +8,13 @@ set -euo pipefail
 
 BOT="${1:?usage: set-fallbacks.sh <bot>}"
 
+# CRITICAL (2026-09-01): profiles do NOT inherit the global `providers` block.
+# A profile with model.provider=openrouter-free fails with "Unknown provider"
+# unless it defines providers.openrouter-free itself. Set it FIRST.
+hermes config set -p "$BOT" providers.openrouter-free.base_url "https://openrouter.ai/api/v1"
+hermes config set -p "$BOT" providers.openrouter-free.api_key_env "OPENROUTER_API_KEY"
+hermes config set -p "$BOT" providers.openrouter-free.model "minimax/minimax-m3:free"
+
 # Verified-free chain (commandcode = deepseek only; routers TRULY last; no slow):
 #   commandcode deepseek-v4-flash (active, verified) →
 #   openrouter-free minimax-m3:free (live-verified, fast + strong) →

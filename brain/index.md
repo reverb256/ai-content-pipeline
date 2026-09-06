@@ -4,6 +4,16 @@
 > any campaign. It defines what we publish, who we publish for, and the rules
 > every campaign must follow.
 
+## ⚠️ Quality Doctrine — READ BEFORE ANY PRODUCTION WORK
+
+`brain/QUALITY_DOCTRINE.md` defines the meticulous standard every stage must
+meet: word budgets (counted, not guessed), visual beat pacing (5-16s per
+beat, never park one visual), scored review gates (1-10, min 7, bounded
+retries), and mechanical validation that BLOCKS before advance. If you are
+producing content — script, audio, visuals, thumbnail, SEO, or review — read
+the doctrine first and follow its stage-contract format. Quality is
+engineered, not vibed.
+
 ## What We Publish About
 
 1. **Building autonomous technical systems in public** — the personal

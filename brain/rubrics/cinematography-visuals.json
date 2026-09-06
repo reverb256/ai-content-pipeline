@@ -1,0 +1,116 @@
+{
+  "rubric_id": "cinematography-visuals",
+  "name": "Cinematography & Visuals Scoring Rubric",
+  "discipline": "cinematography",
+  "stage": "visuals",
+  "version": "0.1.0",
+  "source_corpus": [
+    "brain/craft/cinematography.md",
+    "brain/stage-specs/visuals.md",
+    "brain/QUALITY_DOCTRINE.md"
+  ],
+  "mechanical_gates_that_precede": [
+    "scripts/gates/gate_beat_density.py",
+    "scripts/gates/gate_truncation.py",
+    "scripts/gates/gate_black_frames.py",
+    "scripts/gates/gate_freeze_detect.py",
+    "scripts/gates/gate_resolution.py"
+  ],
+  "scoring": {
+    "scale": "1-10",
+    "pass_threshold": 7,
+    "note": "Each criterion is scored 1-10 by each panel judge. Below-threshold criteria must produce a SPECIFIC diagnosis + fix (not vague judgment). Judges cite which corpus rule the artifact violates."
+  },
+  "criteria": [
+    {
+      "id": "visual-pacing-beat-density",
+      "name": "Visual pacing — beat density matches narration word count",
+      "what_good_looks_like": "Every section with N narration words has ≥ ceil(N/45) visual beats (MAX_WORDS_PER_BEAT=45). Each beat duration is within 5-16 seconds (BEAT_DURATION_RANGE). A 200-word section has ≥5 beats; a 60-word section has ≥2. No beat <5s (strobe) or >16s (parked slide).",
+      "evidence_required": "Beat count per section ≥ ceil(words/45); each beat duration 5-16s; gate_beat_density.py passes; scene count from ffmpeg scene detection matches expected beats.",
+      "poor": "Section has fewer beats than ceil(words/45); beats cluster outside 5-16s range; a 200-word section delivered in 2-3 long holds.",
+      "great": "Beat density precisely tracks narration; every section has the right number of visual beats; pacing feels deliberate, not accidental.",
+      "weight": 1.0
+    },
+    {
+      "id": "shot-variety-grammar",
+      "name": "Shot variety + grammatically appropriate shot size",
+      "what_good_looks_like": "Shot sizes chosen per cinematography.md decision table: ECU for reveal/tension, CU for emotion/reaction, MCU (~10% headroom) for dialogue default, MS for interaction/demos, MLS for walking/context, WS/LS for establishing/scale, EWS for vastness. Shots differ from adjacent shots in ≥1 of: shot size, angle, movement, or subject.",
+      "evidence_required": "At least 2 distinct shot sizes used across the piece; shot sizes match the emotional/narrative purpose per decision table; no two identical consecutive shots.",
+      "poor": "All shots are the same size regardless of context; WS for intimate dialogue or ECU for establishing; identical shot repeated consecutively (template slop).",
+      "great": "Shot size choices serve the story — you can see why each size was chosen; variety keeps the viewer engaged; grammar is invisible because it is correct.",
+      "weight": 1.0
+    },
+    {
+      "id": "framing-rules",
+      "name": "Framing — headroom, lead room, eyeline, crop placement",
+      "what_good_looks_like": "Headroom is 8-15% of frame height (>20% dead space, 0% oppressive unless tension). Lead room ≥2x space in gaze direction vs behind head (reverse only for menace). Eyeline at upper-third line, never center eyes. Crops at clavicle (MCU) or sternum (MS), never at joints (elbows, knees, neck).",
+      "evidence_required": "Measurable headroom 8-15%; lead room ratio ≥2:1; eyeline on upper-third line; no joint-level crops visible in any shot.",
+      "poor": "Subject dead-center with 30%+ headroom; lead room 1:1 or backward; eyes centered; crops at joints causing visual discomfort.",
+      "great": "Every frame feels intentionally composed; headroom, lead room, eyeline all within spec; crops never distract.",
+      "weight": 1.0
+    },
+    {
+      "id": "rule-of-180-eyeline-match",
+      "name": "180-degree rule + eyeline match / continuity",
+      "what_good_looks_like": "Camera stays on ONE side of the axis through subjects. Crosses only when: subject crosses on camera, dolly across in one shot, or deliberate disorientation. Eyeline match: A looking screen-right → B looking screen-left. Spatial relationships remain consistent across cuts.",
+      "evidence_required": "No unintended axis crosses; eyeline directions match across cuts; spatial orientation of characters consistent throughout scene.",
+      "poor": "Camera jumps to opposite side of axis without justification; A looks right, B looks right (broken eyeline); viewer loses spatial orientation after a cut.",
+      "great": "Spatial geography is crystal clear; eyelines match perfectly; any axis cross is motivated and readable.",
+      "weight": 0.9
+    },
+    {
+      "id": "composition-quality",
+      "name": "Composition — rule of thirds, leading lines, negative space, depth",
+      "what_good_looks_like": "Subject placed on power intersection (rule of thirds) with directional negative space. Leading lines converge on focal point. Depth: foreground + subject + background (3-plane) with parallax where possible. Edges clean — no distractions. Per cinematography.md great-column: 'On power intersection + directional negative space', 'Converge precisely on focal point', 'Foreframe, mid, deep BG; parallax'.",
+      "evidence_required": "Subject on third-line or power intersection; visible leading lines or intentional negative space; at least 2-plane depth (FG + subject or subject + BG); no edge distractions.",
+      "poor": "Subject dead-center with no offset; flat single-plane composition; no leading lines; cluttered edges; negative space absent or random.",
+      "great": "Every frame could be a still photograph; composition guides the eye; depth creates immersion; edges are clean.",
+      "weight": 0.9
+    },
+    {
+      "id": "camera-movement-motivation",
+      "name": "Camera movement — motivated, varied, begins/ends composed",
+      "what_good_looks_like": "Movement type chosen per emotional cue: push-in (intimacy/dread/realization), pull-out (isolation/scale/loss), pan (surveillance/reveal), tilt (power/vulnerability), tracking (momentum/journey), static (stability/authority), handheld (urgency/realism), orbit (power/evaluation). Movement type varies ≥3 times per 60s. Every move begins and ends on a composed frame. Two identical push-ins = template slop.",
+      "evidence_required": "≥3 distinct movement types per 60s of footage; movement matches emotional beat in script; no two identical consecutive moves; start/end frames are composed (not mid-pan).",
+      "poor": "All shots static or all shots moving identically; movement without emotional motivation; move starts/ends on uncomposed frame; two identical push-ins back-to-back.",
+      "great": "Movement serves the story; variety keeps visual rhythm alive; every move is intentional and lands on a composed frame.",
+      "weight": 0.8
+    },
+    {
+      "id": "no-jump-cut-continuity",
+      "name": "No jump cuts / continuity between shots",
+      "what_good_looks_like": "No jump cuts at the same angle (spatial confusion; amateur). Cuts either change shot size/angle substantially or use a cutaway. Continuity of action, position, and eyeline across cuts. Each visual beat differs from the previous in ≥1 of: shot size, angle, movement, or subject.",
+      "evidence_required": "No two consecutive shots at the same angle with <30° change; each beat differs in ≥1 dimension (size/angle/movement/subject); continuity of action/position maintained.",
+      "poor": "Jump cuts at same angle; consecutive shots identical in size, angle, movement, and subject; action continuity broken across cuts.",
+      "great": "Cuts feel invisible or intentionally jarring (motivated); every beat is visually distinct; continuity is seamless.",
+      "weight": 0.9
+    },
+    {
+      "id": "anti-slideshow-no-parked",
+      "name": "Anti-slideshow — no parked visuals, pattern interrupts",
+      "what_good_looks_like": "No single static visual held for a full 60s+ narration section. Every beat differs from previous in ≥1 of: shot size, angle, movement, or subject. Pattern interrupt every 60-90s: camera movement, shot size jump, subject change, graphic/text overlay, audio sting, or silence drop. Hook window (first 7s) has visual energy.",
+      "evidence_required": "No beat >16s; no section with N words has < ceil(N/45) beats; pattern interrupt present every 60-90s; first 7s contain visual motion or energy.",
+      "poor": "One static image held for 60s+; no pattern interrupts for 90s+; first 7s is a static title card; beats are visually identical.",
+      "great": "Visual rhythm never stalls; pattern interrupts land on time; the first 7s hook has energy; no viewer could call this a slideshow.",
+      "weight": 1.0
+    },
+    {
+      "id": "duration-match-to-narration",
+      "name": "Duration match — video length equals narration length",
+      "what_good_looks_like": "Final video audio track duration equals narration file duration (±2s). Scenes extend to fill the narration; visuals never truncate it. The #1 historical failure (7-min narration → 88s video) is absent. Per visuals.md: 'Narration must be FULLY muxed.'",
+      "evidence_required": "ffprobe audio duration ≥ narration duration - 2s; video has audio stream; no truncation at scene-total length.",
+      "poor": "Video is 30%+ shorter than narration; audio cuts at scene end; narration truncated; no audio stream in output.",
+      "great": "Audio and video durations match within 2s; narration is fully present from first word to last; no truncation artifacts.",
+      "weight": 1.0
+    },
+    {
+      "id": "technical-quality",
+      "name": "Technical quality — no black frames, no freeze, resolution ≥720p",
+      "what_good_looks_like": "No frozen segments >2s (freezedetect passes). No black frames >5% of total (blackdetect passes). Resolution ≥1280x720. No corrupted frames. Per cinematography.md Section 7 deterministic checks: PASS on frozen, blackdetect, freezedetect, resolution gate.",
+      "evidence_required": "freezedetect: no freeze >2s; blackdetect: <5% near-black; ffprobe resolution ≥1280x720; frames render without corruption.",
+      "poor": "Frozen segment >2s; black frames >5%; resolution <720p; corrupted or unreadable frames.",
+      "great": "Technically flawless; no freezes, no black frames, full resolution; passes all deterministic gates.",
+      "weight": 0.8
+    }
+  ]
+}
