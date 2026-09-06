@@ -1,0 +1,68 @@
+{
+  "rubric_id": "comfyui-determinism",
+  "name": "ComfyUI Determinism & Reproducibility Rubric",
+  "discipline": "comfyui-determinism",
+  "stage": "image-generation",
+  "version": "0.1.0",
+  "source_corpus": [
+    "brain/craft/comfyui-determinism.md",
+    "brain/stage-specs/image-generation.md"
+  ],
+  "mechanical_gates_that_precede": [
+    "scripts/gates/gate_manifest_presence.py",
+    "scripts/gates/gate_seed_determinism.py",
+    "scripts/gates/gate_model_hash.py"
+  ],
+  "scoring": {
+    "scale": "1-10",
+    "pass_threshold": 7,
+    "note": "Each criterion is scored 1-10 by each panel judge. Below-threshold criteria must produce a SPECIFIC diagnosis + fix (not vague judgment). Judges cite which corpus rule the artifact violates."
+  },
+  "criteria": [
+    {
+      "id": "reproducibility",
+      "name": "Reproducibility (same input → same output)",
+      "what_good_looks_like": "Identical seed + model_hash + vae_hash + lora_hash + sampler + scheduler + steps + cfg + resolution + prompt + versions + same GPU → ≈99.5% pixel match. Across GPU architectures → ≈95-98% (bf16 drift, acceptable). Never claims 'identical' — claims 'reproducible within architecture tolerance.' Seed is fixed, never random for production outputs.",
+      "evidence_required": "Seed is set (not random); model hash recorded; re-run produces ≈99.5% match on same GPU; reproducibility claim scoped to architecture tolerance.",
+      "poor": "Random seed for production; no seed recorded; re-run produces different output; claims 'identical' without qualification; no verification of reproducibility.",
+      "great": "Fixed seed + all hashes recorded; re-run verified; reproducibility claim correctly scoped; architecture drift acknowledged.",
+      "weight": 1.0
+    },
+    {
+      "id": "version-as-code",
+      "name": "Version-as-code (declarative workflow)",
+      "what_good_looks_like": "Workflow is flat JSON — no embedded base64, no API calls inside graphs. Parameters at top level (seed, prompt, model, lora) in _meta block. Version field present ('version': '1.2.0'). Node versions pinned ('comfyui_version': '0.2.47'). No hardcoded paths — uses ComfyUI model dropdown names. Reused 3+ projects → template. Naming: {pipeline}_{model}_{semver}.json.",
+      "evidence_required": "Flat JSON workflow; _meta block with parameters; version field present; comfyui_version pinned; no hardcoded paths; naming convention followed.",
+      "poor": "Embedded base64 in workflow; API calls inside graphs; no version field; hardcoded paths; no _meta block; workflow not in git; naming inconsistent.",
+      "great": "Workflow is declarative, versioned, and portable; all parameters at top level; versions pinned; naming convention honored; template extracted for reuse.",
+      "weight": 0.9
+    },
+    {
+      "id": "character-scene-lock-honored",
+      "name": "Character/scene lock honored",
+      "what_good_looks_like": "Per-character profile exists (projects/{char}/profile.yaml) with trigger word, LoRA file + strength, IP-Adapter model + weight, seed_base. Lock chain followed: Load Checkpoint → LoRA (0.7-0.9) → IP-Adapter (0.4-0.7) → ControlNet → KSampler (FIXED SEED). Drift symptoms addressed (face changes → raise IP-Adapter; body shift → add Depth + Canny; style bleed → lower IP-Adapter style weight).",
+      "evidence_required": "Character profile exists; trigger word consistent; LoRA strength 0.7-0.9; IP-Adapter weight 0.4-0.7; ControlNet applied when needed; seed fixed; drift fixes documented.",
+      "poor": "No character profile; trigger word swaps mid-project; LoRA strength outside 0.7-0.9; no IP-Adapter for identity; no ControlNet for structure; seed not fixed; drift symptoms unaddressed.",
+      "great": "Character is locked and consistent across all outputs; profile is complete; drift fixes applied; identity is recognizable and stable.",
+      "weight": 1.0
+    },
+    {
+      "id": "prompt-discipline",
+      "name": "Prompt discipline (structure for determinism)",
+      "what_good_looks_like": "Prompt follows {SUBJECT}, {MEDIUM}, {STYLE}, {LIGHTING}, {CAMERA}, {QUALITY}, {MOOD} structure. Trigger word FIRST. Same character → same trigger word (never swap mid-project). Same style → same keyword set (copy verbatim). Same quality → same tags (don't alternate 8k/4k). Prompt order matters — subject first. No semantic contradictions (photorealistic + oil painting). Negative prompt includes standard rejection set.",
+      "evidence_required": "Prompt structure follows slot format; trigger word first and consistent; style/quality keywords consistent; no contradictions; negative prompt present.",
+      "poor": "No structure; trigger word changes mid-project; style keywords alternate; quality tags inconsistent; semantic contradictions; no negative prompt.",
+      "great": "Prompt is structured, consistent, and deterministic; trigger word is stable; style/quality keywords are verbatim copies; negative prompt is standard.",
+      "weight": 0.9
+    },
+    {
+      "id": "manifest-completeness",
+      "name": "Manifest completeness (repeatability record)",
+      "what_good_looks_like": "Every output ships with a sidecar manifest (*.manifest.json) containing: version, timestamp, output_file, workflow path, workflow_version, comfyui_version, gpu, seed, model (file + hash_sha256), vae (file + hash_sha256), loras (file + strength + hash_sha256), sampler, scheduler, steps, cfg, resolution, denoise, prompt, negative_prompt, ip_adapter, controlnets, output_hash_sha256. Manifest written at generation time. Re-run possible from manifest only.",
+      "evidence_required": "Manifest exists for every output; all fields populated; model/vae/lora hashes present; seed recorded; workflow versioned in git; re-run possible from manifest only.",
+      "poor": "No manifest; missing fields; no hashes; seed not recorded; workflow not in git; re-run not possible from manifest alone; manifest written after the fact.",
+      "great": "Manifest is complete and written at generation time; every field populated; hashes verified; re-run is deterministic from manifest only.",
+      "weight": 1.0
+    }
+  ]
+}

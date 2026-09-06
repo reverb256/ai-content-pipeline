@@ -52,7 +52,9 @@
     "story-narrative": "brain/rubrics/story-narrative.json",
     "cinematography-visuals": "brain/rubrics/cinematography-visuals.json",
     "voice-acting": "brain/rubrics/voice-acting.json",
-    "character-design": "brain/rubrics/character-design.json"
+    "character-design": "brain/rubrics/character-design.json",
+    "media-literacy": "brain/rubrics/media-literacy.json",
+    "comfyui-determinism": "brain/rubrics/comfyui-determinism.json"
   },
   "review_protocol": {
     "judge_count": "3+ (different model families)",
