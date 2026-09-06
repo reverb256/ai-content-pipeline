@@ -1,0 +1,87 @@
+{
+  "rubric_id": "character-design",
+  "name": "Character Design Scoring Rubric",
+  "discipline": "character-design",
+  "stage": "audio-drama",
+  "version": "0.1.0",
+  "source_corpus": [
+    "brain/craft/character-design.md",
+    "brain/craft/storycraft.md",
+    "brain/stage-specs/audio-drama.md",
+    "brain/QUALITY_DOCTRINE.md"
+  ],
+  "mechanical_gates_that_precede": [
+    "scripts/gates/gate_continuity.py",
+    "scripts/gates/gate_character_sheet.py"
+  ],
+  "scoring": {
+    "scale": "1-10",
+    "pass_threshold": 7,
+    "note": "Each criterion is scored 1-10 by each panel judge. Below-threshold criteria must produce a SPECIFIC diagnosis + fix (not vague judgment). Judges cite which corpus rule the artifact violates. Average >= 7.0 AND no single criterion < 5 = PASS (per character-design.md §7)."
+  },
+  "criteria": [
+    {
+      "id": "char-sheet-completeness",
+      "name": "Character sheet completeness — required fields present",
+      "what_good_looks_like": "All 10 required fields from character-design.md §1 are populated: name, role, archetype, want, need, flaw, voice_params (with base_desc, pitch_shift, rate, timbre, emotion_presets), visual_signature (gender, age, hair, face, clothing, color_palette, key_anchor), backstory_lite (3-5 bullets), and relationships map. No blank fields. The YAML template is followed exactly.",
+      "evidence_required": "character sheet at brain/craft/characters/<name>/README.md parsed for all 10 required fields; voice_params and visual_signature sub-objects present with their required sub-fields.",
+      "poor": "Missing want, need, or flaw. voice_params has no emotion_presets. visual_signature lacks key_anchor or color_palette. backstory_lite has fewer than 3 bullets. Sheet is incomplete — downstream stages (LoRA, voice design, dialogue) cannot be derived from it.",
+      "great": "Every required field present and populated. voice_params.emotion_presets covers at least calm/angry/sad/fearful/defiant. visual_signature.key_anchor is a concrete 2-feature string usable as a descriptor lock. Sheet is ready for LoRA training, voice synthesis, and dialogue derivation.",
+      "weight": 1.0
+    },
+    {
+      "id": "visual-consistency-descriptor-lock",
+      "name": "Visual consistency — descriptor lock honored across appearances",
+      "what_good_looks_like": "Every prompt for the character contains key_anchor (character-design.md §2 Descriptor Lock). Visual signature applied: gender, age, hair, face, clothing, and color_palette consistent across all shots/scenes. LoRA/IP-Adapter applied where specified. No face drift (different look every shot), no outfit amnesia (clothing changes mid-scene), no age sliding (character ages/regresses), no palette bleed (colors shift to defaults). QA §7 Visual criteria pass: key_anchor features in frame, 2 of 3 palette colors within +/-10% HSL, clothing matches, age/gender match, LoRA/IP-Adapter trigger present.",
+      "evidence_required": "Prompt logs for every scene containing the character; key_anchor string present in every prompt; color_palette hex values applied; LoRA trigger word or IP-Adapter reference in generation metadata.",
+      "poor": "Character looks different in every shot. Outfit changes mid-scene without justification. key_anchor missing from some prompts. Age/gender drifts between episodes. Palette defaults to model's generic output instead of the specified hex values.",
+      "great": "The character is instantly recognizable in every appearance. Descriptor lock is honored in every prompt. Palette, clothing, age, and features are consistent. A viewer could thumbnail any frame and identify the character without context.",
+      "weight": 0.9
+    },
+    {
+      "id": "voice-consistency-across-appearances",
+      "name": "Voice consistency — same voice across scenes and episodes",
+      "what_good_looks_like": "Base_desc is copied verbatim from voice.yaml for every appearance (character-design.md §3 Anti-Drift Rule 1). Emotion presets are the ONLY variable — everything else is fixed. Pitch_shift and rate are global constants — never change per line (Rule 3). Timbre is the character's physical fingerprint — constant across all scenes (Rule 4). New emotions added to voice.yaml first — no ad-hoc emotions (Rule 5). QA §7 Voice criteria pass: base_desc exact match to voice.yaml, emotion presets valid (present in voice.yaml), pitch/rate within +/-0.1, timbre consistent, no cross-contamination between characters.",
+      "evidence_required": "Cast block in story.md matches voice.yaml base_desc character-for-character. emotion_presets used are a subset of voice.yaml presets. pitch_shift and rate values identical across all lines. Timbre description consistent.",
+      "poor": "Base_desc improvised per line. Character sounds different in every episode. Pitch shifts between lines. Timbre wanders from 'alto, husky, close-mic' to 'young, bright, distant'. Two characters sound identical. Emotion presets used that don't exist in voice.yaml.",
+      "great": "The character's voice is a constant. You could hear one line from episode 1 and one from episode 5 and know it's the same person. Base_desc is copied verbatim. Emotions land because they vary within a fixed framework. Timbre is the fingerprint.",
+      "weight": 1.0
+    },
+    {
+      "id": "character-distinctiveness",
+      "name": "Character distinctiveness — not samey, each character recognizable",
+      "what_good_looks_like": "Every named character has a distinct voice (storycraft.md §4.4 Voice Lock). The dialogue test passes: remove all attributions — you can still tell who speaks by word choice and rhythm alone. Catchphrase discipline enforced: max ONE use per episode per character, never consecutive episodes (character-design.md §4 Catchphrase Discipline). Supporting cast each serve ONE primary function (Mirror/Mentor/Shadow/Ally) — no redundant characters (storycraft.md §4.3). Big-5 personality axes produce distinct dialogue patterns per character.",
+      "evidence_required": "Cast block in story.md has unique base_desc per character. Dialogue test: attributions removed, characters still distinguishable by voice. Catchphrase usage logged per episode (count <= 1).",
+      "poor": "All characters sound identical — same cadence, same vocabulary, same sentence length. Every character uses the catchphrase every scene. Two characters could swap lines with no loss of meaning. Supporting cast has redundant functions.",
+      "great": "Each character is a distinct vocal presence. You know who's speaking before the attribution. Word choice, rhythm, and sentence structure are per-character signatures. Supporting cast functions are non-overlapping and each earns their place.",
+      "weight": 0.9
+    },
+    {
+      "id": "character-goal-clarity",
+      "name": "Character goal clarity — want/need/flaw explicit and distinct",
+      "what_good_looks_like": "want, need, and flaw are all explicit in the character sheet (storycraft.md §4.1). want is concrete and achievable-seeking (a person, object, state). need is the unconscious truth they resist — the arc is accepting it. flaw is the specific blindness that prevents them from getting the need. want != need — if they are the same, the character has no internal conflict (storycraft.md §2 Story Engine: 'Want != need; both are explicit in the script'). Antagonist attacks the flaw directly (storycraft.md §4.2).",
+      "evidence_required": "Character sheet has want, need, and flaw fields populated. want and need are different concepts. Flaw is a specific behavior or belief, not a vague trait. Story script shows the antagonist leveraging the flaw.",
+      "poor": "want and need are identical. Flaw is vague ('bad temper') rather than specific ('Cannot delegate without suspicion'). Flaw is not a limiting belief that prevents the need. Antagonist is 'just evil' with no connection to the protagonist's flaw. The character has no internal conflict.",
+      "great": "want is concrete ('Keep the station running'). need is the unconscious truth ('Let go of control'). flaw is the specific mechanism ('Cannot delegate without suspicion'). The antagonist is the strongest teacher — they attack the flaw directly. The gap between want and need drives every scene.",
+      "weight": 1.0
+    },
+    {
+      "id": "character-arc-presence",
+      "name": "Character arc presence — arc defined with beats and earned resolution",
+      "what_good_looks_like": "Arc is defined with explicit beats tracked per episode (character-design.md §5 Full Arc Tracking). The arc test passes: you can state the protagonist's belief at scene 1 and the opposite belief at the end (storycraft.md §4.1 Arc test). Arc type matches format: Micro-arc (1 emotional shift) for short video, Mini-arc (2-3 beats) for long video, Full arc (5+ beats) for episodic audio drama. Every episode's story.md references the current arc beat per character (character-design.md §5 Rule). Flaw-fuels-crisis at All Is Lost, resolution is earned (not deus ex machina). Arc YAML in README.md has want, need, flaw, and beats with episode + beat description + state.",
+      "evidence_required": "Arc YAML block in character README.md with beats array. Each beat references an episode number. Story.md for each episode references the current arc beat. Arc resolution is earned through character choice, not coincidence.",
+      "poor": "No arc defined — character has the same worldview at the end as the start. Arc test fails — cannot state opposite belief. Arc type doesn't match format (micro-arc claimed for a season-long drama). Arc beats not tracked per episode. Resolution comes from coincidence or outside intervention (deus ex machina).",
+      "great": "The arc is explicit and trackable. You can name the belief at beat 1 and the opposite belief at the final beat. The flaw is the engine of the crisis. The resolution is earned — the character chooses differently because of what the arc taught them. Every episode's contribution to the arc is documented.",
+      "weight": 0.9
+    },
+    {
+      "id": "no-character-drift-contradiction",
+      "name": "No character drift or contradiction — canon integrity across episodes",
+      "what_good_looks_like": "No bible contradiction (character-design.md §7 Behavior QA #3). Personality axes match dialogue patterns (QA #1). Arc beat correct for this episode (QA #2). Relationship tone matches relationship map (QA #5). Story bible (storycraft.md §8) is updated per episode — cast.md, timeline.md, world.md, canon.md, plants.md. Changelog discipline: every change is logged with date, author, and reason (character-design.md §6 Change-Log Discipline). Versioning followed: MAJOR for personality rewrite/arc reversal, MINOR for new emotion preset/catchphrase/visual anchor, PATCH for typo fix. No personality drift (acts out of profile mid-season), no arc amnesia (no change across episodes), no catchphrase spam, no flat character (no want/need/flaw), no bible contradiction.",
+      "evidence_required": "Character README.md changelog updated per change. Story bible components (cast.md, timeline.md, world.md, canon.md, plants.md) exist and are current. Every episode's story.md checked against bible for contradictions. Relationship tone matches relationship map.",
+      "poor": "New episode contradicts facts established in prior episodes. Character acts out of personality profile mid-season. Relationship tone shifts without justification. Story bible not updated. Changelog missing. Versioning ignored. Prior episode's events ignored or overwritten.",
+      "great": "The character is a consistent entity across all episodes. Every new story honors the established bible. Changes are logged, versioned, and justified. A new writer (or bot) could read only the bible and produce episode N+1 without re-reading all prior episodes. Canon is a reliable source of truth.",
+      "weight": 1.0
+    }
+  ]
+}

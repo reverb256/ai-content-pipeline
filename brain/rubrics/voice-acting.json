@@ -1,0 +1,98 @@
+{
+  "rubric_id": "voice-acting-tts",
+  "name": "Voice Acting & TTS Delivery Scoring Rubric",
+  "discipline": "voice-acting",
+  "stage": "voice",
+  "version": "0.1.0",
+  "source_corpus": [
+    "brain/craft/voice-acting.md",
+    "brain/stage-specs/voice.md",
+    "brain/stage-specs/audio-drama.md",
+    "brain/QUALITY_DOCTRINE.md"
+  ],
+  "mechanical_gates_that_precede": [
+    "scripts/gates/gate_loudness.py",
+    "scripts/gates/gate_eq.py",
+    "scripts/gates/gate_duration_vs_wordcount.py",
+    "scripts/gates/gate_completeness.py"
+  ],
+  "scoring": {
+    "scale": "1-10",
+    "pass_threshold": 7,
+    "note": "Each criterion is scored 1-10 by each panel judge. Below-threshold criteria must produce a SPECIFIC diagnosis + fix (not vague judgment). Judges cite which corpus rule the artifact violates. This rubric is NON-duplicative with audio-production-mix — pause placement, inter-line gaps, and character consistency across episodes are scored there."
+  },
+  "criteria": [
+    {
+      "id": "voice-wpm-appropriateness",
+      "name": "WPM rate matches content type (narration vs. drama)",
+      "what_good_looks_like": "Narration (VO/faceless) delivered at 150–165 WPM (~160). Audio-drama dialogue delivered at 120–140 WPM (~130). Duration math holds: narration_seconds = word_count / 160, dialogue_seconds = word_count / 130. Actual duration within ±10% of word-budget estimate. No truncation below 90% of expected.",
+      "evidence_required": "ffprobe duration vs. script word count; compare actual WPM to target band per content type; PASS if actual >= expected * 0.90.",
+      "poor": "Audio-drama read at VO pace (too fast to hear character beats) or narration at drama pace (dragging); duration < 90% of word budget (truncation); WPM outside the corpus band entirely.",
+      "great": "Narration sits in the 150–165 sweet spot; drama dialogue has room to breathe at 120–140; duration matches word budget ±10%; no truncation.",
+      "weight": 0.9
+    },
+    {
+      "id": "voice-rhetorical-emphasis",
+      "name": "Rhetorical devices land — rule of three, contrast, anaphora, rising action, hook",
+      "what_good_looks_like": "Script uses rhetorical devices that work in audio: rule of three (third item carries the punch), contrast pause [pause: 0.8s] before a turn/reversal, anaphora (repeated opening phrase 2–3 lines), rising action (sentence length drops from ~18 → ~8 words toward climax), and hook cadence (first 7 seconds contain ONE short sentence ≤ 8 words + pattern interrupt). Emphasis is carried by Voice Design description + emotion cue, NOT CAPS or punctuation.",
+      "evidence_required": "Script markup contains rhetorical devices; [pause: 0.8] cues before reversals; first 7s of audio has a short sentence + pattern break; sentence-length variance measured across the piece (6–22 word range visible in script).",
+      "poor": "No rhetorical structure; flat list of equal-weight statements; hook is a long sentence with no contrast; climax arrives without rising action; emphasis marked only by CAPS (ignored by TTS).",
+      "great": "The listener feels the turns land; the hook grabs in under 7 seconds; the rule-of-three third item hits; rising action builds; contrast pauses create dramatic tension.",
+      "weight": 1.0
+    },
+    {
+      "id": "voice-tts-naturalness",
+      "name": "TTS naturalness — no robotic flatness, varied prosody, correct intonation",
+      "what_good_looks_like": "Natural prosody: declarative sentences fall at the end, questions rise. Sentence length varies (target 12–18 words, range 6–22 across lines). No machine-gun delivery (identical gap variance ±0.05s everywhere). No upspeak on declaratives. Listener cannot tell it is TTS on first listen. CFG set correctly: 2.0 for calm/neutral, 2.8 for emotive lines.",
+      "evidence_required": "Listen-test for robotic cadence; sentence-length distribution in script; pitch-direction check on declaratives vs. questions; CFG values in synthesis logs.",
+      "poor": "Metronomic uniform gaps (±0.05s); every sentence same length; upspeak on declaratives (sounds uncertain); listener identifies it as synthetic within 3 seconds; CFG mismatch (calm at 2.8 = too sharp, emotion at 2.0 = too flat).",
+      "great": "Prosody sounds human; sentence rhythm varies; declaratives fall, questions rise; CFG matched to emotion level; indistinguishable from a skilled human narrator on blind listen.",
+      "weight": 1.0
+    },
+    {
+      "id": "voice-character-differentiation",
+      "name": "Character voice design fits archetype and is distinct from others",
+      "what_good_looks_like": "Each character has a Voice Design string with gender + age + temperament + texture + emotion/pace (per archetype table). In any scene with N characters, pitch/rate pairs differ by ≥ 15% between each. Archetype-accurate: young hero (medium-high pitch, rate 1.0), weary detective (low pitch, rate 0.95), cold villain (low pitch, rate 0.85), whisper (low pitch, rate 0.8), etc. Voice Design quality: specific, not generic ('a person speaking' = FAIL).",
+      "evidence_required": "Cast block Voice Design strings in frontmatter; pitch/rate delta ≥ 15% between characters measured or inferred from Voice Design; archetype matches the table; no generic descriptions.",
+      "poor": "Two characters share the same pitch/rate (indistinguishable); generic Voice Design ('a person speaking'); archetype mismatches the descriptor (villain sounds warm and bubbly); cast block missing entirely.",
+      "great": "Each character is instantly identifiable by voice alone; pitch/rate deltas ≥ 15%; archetype descriptions match the voice design table; Voice Design strings are rich and specific.",
+      "weight": 0.9
+    },
+    {
+      "id": "voice-emotional-arc",
+      "name": "Emotional arc across the whole performance (rising action, scene trajectory)",
+      "what_good_looks_like": "The piece has a macro-emotional arc: rising action builds from calm/neutral toward a climax, then resolves. Scene-level emotions are coherent (a tense scene stays tense; a joyful scene doesn't suddenly flatten). Per-line emotions serve the arc (most lines reinforce the scene emotion; < 50% override). The climax lands with higher intensity (shortened sentences, clipped pace, CFG 2.8). Resolution brings the listener back down.",
+      "evidence_required": "Script scene-emotion cues form an arc (not random); climax is identifiable by rising action + shortened sentences; per-line emotion overrides are < 50% of scene lines; CFG values map to emotional intensity.",
+      "poor": "Flat emotional line from start to finish (no arc); scene emotions contradict the narrative; climax is indistinguishable from exposition; > 50% of lines override the scene emotion (scene heading emotion is wrong).",
+      "great": "The listener is taken on a journey; rising action is palpable; the climax hits with force; the resolution satisfies; scene emotions are coherent and serve the story.",
+      "weight": 1.0
+    },
+    {
+      "id": "voice-pronunciation-clarity",
+      "name": "Pronunciation & clarity of key terms — no mush-mouth, clipped consonants, or dead air",
+      "what_good_looks_like": "Every word is intelligible on first listen. Key terms (names, technical words, proper nouns) are pronounced correctly. No clipped consonants (p/t/k distort or crunch). No mush-mouth (consonants swallowed). No unintended mid-section silence > 2s (dead air). No volume clipping. Numbers rendered as words where the script specifies. Mean volume between −20 and −30 dB.",
+      "evidence_required": "Listen-test for intelligibility; key-term pronunciation check; plosive distortion check; silencedetect for unintended gaps > 2s; volumedetect for mean level; no clipping in transients.",
+      "poor": "Key terms mispronounced; plosives clip or distort; consonants swallowed (mush-mouth); dead air > 2s mid-section; volume too low (buried) or clipped; numbers read as digits where words were intended.",
+      "great": "Every word lands cleanly on first listen; key terms pronounced with confidence; no plosive distortion; no dead air; volume sits in the −20 to −30 dB sweet spot; no clipping.",
+      "weight": 1.0
+    },
+    {
+      "id": "voice-hook-cadence",
+      "name": "Hook cadence — first 7 seconds contain a short sentence ≤ 8 words + pattern interrupt",
+      "what_good_looks_like": "The opening 7 seconds contain ONE short sentence (≤ 8 words) followed by a pattern interrupt (a contrast, a question, a sudden shift in topic or tone). This is the hook cadence that stops the scroll. The short sentence is punchy and self-contained. The pattern interrupt creates a gap the listener wants filled.",
+      "evidence_required": "First 7 seconds of audio measured; short sentence ≤ 8 words present; pattern interrupt (contrast/question/shift) follows within the 7s window.",
+      "poor": "Opening is a long, meandering sentence (> 12 words); no pattern interrupt; first 7 seconds are setup/explanation (boring); listener has no reason to continue.",
+      "great": "The hook grabs immediately; the short sentence lands; the pattern interrupt creates curiosity; the listener is hooked within 7 seconds.",
+      "weight": 0.8
+    },
+    {
+      "id": "voice-duration-completeness",
+      "name": "Duration completeness — all script lines present, in order, within word-budget tolerance",
+      "what_good_looks_like": "Every narration line from script.md is present in the audio, in order. No skipped sections, no truncation. Duration is within ±10% of the word-budget estimate (words / 160 for narration, words / 130 for drama). Mechanical gate: actual_duration >= expected * 0.90. Audio is non-silent (mean volume not −90 dB).",
+      "evidence_required": "ffprobe duration check vs. script word count; gate_duration_vs_wordcount.py output; completeness check (all lines audible in order); volumedetect for non-silence.",
+      "poor": "Script lines missing or out of order; duration far shorter than word budget implies (truncation); audio is silent or near-silent; duration < 90% of expected.",
+      "great": "Every script line present and in order; duration within ±10% of word-budget estimate; audio is non-silent; mechanical gates pass.",
+      "weight": 0.9
+    }
+  ]
+}
