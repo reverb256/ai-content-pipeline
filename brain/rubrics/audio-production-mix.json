@@ -1,0 +1,107 @@
+{
+  "rubric_id": "audio-production-mix",
+  "name": "Audio Production & Mix Scoring Rubric",
+  "discipline": "audio-production",
+  "stage": "audio-drama",
+  "version": "0.1.0",
+  "source_corpus": [
+    "brain/craft/voice-acting.md",
+    "brain/research/spatial-audio-format.md",
+    "brain/stage-specs/audio-drama.md",
+    "brain/stage-specs/voice.md"
+  ],
+  "mechanical_gates_that_precede": [
+    "scripts/gates/gate_loudness.py",
+    "scripts/gates/gate_eq.py",
+    "scripts/gates/gate_ambience.py",
+    "scripts/gates/gate_beat_density.py"
+  ],
+  "scoring": {
+    "scale": "1-10",
+    "pass_threshold": 7,
+    "note": "Each criterion is scored 1-10 by each panel judge. Below-threshold criteria must produce a SPECIFIC diagnosis + fix (not vague judgment). Judges cite which corpus rule the artifact violates."
+  },
+  "criteria": [
+    {
+      "id": "mix-loudness-consistency",
+      "name": "Loudness consistency across the whole piece",
+      "what_good_looks_like": "Master loudness -16 LUFS ±1.5 across ALL scenes (storyteller masters at -16 LUFS / -1.5 dBTP / LRA 11). No scene jumps louder/quieter than ±1.5 LU from the master. True peak never exceeds -1.0 dBTP (no clipping).",
+      "evidence_required": "ffprobe/ffmpeg loudness measurement per scene; gate_loudness.py output; no clipping in waveform.",
+      "poor": "Scenes vary >2 LU from master; peaks near 0 dBTP; inconsistent perceived volume scene-to-scene.",
+      "great": "Rock-steady -16 LUFS across every scene; effortless listen; no level rides needed.",
+      "weight": 1.0
+    },
+    {
+      "id": "mix-spectral-health",
+      "name": "Spectral / EQ balance (speech intelligibility)",
+      "what_good_looks_like": "Energy in the 1-4 kHz intelligibility band 24-44% (narration) or 24-49% (drama); mud (bass+low-mid 60-500 Hz) 16-36% (narration) / 18-47% (drama); spectral centroid ~2000-2900 Hz. Not dull (<500 Hz centroid) or harsh/brittle (>4000 Hz). No excessive sibilance.",
+      "evidence_required": "gate_eq.py spectral bands output; spectral centroid; sibilance measurement.",
+      "poor": "All energy in bass/low-mid (mud), almost none in 1-4 kHz intelligibility; centroid far from human speech; harsh sibilance.",
+      "great": "Clear, present, natural speech spectrum; balanced lows; no listener fatigue.",
+      "weight": 1.0
+    },
+    {
+      "id": "mix-reverb-consistency",
+      "name": "Reverb / acoustic-space consistency",
+      "what_good_looks_like": "All sounds in a scene share similar reverb characteristics (the corpus rule: if dialogue sounds like a cathedral but footsteps are dry, listeners notice). Room preset matches the scene's stated [SPATIAL: room] cue. Reverb per-character is consistent with their cast-block reverb field.",
+      "evidence_required": "Reverb preset per scene matches script [SPATIAL:] cue; no scene where elements clash acoustically.",
+      "poor": "Dialogue in a hall but SFX dry; reverb changes mid-scene without a spatial cue justifying it; characters in the same scene sound in different rooms.",
+      "great": "Every element sits in the same believable acoustic space; the room sells the scene; spatial cues are honored.",
+      "weight": 0.9
+    },
+    {
+      "id": "mix-spatial-placement",
+      "name": "Spatial placement / stereo field (when spatial cues used)",
+      "what_good_likes_like": "Characters placed per their cast-block position (center/L/R); pan cues (e.g. [SPATIAL: pan L→R]) executed with the stated duration; narrator anchored center; movement reads naturally. Spatial audio serves the story (BBC rule: don't use spatial for its own sake).",
+      "evidence_required": "Script spatial cues present; rendered audio honors them (pan/placement audible); movement cues timed.",
+      "poor": "All voices dead-center regardless of scripted positions; pan cues ignored; spatial placement contradicts the blocking.",
+      "great": "The stereo/3D field tells part of the story — you know where each character stands; movement is motivated and clear.",
+      "weight": 0.8
+    },
+    {
+      "id": "mix-beds-under-dialogue",
+      "name": "Music/SFX beds sit under dialogue (ducking + level)",
+      "what_good_looks_like": "ATMOS/MUSIC beds duck under dialogue per their [ATMOS: ... duck: N] gain; dialogue always intelligible over beds; beds audible but never competing. No 'wall of sound' burying the voice.",
+      "evidence_required": "Beds duck when dialogue present; dialogue remains intelligible; gain values match script cues.",
+      "poor": "Music or ambience overwhelms dialogue; ducking absent; listener strains to hear the voice.",
+      "great": "Beds support the emotion and sit perfectly beneath the voice; you feel them but never fight them.",
+      "weight": 0.9
+    },
+    {
+      "id": "mix-dynamic-range-and-noise",
+      "name": "Dynamic range + noise floor",
+      "what_good_looks_like": "LRA ~11 (storyteller target); no hiss/room-tone noise audible in silences; no pumping/breathing artifacts; silences are clean (gate_ambience passes); no clipped transients.",
+      "evidence_required": "gate_ambience.py output; LRA measurement; noise floor check in pauses; no clipping in transients.",
+      "poor": "Audible hiss in pauses; room tone inconsistent; breathing/mouth noise; overly compressed (no dynamics) or wildly dynamic.",
+      "great": "Clean, quiet floor; dynamics serve the emotion; pauses are restful not noisy.",
+      "weight": 0.8
+    },
+    {
+      "id": "voice-pacing-and-pauses",
+      "name": "Voice pacing + pause placement (per voice-acting corpus)",
+      "what_good_looks_like": "Pauses placed per corpus: [pause: 1.0-2.0s] after rhetorical questions + paragraph boundaries; [pause: 0.5s] after punch lines; [pause: 0.8s] contrast before turns/reversals. At least one ≥0.9s scene-boundary pause; gaps NOT all identical (robotic-uniform ~0.28s = FAIL). Inter-line gap 0.42s on speaker change; narrator beats 0.55s. No run-on >25 words without a pause break.",
+      "evidence_required": "silencedetect output; pause-length distribution; no uniform gaps; corpus pause constants honored.",
+      "poor": "Robotic uniform pacing; no scene breaths; run-on sentences; pauses in wrong places (mid-thought).",
+      "great": "Pacing breathes; pauses land where the story needs them; every scene boundary is audible; rhythm feels human and intentional.",
+      "weight": 1.0
+    },
+    {
+      "id": "voice-emotive-and-character-consistency",
+      "name": "Emotive delivery + character voice consistency",
+      "what_good_looks_like": "Character voices match cast-block descriptors + emotion cues (angry/weary/etc. map to vocal params); same character sounds like the same voice across scenes; emotion reads in the delivery, not just the words; narrator is stable and distinct from characters.",
+      "evidence_required": "Cast-block voice descriptors honored; character consistency across episodes/scenes; emotion cues audible.",
+      "poor": "Character voice drifts between scenes; emotion cues ignored (reads flat); two characters sound identical; narrator collides with a character voice.",
+      "great": "Each character is instantly recognizable and consistent; emotion lands; the cast feels cast.",
+      "weight": 0.9
+    },
+    {
+      "id": "story-clarity-through-mix",
+      "name": "Story clarity — can a listener follow it?",
+      "what_good_looks_like": "A first-time listener can tell who is speaking, where they are, and what is happening — from the mix alone. Scene changes are audible. The spatial/reverb/music choices support comprehension, not confusion.",
+      "evidence_required": "A blind listen (judge listens without script) can follow scene/character/spatial changes.",
+      "poor": "Confusing who spoke; scene transitions muddy; spatial choices obscure rather than clarify.",
+      "great": "The mix alone tells the story — you never need the script to know where you are and who's talking.",
+      "weight": 1.0
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+{
+  "rubric_id": "story-narrative",
+  "name": "Story / Narrative Scoring Rubric",
+  "discipline": "story-narrative",
+  "stage": "story",
+  "version": "0.1.0",
+  "source_corpus": [
+    "brain/craft/storycraft.md",
+    "brain/craft/narrative-quality-guide.md",
+    "brain/craft/character-design.md",
+    "brain/stage-specs/story.md",
+    "brain/stage-specs/script.md",
+    "brain/stage-specs/audio-drama.md"
+  ],
+  "mechanical_gates_that_precede": [
+    "scripts/gates/gate_scene_goal.py",
+    "scripts/gates/gate_cold_open.py",
+    "scripts/gates/gate_tension_arc.py",
+    "scripts/gates/gate_scene_causation.py",
+    "scripts/gates/gate_plant_payoff.py",
+    "scripts/gates/gate_character_name_tag.py",
+    "scripts/gates/gate_voice_contrast.py"
+  ],
+  "scoring": {
+    "scale": "1-10",
+    "pass_threshold": 7,
+    "note": "Each criterion scored 1-10 by each panel judge. Min pass = 7 (per storycraft §7 and narrative-quality-guide §5.6). FAIL if any criterion < 7. Feedback must name the scene + exact fix (e.g. 'Scene 4 has no therefore/but link to Scene 5 — add a [link: but] tag'). Judges cite which corpus rule the artifact violates. Max 2 retries; then flag for human review."
+  },
+  "criteria": [
+    {
+      "id": "inciting-incident-timing",
+      "name": "Inciting incident — presence and timing",
+      "what_good_looks_like": "A concrete event throws the protagonist's life into chaos (McKee §1.1; Save the Cat Catalyst beat at ~10% in). The incident is stated within the first act — before the 10% mark for short-form, before the Debate beat (~15-20%) for longer pieces. It is a specific, irreversible event — 'The console beeped once. Then it stopped' — not a vague transition.",
+      "evidence_required": "Script contains an inciting incident event before 10-15% mark; the event is concrete (not a narrative transition); the protagonist's status quo is visibly disrupted.",
+      "poor": "No inciting incident, or 'And then one day...' / 'Welcome back to the show.' The story drifts into conflict without a concrete trigger. (McKee BAD: 'Mara woke up. She had a normal day.')",
+      "great": "A single concrete event upsets the balance before the Debate beat. The listener knows exactly what changed and when. (McKEE GOOD: 'The console beeped once. Then it stopped. The signal is gone.')",
+      "weight": 1.0
+    },
+    {
+      "id": "progressive-complications",
+      "name": "Progressive complications — rising stakes, no flat middle",
+      "what_good_looks_like": "Each scene adds new information or raises cost/risk (storycraft §2 Escalation). The plan fails at least once (Truby §1.2 Plan). Change happens in small steps — cowardice → small courage → bigger act → final bravery (Egri §1.3). No scene is a repeat of the previous one. The midpoint (45-55%) reverses the protagonist's understanding — the 'truth was backwards' beat (storycraft §5.2; narrative-quality §4.4).",
+      "evidence_required": "Each scene has a distinct escalation (new info or higher stakes); at least one plan failure; midpoint reversal present at 45-55%; no two consecutive scenes with identical tension level.",
+      "poor": "Flat middle — scenes repeat the same tension level. Plan succeeds on first try. No midpoint reversal. Stakes stay abstract ('failure is not an option'). (Truby BAD: 'Plan succeeds on first try with no obstacle.')",
+      "great": "Every scene raises the cost. The plan fails, forcing a bigger risk. The midpoint flips the protagonist's understanding. The listener feels the stakes tightening scene by scene. (McKEE GOOD: 'Mara finds a clue — but it implicates someone she trusts.')",
+      "weight": 1.0
+    },
+    {
+      "id": "crisis-climax-resolution",
+      "name": "Crisis / climax — resolution earned, not deus ex machina",
+      "what_good_looks_like": "The climax is the final, most extreme, irreversible change (McKee §1.1). The protagonist risks the most and the theme is proven. The ending flows from character choice — the hero uses what they learned (Truby §1.2 Battle). No coincidence saves the protagonist (storycraft §6.1 anti-cliché). The resolution is earned: the protagonist's choice, not an external force, resolves the conflict.",
+      "evidence_required": "Climax scene present where protagonist makes the highest-stakes choice; the choice is causally linked to prior scenes (therefore/but chain); no unforeshadowed external rescue; theme is demonstrated through the outcome.",
+      "poor": "Deus ex machina — external force resolves the conflict. The protagonist's choices were irrelevant. The ending contradicts the established rules. (McKEE BAD: 'Deus ex machina saves Mara; her choices were irrelevant.')",
+      "great": "The protagonist confronts the antagonist with what they've learned. The climax is the most extreme change. The theme is proven through the character's final choice. (TRUBY GOOD: 'Mara delegates to Elias, trusts him, and they fix it together.')",
+      "weight": 1.0
+    },
+    {
+      "id": "scene-goal-discipline",
+      "name": "Scene goal — every scene has ONE of reveal / escalate / decision",
+      "what_good_looks_like": "Every scene has exactly ONE goal: Reveal (new information that changes the listener's understanding), Escalate (raise tension, cost, or stakes), or Decision (protagonist makes a choice that constrains future choices) (storycraft §3.1; narrative-quality §3.1). The goal is checkable — a scene that 'exists for vibe' with no checkable goal FAILS.",
+      "evidence_required": "Each scene heading or annotation declares its goal (reveal/escalate/decision); the scene's content delivers that goal; no scene is atmosphere-only.",
+      "poor": "Scene exists for vibe — no checkable goal. Meandering dialogue that changes nothing. (BBC BAD: 'Mara looked around the room.' — no new information.)",
+      "great": "Every scene has a named goal and delivers it. The listener's understanding changes, the stakes rise, or the protagonist makes a binding choice — every single scene. (GOOD: 'Mara: The signal wasn't from a satellite. It was from the station itself.' — reveal.)",
+      "weight": 0.9
+    },
+    {
+      "id": "scene-tension-arc",
+      "name": "Tension arc per scene — rise and fall, no flat scenes",
+      "what_good_looks_like": "Every scene has a tension arc: enter late, build to a peak (revelation/decision/setback), exit early with a new status quo (storycraft §3.2). Flat scenes (same tension start to end) FAIL. Minimum 0.3-point tension delta per scene on a 0-3 scale. The scene's emotional outcome ≠ its emotional start (McKee value turn).",
+      "evidence_required": "Each scene has a measurable tension delta (≥0.3 on 0-3 scale); scene opens at a different emotional charge than it closes; no scene is flat calm→calm.",
+      "poor": "Flat scene — opens calm, ends calm. No value moved. The scene is one long monologue with no internal value shift. (McKEE BAD: 'Scene opens calm, ends calm — no value moved; exposition masquerading as drama.')",
+      "great": "Every scene rises and falls. The listener feels the shift — trust→betrayal, hope→despair, suspicion→conflict. The scene ends the moment the goal is achieved, never after. (McKEE GOOD: 'Scene opens with trust, ends with betrayal — the listener feels the shift.')",
+      "weight": 0.9
+    },
+    {
+      "id": "scene-causation",
+      "name": "Scene-to-scene causation — therefore / but, no 'and then'",
+      "what_good_looks_like": "Every transition between scenes is either Therefore ('X happened, therefore Y must happen' — consequence, choice-driven) or But ('X happened, but Y blocks it' — obstacle, reversal) (storycraft §3.3; narrative-quality §3.3). 'And then' is FORBIDDEN — the sign of episodic, unlinked storytelling. If you cannot name the therefore/but between scene N and N+1, the story has a plot hole.",
+      "evidence_required": "Every scene link is causal (therefore) or reversal (but); no 'and then' transitions; optional [link: therefore] / [link: but] tags present at scene headings.",
+      "poor": "'And then she went to the station. And then the signal came back.' Episodic, unlinked scenes. The story is a sequence of events, not a causal chain. (BAD: 'Mara fixes the relay → then we see a sunset.')",
+      "great": "Every scene is caused by the previous one. The listener can trace the causal chain from inciting incident to climax. Transitions are either consequence or reversal — never mere sequence. (GOOD: 'Mara finds the clue → but it implicates her ally → therefore she must choose.')",
+      "weight": 0.9
+    },
+    {
+      "id": "character-want-need-arc",
+      "name": "Character want vs need + arc — belief changes pole to pole",
+      "what_good_looks_like": "The protagonist has an explicit want (concrete, achievable-seeking goal) AND an explicit need (unconscious truth they resist) — want ≠ need (storycraft §4.1; McKee §1.1; Truby §1.2). The flaw is the specific blindness that prevents them from getting the need. The arc test: can you state the protagonist's belief at scene 1 and the OPPOSITE belief at the end? If not, there is no arc. The antagonist attacks the flaw directly (storycraft §4.2; Truby Opponent).",
+      "evidence_required": "Want and need are both explicit in the script; want ≠ need; the flaw is named and tested by the plot; the protagonist's belief at the end is the opposite of scene 1; the antagonist's strategy targets the flaw.",
+      "poor": "Want = need (no inner resistance). Protagonist has a flaw but it never matters. No arc — same worldview at start and end. Antagonist is 'just evil' with no connection to the hero's flaw. (BAD: 'Wants to find signal and succeeds with no inner conflict.')",
+      "great": "Want and need are both explicit and in tension. The flaw is tested — it causes the crisis. The protagonist's belief flips from scene 1 to the end. The antagonist is the protagonist's strongest teacher, attacking the flaw directly. (GOOD: 'Mara wants to find the signal (want) but needs to accept she's been running (need). Her control-freak flaw causes the relay failure.')",
+      "weight": 1.0
+    },
+    {
+      "id": "thematic-premise",
+      "name": "Thematic premise — character + conflict + conclusion, derivable",
+      "what_good_looks_like": "The premise can be stated in one sentence: Premise = Character Trait → Conflict → Conclusion (Egri §1.3; Truby §1.2). The premise is ≤25 words and contains character + conflict (storycraft §2 Premise). Every element (character, scene, symbol) is derivable from the premise — if it doesn't connect, it doesn't belong (Truby design principle). The unity of opposites holds: protagonist and antagonist want irreconcilable things; compromise is impossible.",
+      "evidence_required": "A one-sentence premise is derivable from the script; the premise contains character trait + conflict + conclusion; major scenes connect to the premise; the protagonist-antagonist conflict is irreconcilable (no easy compromise).",
+      "poor": "No premise, or premise is vague ('Love conquers all'). Scenes exist that don't connect to any premise. The antagonist could easily compromise with the protagonist. (EGRI BAD: 'Love conquers all' — too vague to produce drama.)",
+      "great": "The premise is a single drivable sentence. Every major scene traces back to it. The protagonist and antagonist are locked in a conflict that cannot be resolved without one destroying the other. (EGRI GOOD: 'Jealousy destroys the thing it loves' — character trait + collision + outcome.)",
+      "weight": 0.8
+    },
+    {
+      "id": "show-dont-tell",
+      "name": "Show, don't tell — physical manifestation before emotion word",
+      "what_good_looks_like": "For every emotion beat, the physical manifestation is written FIRST. The emotion word ('she was angry') is only used if the physical beat is ambiguous (storycraft §5.3). Emotions are shown through action, dialogue, or sensory detail — the audience infers the emotion. Generated prose uses plausible generalities; authored prose uses unrepeatable specifics (storycraft §6.4).",
+      "evidence_required": "Emotion beats include physical/sensory detail before (or instead of) the emotion noun; specific nouns replace generic ones ('a '98 Corolla with a cracked dash' not 'a car'); the dialogue test passes — remove attributions, can you still tell who speaks?",
+      "poor": "'He was terrified' without physical beat. 'She felt betrayed.' Generic nouns ('a car,' 'a building'). All characters sound identical. (BAD: 'She was sad.')",
+      "great": "The audience infers the emotion from action. 'His hand missed the keyhole twice.' 'She read the message twice, then set the phone face-down.' Every detail is specific to THIS story — could not appear in someone else's story about the same genre. (GOOD: 'He closed the door. Opened it. Closed it again, quiet.')",
+      "weight": 0.9
+    },
+    {
+      "id": "ending-payoff-plant-payoff",
+      "name": "Ending payoff — plant/payoff discipline + opening image callback",
+      "what_good_looks_like": "Every object, line of dialogue, or skill shown in Act 1 EITHER pays off in Act 3 (Chekhov's gun) OR is a deliberate red herring (signposted by over-emphasis) (storycraft §5.4). Untracked plants = loose threads = FAIL. The ending includes a callback to the opening image (storycraft §2 Resolution; Save the Cat Opening Image → Finale). The first major reveal lands before 25%; the final reveal resolves the opening question (storycraft §5.2).",
+      "evidence_required": "All Act 1 plants are tracked and either paid off or marked as red herring; no loose threads; opening image is echoed/called back at the ending; first reveal before 25% mark; final reveal resolves the opening question.",
+      "poor": "Chekhov's gun unfired — setup with no payoff. Loose threads. No callback to opening image. First reveal comes too late (after 25%). Final reveal doesn't resolve the opening question. (BAD: 'Gun on mantle, never fired.')",
+      "great": "Every setup has a resolution. The opening image is echoed at the ending — the listener feels the story close its own loop. The first reveal hooks early; the final reveal answers the opening question. (GOOD: '[SFX: gun on mantle | plant: true]' → '[SFX: gun fires | pays: gun on mantle]'; Opening Image: dead relay → Finale: relay restored, Mara changed.)",
+      "weight": 1.0
+    }
+  ]
+}
