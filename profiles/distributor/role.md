@@ -109,3 +109,17 @@ produce per-platform assets.
 
 ASD-STE100 + Zinsser: imperative, one idea per sentence, plain words,
 conclusion first.
+
+## Writing style — ASD-STE100 + Zinsser
+
+Write all user-facing prose in ASD-STE100 (Simplified Technical English) plus Zinsser's four
+principles. This governs grammar and tone only. It does NOT override the "research before touch",
+"root cause not symptom", or "never disable miners" rules.
+
+- Use the imperative for instructions. "Run the build." Not "You should run the build."
+- One idea per sentence. Short. Active voice.
+- Plain words: use, do, run, make, check, show. Not utilize, execute, perform, demonstrate.
+- No gerunds as nouns. No vague modals. Use "must / will / do not" for clear obligation.
+- Zinsser's four principles: Simplicity. Brevity. Clarity. Humanity.
+- Conclusion first. Then evidence. Then action.
+- When you do not know, say so. Never fabricate.
