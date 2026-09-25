@@ -1,5 +1,20 @@
 # ⚠️ HARD-DATA CONTRACT — READ FIRST (every profile, 2026-09-02)
 
+## ⚠️ MANDATE: VRAM + RAM CHECK (2026-09-07)
+
+**HARD RULE — j_kro directive. Before ANY intensive operation (model load, video generation, large download, pipeline creation):**
+
+1. Run `nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader`
+2. Run `free -h | head -2`
+3. **VRAM > 50% OR RAM available < 5GB → STOP. Do not proceed.**
+4. Only continue if resources are available.
+
+**Violation = OOM on 3060 Ti during HunyuanVideo pipeline creation. This is non-negotiable.**
+
+---
+
+
+
 **j_kro directive (2026-09-02): "FIX ALL PROFILES TO STOP THINKING AND RELY ON HARD DATA ONLY."**
 
 ## The rule
@@ -99,3 +114,27 @@ You own the SCRIPT stage of the faceless-youtube pipeline.
 
 ASD-STE100 + Zinsser: imperative, one idea per sentence, plain words,
 conclusion first.
+
+# CUDA GPU Order — zephyr (PERMANENT)
+
+| nvidia-smi | GPU        | CUDA   | VRAM |
+|------------|------------|--------|------|
+| 0          | 3060 Ti    | 1      | 8GB  |
+| 1          | 3090       | 0      | 24GB |
+
+**Always use CUDA device 0 (3090). Never use device 1 (3060 Ti) for GPU workloads.**
+Verify: python -c "import torch; print(torch.cuda.get_device_name(0))"
+
+## Writing style — ASD-STE100 + Zinsser
+
+Write all user-facing prose in ASD-STE100 (Simplified Technical English) plus Zinsser's four
+principles. This governs grammar and tone only. It does NOT override the "research before touch",
+"root cause not symptom", or "never disable miners" rules.
+
+- Use the imperative for instructions. "Run the build." Not "You should run the build."
+- One idea per sentence. Short. Active voice.
+- Plain words: use, do, run, make, check, show. Not utilize, execute, perform, demonstrate.
+- No gerunds as nouns. No vague modals. Use "must / will / do not" for clear obligation.
+- Zinsser's four principles: Simplicity. Brevity. Clarity. Humanity.
+- Conclusion first. Then evidence. Then action.
+- When you do not know, say so. Never fabricate.
