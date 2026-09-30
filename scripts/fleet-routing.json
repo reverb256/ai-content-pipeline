@@ -1,0 +1,275 @@
+{
+  "version": 1,
+  "generated": "2026-09-30",
+  "comment": "Low-cost fleet routing spec. Lanes: free = nous laguna-s-2.1/laguna-xs-2.1/ling-3.0-flash-sante + openrouter-free + commandcode free (ling-3.1-flash:free); paid workhorse = commandcode GOAT ($10/mo sunk, deepseek-v4.1-flash); quality = nvidia NIM (eval credits). opencode-zen is BLOCKED for API use (403 'free tier can only be used within OpenCode'); opencode-go quota exhausted; longcat-2.0:free retired (404 'no longer free'); minimax-m3:free and ling-3.0-flash-fin:free dead on openrouter-free. Local pair = last resort. 2026-09-30: pair dropped from all chains (llmster load broken); qwen3.8-27b:free rate-limited upstream -> publishbot/reviewer-minimax swapped.",
+  "dead_slugs": [
+    "meituan/longcat-2.0:free",
+    "inclusionai/ling-3.0-flash-fin:free",
+    "minimax/minimax-m3:free"
+  ],
+  "providers": {
+    "nous": {
+      "base_url": "https://inference-api.nousresearch.com/v1",
+      "api_key_env": "NOUS_API_KEY",
+      "model": "poolside/laguna-s-2.1:free"
+    },
+    "openrouter-free": {
+      "base_url": "https://openrouter.ai/api/v1",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "kilo": {
+      "base_url": "https://api.kilo.ai/api/gateway",
+      "api_key_env": "KILOCODE_API_KEY",
+      "model": "kilo-auto/free"
+    },
+    "commandcode": {
+      "base_url": "https://api.commandcode.ai/provider/v1",
+      "api_key_env": "COMMANDCODE_API_KEY",
+      "model": "deepseek/deepseek-v4.1-flash"
+    },
+    "pair": {
+      "api": "http://127.0.0.1:1235/v1",
+      "api_key": "*",
+      "discover_models": true
+    }
+  },
+  "chains": {
+    "cc": [
+      {
+        "provider": "nvidia",
+        "model": "deepseek-ai/deepseek-v4.1-flash"
+      },
+      {
+        "provider": "openrouter-free",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      },
+      {
+        "provider": "nous",
+        "model": "poolside/laguna-s-2.1:free"
+      }
+    ],
+    "cc_z": [
+      {
+        "provider": "nvidia",
+        "model": "deepseek-ai/deepseek-v4.1-flash"
+      },
+      {
+        "provider": "openrouter-free",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      },
+      {
+        "provider": "nous",
+        "model": "poolside/laguna-s-2.1:free"
+      },
+      "zai"
+    ],
+    "quality": [
+      {
+        "provider": "commandcode",
+        "model": "deepseek/deepseek-v4.1-flash"
+      },
+      {
+        "provider": "openrouter-free",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      },
+      {
+        "provider": "nous",
+        "model": "poolside/laguna-s-2.1:free"
+      }
+    ],
+    "free_n": [
+      {
+        "provider": "openrouter-free",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      },
+      {
+        "provider": "commandcode",
+        "model": "inclusionai/ling-3.1-flash:free"
+      },
+      {
+        "provider": "commandcode",
+        "model": "deepseek/deepseek-v4.1-flash"
+      },
+      {
+        "provider": "kilo",
+        "model": "kilo-auto/free"
+      }
+    ],
+    "free_o": [
+      {
+        "provider": "nous",
+        "model": "poolside/laguna-s-2.1:free"
+      },
+      {
+        "provider": "commandcode",
+        "model": "inclusionai/ling-3.1-flash:free"
+      },
+      {
+        "provider": "commandcode",
+        "model": "deepseek/deepseek-v4.1-flash"
+      },
+      {
+        "provider": "kilo",
+        "model": "kilo-auto/free"
+      }
+    ]
+  },
+  "profiles": {
+    "@home": {
+      "provider": "commandcode",
+      "model": "deepseek/deepseek-v4.1-flash",
+      "chain": "cc_z"
+    },
+    "default": {
+      "provider": "commandcode",
+      "model": "deepseek/deepseek-v4.1-flash",
+      "chain": "cc_z"
+    },
+    "nexus-core": {
+      "provider": "commandcode",
+      "model": "deepseek/deepseek-v4.1-flash",
+      "chain": "cc_z"
+    },
+    "editor": {
+      "provider": "commandcode",
+      "model": "deepseek/deepseek-v4.1-flash",
+      "chain": "cc"
+    },
+    "trader": {
+      "provider": "commandcode",
+      "model": "deepseek/deepseek-v4.1-flash",
+      "chain": "cc"
+    },
+    "reviewer-deepseek": {
+      "provider": "commandcode",
+      "model": "deepseek/deepseek-v4.1-flash",
+      "chain": "cc"
+    },
+    "maplespike-eng": {
+      "provider": "nvidia",
+      "model": "z-ai/glm-5.3",
+      "chain": "quality"
+    },
+    "oracle": {
+      "provider": "nvidia",
+      "model": "z-ai/glm-5.3",
+      "chain": "quality"
+    },
+    "strategist": {
+      "provider": "nvidia",
+      "model": "z-ai/glm-5.3",
+      "chain": "quality"
+    },
+    "writer": {
+      "provider": "nvidia",
+      "model": "z-ai/glm-5.3",
+      "chain": "quality"
+    },
+    "site-agency": {
+      "provider": "nvidia",
+      "model": "moonshotai/kimi-k3",
+      "chain": "quality"
+    },
+    "storyteller": {
+      "provider": "nvidia",
+      "model": "moonshotai/kimi-k3",
+      "chain": "quality"
+    },
+    "distributor": {
+      "provider": "nvidia",
+      "model": "google/gemma-4-31b-it",
+      "chain": "quality"
+    },
+    "web-designer": {
+      "provider": "nvidia",
+      "model": "google/gemma-4-31b-it",
+      "chain": "quality"
+    },
+    "reviewer-nemotron": {
+      "provider": "nvidia",
+      "model": "nvidia/nemotron-3-ultra-550b-a55b",
+      "chain": "quality"
+    },
+    "coo": {
+      "provider": "openrouter-free",
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "chain": "free_o"
+    },
+    "analyst": {
+      "provider": "openrouter-free",
+      "model": "inclusionai/ling-3.0-flash-sante:free",
+      "chain": "free_o"
+    },
+    "producer": {
+      "provider": "openrouter-free",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free",
+      "chain": "free_o"
+    },
+    "publishbot": {
+      "provider": "openrouter-free",
+      "model": "nvidia/nemotron-3.5-lightning:free",
+      "chain": "free_o"
+    },
+    "reviewer-minimax": {
+      "provider": "openrouter-free",
+      "model": "dots-studio/dots-3-note-preview:free",
+      "chain": "free_o"
+    },
+    "seobot": {
+      "provider": "openrouter-free",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free",
+      "chain": "free_o"
+    },
+    "socialbot": {
+      "provider": "openrouter-free",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free",
+      "chain": "free_o"
+    },
+    "voicebot": {
+      "provider": "openrouter-free",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free",
+      "chain": "free_o"
+    },
+    "researcher": {
+      "provider": "nous",
+      "model": "inclusionai/ling-3.0-flash-sante:free",
+      "chain": "free_n"
+    },
+    "clipbot": {
+      "provider": "nous",
+      "model": "poolside/laguna-s-2.1:free",
+      "chain": "free_n"
+    },
+    "companion": {
+      "provider": "nous",
+      "model": "poolside/laguna-s-2.1:free",
+      "chain": "free_n"
+    },
+    "haven-bot": {
+      "provider": "nous",
+      "model": "poolside/laguna-s-2.1:free",
+      "chain": "free_n"
+    },
+    "reviewer-longcat": {
+      "provider": "nous",
+      "model": "poolside/laguna-s-2.1:free",
+      "chain": "free_n"
+    },
+    "scriptwriter": {
+      "provider": "nous",
+      "model": "poolside/laguna-s-2.1:free",
+      "chain": "free_n"
+    },
+    "thumbnailbot": {
+      "provider": "nous",
+      "model": "poolside/laguna-xs-2.1:free",
+      "chain": "free_n"
+    },
+    "videobot": {
+      "provider": "nous",
+      "model": "poolside/laguna-xs-2.1:free",
+      "chain": "free_n"
+    }
+  }
+}
