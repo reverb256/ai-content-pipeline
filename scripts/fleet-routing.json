@@ -1,7 +1,7 @@
 {
   "version": 1,
   "generated": "2026-09-30",
-  "comment": "Low-cost fleet routing spec. Lanes: free = nous laguna-s-2.1/laguna-xs-2.1/ling-3.0-flash-sante + openrouter-free + commandcode free (ling-3.1-flash:free); paid workhorse = commandcode GOAT ($10/mo sunk, deepseek-v4.1-flash); quality = nvidia NIM (eval credits). opencode-zen is BLOCKED for API use (403 'free tier can only be used within OpenCode'); opencode-go quota exhausted; longcat-2.0:free retired (404 'no longer free'); minimax-m3:free and ling-3.0-flash-fin:free dead on openrouter-free. Local pair = last resort. 2026-09-30: pair dropped from all chains (llmster load broken); qwen3.8-27b:free rate-limited upstream -> publishbot/reviewer-minimax swapped.",
+  "comment": "Low-cost fleet routing spec. Lanes: free = nous laguna-s-2.1/laguna-xs-2.1/ling-3.0-flash-sante + openrouter-free + commandcode free (ling-3.1-flash:free); paid workhorse = commandcode GOAT ($10/mo sunk, deepseek-v4.1-flash); quality = nvidia NIM (eval credits). opencode-zen is BLOCKED for API use (403 'free tier can only be used within OpenCode'); opencode-go quota exhausted; longcat-2.0:free retired (404 'no longer free'); minimax-m3:free and ling-3.0-flash-fin:free dead on openrouter-free. Local pair = last resort. 2026-09-30: pair dropped from all chains (llmster load broken); qwen3.8-27b:free rate-limited upstream -> publishbot/reviewer-minimax swapped. 2026-09-30: nvidia deepseek-v4.1-flash dropped from chains (2-4 min cold start); z-ai/glm-5.3 used instead.",
   "dead_slugs": [
     "meituan/longcat-2.0:free",
     "inclusionai/ling-3.0-flash-fin:free",
@@ -37,30 +37,30 @@
   "chains": {
     "cc": [
       {
-        "provider": "nvidia",
-        "model": "deepseek-ai/deepseek-v4.1-flash"
-      },
-      {
         "provider": "openrouter-free",
         "model": "nvidia/nemotron-3-super-120b-a12b:free"
       },
       {
         "provider": "nous",
         "model": "poolside/laguna-s-2.1:free"
+      },
+      {
+        "provider": "nvidia",
+        "model": "z-ai/glm-5.3"
       }
     ],
     "cc_z": [
       {
-        "provider": "nvidia",
-        "model": "deepseek-ai/deepseek-v4.1-flash"
-      },
-      {
         "provider": "openrouter-free",
         "model": "nvidia/nemotron-3-super-120b-a12b:free"
       },
       {
         "provider": "nous",
         "model": "poolside/laguna-s-2.1:free"
+      },
+      {
+        "provider": "nvidia",
+        "model": "z-ai/glm-5.3"
       },
       "zai"
     ],
