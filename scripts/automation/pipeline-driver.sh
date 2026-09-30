@@ -76,7 +76,7 @@ dispatch_stage() {
     escalate)  # Human gate: the card is parked awaiting j_kro. Never dispatch it,
                # never log-loop it (pre-fix this hit the *) branch every 30 min —
                # 198 lines of "unknown stage escalate" in the surviving log).
-               return ;;
+               return 1 ;;
     *) log "unknown stage $stage for card $card"; return ;;
   esac
   log "dispatching $bot for card $card (stage $stage)"
@@ -107,7 +107,8 @@ for card in $(get_ready_cards); do
     continue
   fi
   log "card $card → stage $stage"
-  dispatch_stage "$card" "$stage"
-  dispatched=$((dispatched+1))
+  if dispatch_stage "$card" "$stage"; then
+    dispatched=$((dispatched+1))
+  fi
 done
 log "pipeline driver run complete (dispatched $dispatched, running $(running_bots)/$MAX_CONCURRENT)"
