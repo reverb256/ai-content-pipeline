@@ -73,9 +73,18 @@ dispatch_stage() {
     analyze)   bot="analyst";     prompt="Run the analyze stage for kanban task $card. Pull performance, produce keep/test/stop. Post to kanban." ;;
     review)    bot="default";     prompt="You are SPOC (chief of staff). Run the critic/review pass on kanban task $card (board $BOARD). Read the card's latest artifact (research/script/audio/video), judge it: does it meet the definition of done? Is it original (not template-slop)? Does it match the voice/brain rules? If it passes, advance it: run scripts/automation/advance-stage.sh $card <next-stage>. If it fails, comment with the specific critique and keep the card at its current stage (do NOT advance). You review; you do not redo the work." ;;
     story)     bot="storyteller"; prompt="Run the story/audio-drama stage for kanban task $card. Read the story script (or write one from the opportunity), run storyteller.py (scripts/audio/storyteller.py) to synthesize the audio drama with VoxCPM TTS (self-hosted). Save the finished audio + comment with the output path." ;;
+    escalate)  # Human gate: the card is parked awaiting j_kro. Never dispatch it,
+               # never log-loop it (pre-fix this hit the *) branch every 30 min —
+               # 198 lines of "unknown stage escalate" in the surviving log).
+               return ;;
     *) log "unknown stage $stage for card $card"; return ;;
   esac
   log "dispatching $bot for card $card (stage $stage)"
+  # DRY_RUN=1 proves routing without launching a bot (used by the D6 test).
+  if [ "${DRY_RUN:-0}" = "1" ]; then
+    log "[dry-run] would dispatch $bot"
+    return 0
+  fi
   # Fire in background so the driver doesn't block on one bot.
   # --oneshot -Q ensures the process exits after answering instead of
   # staying resident as an interactive session.
