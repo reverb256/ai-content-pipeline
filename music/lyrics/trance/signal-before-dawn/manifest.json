@@ -1,0 +1,28 @@
+{
+  "schema": "music/track-lyrics-manifest v1",
+  "track_slug": "signal-before-dawn",
+  "title": "Signal Before Dawn",
+  "genre": "trance",
+  "genre_family": "edm",
+  "theme": "Holding on through the long stretch before dawn. Not a party song — a 3am promise. One voice against a big sky.",
+  "authorship": {
+    "status": "human-original",
+    "authors": [
+      "j_kro"
+    ],
+    "written_at": "2026-10-08T12:48:59+00:00",
+    "ai_assist": "Lyric text written by j_kro. Suno will only render vocals from this text; it did not write or edit any line.",
+    "suno_generated_lyrics": false
+  },
+  "files": {
+    "lyrics.suno.txt": {
+      "sha256": "e667e248627e5c985e76018d424fa1e18d33fc2379381025d7da4a98734505da",
+      "bytes": 1219
+    },
+    "lyrics.txt": {
+      "sha256": "a2ea28b2ec6126e4b927337c92a7fe7fb08237add51b069b729c036d32653a52",
+      "bytes": 842
+    }
+  },
+  "notes": "Lane fit: streaming (independent release) + youtube-mix. Beatport closed 2026-08-12. Lines must loop cleanly against a 138 BPM four-on-the-floor."
+}

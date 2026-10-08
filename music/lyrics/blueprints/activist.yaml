@@ -1,0 +1,45 @@
+# Lyric blueprint — activist (family: vocal)
+# Data, not code. The writer writes the actual lyrics from this brief.
+genre: activist
+family: vocal
+theme: >-
+  Water. A town learns what runs beneath it, then stands up. Specific,
+  local, unwon. No villains with faces — the villain is the bill, the
+  hearing, the queue. The song ends with a door, not a victory.
+voice_notes: >-
+  Testimony first, slogan second. Plain speech that survives being read
+  aloud. Names of ordinary things: kettle, ledger, gravel, tap. Anger
+  banked, not spent. The chorus is a fact the listener cannot unhear.
+rhyme: >-
+  ABCB verses. Chorus unrhymed or slant — precision beats music-hall.
+line_length: "8-13 words per verse line; chorus lines under 8 words."
+bpm_anchor: 96
+mood_words: [ledger, aquifer, hearing, gravel, tap, notice, neighbours]
+avoid: >-
+  "Rise up", "they can't stop us", fist imagery, revolution clichés,
+  naming real politicians or companies, anything that reads as a call to
+  unlawful action.
+title_candidates:
+  - "What Runs Beneath"
+  - "The Hearing"
+  - "Notice in the Square"
+structure:
+  - tag: "Verse 1"
+    guidance: "4-6 lines. The town before: ordinary morning, water taken for granted."
+  - tag: "Chorus"
+    guidance: "4 lines. The fact. Land it as a headline, repeat once."
+  - tag: "Verse 2"
+    guidance: "4-6 lines. The discovery. The letter, the test, the number that fails."
+  - tag: "Chorus"
+    guidance: "Repeat the chorus verbatim."
+  - tag: "Bridge"
+    guidance: "3-4 lines. The cost of speaking: the queue, the form, the raised hand."
+  - tag: "Verse 3"
+    guidance: "4-6 lines. The turnout. Count it: chairs, boots, signatures. Not a mob — a Tuesday."
+  - tag: "Outro"
+    guidance: "2 lines. The door is open. Do not declare victory."
+notes: >-
+  Lane fit: direct-fan (Patreon/own site) + sync for documentaries.
+  Ad-suitability risk — audience-funded beats ad-funded. Keep it to
+  testimony and the hearing room; sync buyers need songs that age well
+  and take no sides by name.
