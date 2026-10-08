@@ -1,0 +1,81 @@
+# music/stages.yaml — stage → bot map for the MUSIC board.
+# The pipeline driver (scripts/automation/pipeline-driver.sh) reads this
+# file when BOARD=music, so the music lane is data-driven: adding a
+# stage means adding a block here, never editing the driver.
+#
+# Schema (driver contract — same as scripts/automation/stages/):
+#   stage:            kanban stage label (the "stage: <stage>" marker)
+#   bot:              hermes profile to dispatch
+#   prompt:           the stage prompt. {card} -> kanban task id,
+#                     {board} -> board slug, at dispatch time.
+#   human_gate: true  NEVER auto-dispatch. Parked for j_kro / a human.
+#   auto_next: <stage>  (human gates only) advance target after approval.
+#
+# Stage list: brain/playbooks/music-lane-architecture.md §4.
+# Bots are existing hermes profiles (verified `hermes profile list`):
+#   producer, writer, reviewer-deepseek, videobot, publishbot,
+#   distributor, analyst.
+version: 1
+
+stages:
+  - stage: brief
+    bot: producer
+    prompt: "Run the brief stage for kanban task {card} (board music). Resolve the genre + lane + intent from the music registry (music/genres.yaml, music/lanes.yaml via music/registry.py). Write the brief: genre, target lanes, cadence, video shape. Save + comment on the kanban task."
+
+  - stage: genre-select
+    bot: producer
+    prompt: "Run the genre-select stage for kanban task {card} (board music). Resolve the genre to a complete registry entry (music/genres.yaml). Verify the entry exists and every referenced lane exists in music/lanes.yaml. Save the resolved entry + comment."
+
+  - stage: lyrics
+    bot: writer
+    prompt: "Run the lyrics stage for kanban task {card} (board music). Write ORIGINAL human-authored lyrics (copyrightable — never Suno-generated). Record the authorship claim per music/registry.py conventions. Save the lyric sheet, then run the lyrics gate: python3 music/gates/gate_lyrics_original.py. Comment the result."
+
+  - stage: generate
+    bot: producer
+    prompt: "Run the generate stage for kanan task {card} (board music). FIRST run the quota gate (python3 music/gates/gate_quota.py) — never outrun the 60/month standard-download cap. Then generate 2 tracks via Suno CDP (music/suno-gen.py) on the logged-in Premier session. Export ONLY through Suno Studio (unlimited), never the standard download button. Save tracks + comment."
+
+  - stage: curate
+    bot: producer
+    prompt: "Run the curate stage for kanban task {card} (board music). Listen to the generated tracks, pick the winner, record a reject reason for each loser. Save the curation note + comment."
+
+  - stage: stems
+    bot: producer
+    prompt: "Run the stems stage for kanban task {card} (board music). Export stems through Suno Studio (unlimited). Stems are MANDATORY for sync + direct-licensing. Save the stems, then run the stems gate: python3 music/gates/gate_stems_present.py --master <master> --stems-dir <dir>. Comment the result."
+
+  - stage: master
+    bot: producer
+    prompt: "Run the master stage for kanban task {card} (board music). Loudness-normalize the master (-14 LUFS streaming / -16 sync, +/-1 dB). Save the master, then run the loudness gate: python3 music/gates/gate_loudness.py --master <master> --target streaming. Comment the result."
+
+  - stage: gate
+    bot: reviewer-deepseek
+    prompt: "Run the quality-gate stage for kanban task {card} (board music). Independent review on a DIFFERENT model than the producer. Judge the artifact against the music rubric (quality, originality, not template-slop). Record the verdict bound to the artifact hash, then run: python3 music/gates/gate_quality.py. If it fails, comment the specific findings and do NOT advance. You review; you do not redo the work."
+
+  - stage: package
+    bot: producer
+    prompt: "Run the package stage for kanban task {card} (board music). Build the release package: manifest, metadata, ISRC (ISO 3901), artwork, AI-disclosure flag. Then run: python3 music/gates/gate_release_ready.py. Comment the result."
+
+  - stage: visual
+    bot: videobot
+    prompt: "Run the visual stage for kanban task {card} (board music). Render the platform-native video for the genre's video_shape (music/genres.yaml: album-30-60min / mix-60min / loop-10min / lyric-video / single-4min). Then run: python3 music/gates/gate_youtube_authentic.py. Save the MP4 + comment."
+
+  - stage: publish
+    bot: publishbot
+    prompt: "Run the publish stage for kanban task {card} (board music). Upload PRIVATE / draft ONLY — never make public without human approval (review gate). Distribution goes through the distributor bot per the lane. Report the upload ID / draft URL."
+
+  - stage: track
+    bot: analyst
+    prompt: "Run the track stage for kanban task {card} (board music). Pull streams, revenue, and lane ROI. Feed the numbers back to the registry cadence weights. Post the analysis to the kanban task."
+
+  # Human gates — parked for j_kro. Never auto-dispatched.
+  - stage: human-approval
+    human_gate: true
+    auto_next: publish
+    prompt: "Run the human-approval gate for kanban task {card} (board music). j_kro's publish-approval gate (brain/playbooks/music-lane-architecture.md §7). A bot must never auto-pass this."
+
+  - stage: escalate
+    human_gate: true
+    prompt: "Human gate — the card is parked awaiting j_kro. Never dispatch, never log-loop."
+
+# Cards whose stage label is missing default to "brief" (the oracle
+# creates them there). Unknown stages are logged and skipped.
+default_stage: brief
