@@ -1,0 +1,28 @@
+{
+  "schema": "music/track-lyrics-manifest v1",
+  "track_slug": "amber-hour",
+  "title": "Amber Hour",
+  "genre": "chill-lounge",
+  "genre_family": "ambient",
+  "theme": "Late-night quiet after a long day. A city slows down; one person keeps the light on. Warmth without drama. The song is a room you want to stay in.",
+  "authorship": {
+    "status": "human-original",
+    "authors": [
+      "j_kro"
+    ],
+    "written_at": "2026-10-08T12:48:59+00:00",
+    "ai_assist": "Lyric text written by j_kro. Suno will only render vocals from this text; it did not write or edit any line.",
+    "suno_generated_lyrics": false
+  },
+  "files": {
+    "lyrics.suno.txt": {
+      "sha256": "a6ced15fda84053ed2b63a46d670ea9731681c260134297a7e39e41b331d5b1d",
+      "bytes": 1225
+    },
+    "lyrics.txt": {
+      "sha256": "527b83be64aea17b50df5476e22d0c63e880b4c0f40e13102908432edc7c529f",
+      "bytes": 867
+    }
+  },
+  "notes": "Lane fit: youtube-longform album beds. Vocals sit low; vowel shape over consonants."
+}

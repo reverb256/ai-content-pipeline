@@ -1,0 +1,43 @@
+# Lyric blueprint — chill-lounge (family: ambient)
+# Data, not code. The writer writes the actual lyrics from this brief.
+genre: chill-lounge
+family: ambient
+theme: >-
+  Late-night quiet after a long day. A city slows down; one person keeps the
+  light on. Warmth without drama. The song is a room you want to stay in.
+voice_notes: >-
+  Conversational, unhurried, zero melodrama. Singable in a low register with
+  long vowels (slow, gold, home, glow). No heartbreak clichés, no "baby"
+  filler. Verses observe; the chorus admits one small true thing.
+rhyme: >-
+  Loose ABCB. Slant rhymes welcome (glow/home, rain/again). Never force a
+  rhyme with an awkward inversion.
+line_length: "7-11 words per line, lines breathe at comma pauses"
+bpm_anchor: 72
+mood_words: [amber, window, slow, kettle, vinyl, rain, home]
+avoid: >-
+  "Neon" as a verb, "city lights" as the whole image, any drunk/party angle,
+  brand names.
+title_candidates:
+  - "Amber Hour"
+  - "Kitchen Light"
+  - "Slow Gold"
+structure:
+  - tag: "Intro"
+    guidance: "2 lines, hummed or spoken low. Set the room: one image, no verb."
+  - tag: "Verse 1"
+    guidance: "4 lines. The evening arrives. Concrete nouns only."
+  - tag: "Chorus"
+    guidance: "4 lines. The small true thing: staying is enough. Land the hook in line 1."
+  - tag: "Verse 2"
+    guidance: "4 lines. A second room, a second hour. Change the weather outside the window."
+  - tag: "Chorus"
+    guidance: "Repeat the chorus. One word may change; keep the rest identical."
+  - tag: "Bridge"
+    guidance: "2-3 lines. Drop the beat to near-silence. One new image."
+  - tag: "Outro"
+    guidance: "2 lines. Fade on the hook word. No resolution statement."
+notes: >-
+  Lane fit: youtube-longform album beds. Vocals sit low in the mix, so
+  consonants matter less than vowel shape. Keep every line singable in one
+  slow breath.
