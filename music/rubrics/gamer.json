@@ -1,0 +1,71 @@
+{
+  "family": "gamer",
+  "version": 1,
+  "genres": ["elemental-fire", "elemental-water", "elemental-earth", "elemental-air", "chiptune-8bit", "epic-orchestral-boss"],
+  "score_scale": "Each criterion scored 1-10. Overall = weighted mean. pass_threshold applies to the geometric-median aggregate across the panel.",
+  "pass_threshold": 7.0,
+  "criteria": [
+    {
+      "id": "chip_timbre_authenticity",
+      "name": "Chiptune: authentic chip timbres, not 'chiptune-ish synth' (chiptune-8bit only)",
+      "weight": 3,
+      "type": "measured",
+      "anchor": "NES Ricoh 2A03: EXACTLY five voices — 2 pulse, 1 triangle, 1 noise, 1 DPCM; no reverb on the chip, no filter; duty cycles 12.5%/25%/50% (25% = reedy classic lead; 50% = hollow square); triangle = bass (no volume control, octave lower); noise = percussion via envelope; fast frame-rate arpeggios (~60 Hz swaps) fake chords from monophony; volume is 16 steps, not fades; echo (one quiet re-triggered note) not reverb (NESdev APU wiki; musicproductionwiki chiptune; chiptune-8bit prompt craft notes). A stacked chord that rings as a chord is a hardware-impossible defect. Smooth analog pads, reverb tails, realistic instruments = OUT of genre.",
+      "evidence": "pct_energy_above_8khz (noise percussion + pulse brightness read high; lush filtered pads read differently), the style prompt's timbre claims, crest_factor_db. Unverifiable specifics (duty cycle) must be marked unverifiable, not guessed.",
+      "guide": "10 = prompt claims the exact 5-voice palette + no-reverb + arp-bass pattern AND numbers consistent. 7 = palette claimed, one element unverifiable. 4 = 'retro synth' claim without the voice budget or with reverb/pads allowed. 1 = modern synth production with a chiptune label."
+    },
+    {
+      "id": "battle_energy",
+      "name": "Boss/battle energy (elemental-*, epic-orchestral-boss)",
+      "weight": 3,
+      "type": "craft",
+      "anchor": "Boss battle: fast tempos 130-200 BPM (typical 140-180; OoT boss 180; KH-style ~170); ostinatos and percussion are the anchors; chromaticism in chords and melody; heavy syncopation; timpani + snare militaristic layers; multi-phase feel with key changes/choir entries (Matthew Chilelli boss-battle analysis; tunee boss-battle guide: BPM range 130-200; videogamemusicshrine OoT boss analysis: 6/4, atonal/chromatic, ostinato anchors).",
+      "evidence": "bpm + bpm_candidates (boss claims need a fast candidate), rms_1s_spread_db (phase evolution), duration_s, the style prompt.",
+      "guide": "10 = fast-tempo candidate + multi-phase dynamics evidence + ostinato/percussion claims. 7 = fast + energy evidence, phases unverifiable. 4 = mid-tempo (~110-130) with a boss claim. 1 = slow ambient track with a battle label."
+    },
+    {
+      "id": "loop_safety",
+      "name": "Loop safety for game use (all gamer genres)",
+      "weight": 3,
+      "type": "measured",
+      "anchor": "Game assets demand seamless loops: loop packs must be seamless + click-free with stated BPM/key (architecture §13); loop point ends on a phrase that leads back to bar 1; no reverb tail across the seam; loopable structure maintains intensity without sounding repetitive (tunee loopable request pattern; game-assets lane: requires stems, loop_point, seamless_loop).",
+      "evidence": "Tail/head RMS compatibility for a loop (last-1s RMS within ~6 dB of first-1s RMS, no fade-to-silence on a loop claim), silences_ge_1s, bar math: duration_s * bpm / 240 should land near a whole bar count.",
+      "guide": "10 = seam-compatible levels AND whole-bar duration at the claimed BPM. 7 = levels compatible, bar math ambiguous. 4 = fade ending or fractional-bar duration. 1 = hard truncation/seam click evidence."
+    },
+    {
+      "id": "asset_packaging",
+      "name": "Asset-pack packaging (stems, BPM/key metadata, naming)",
+      "weight": 1,
+      "type": "craft",
+      "anchor": "Game-asset lane requires: stems, loop_point, seamless_loop, metadata (lanes.yaml game-assets). Asset-pack packaging: loops must state BPM and key, stems time-aligned, clean WAV, consistent naming (architecture §13). Indie devs buy asset packs at $2,500-7,500 for 5-10 tracks.",
+      "evidence": "Package contents and manifest fields when present.",
+      "guide": "10 = stems + BPM/key + loop-point marker present. 7 = master + metadata. 4 = bare master. 1 = nothing."
+    },
+    {
+      "id": "loudness_target",
+      "name": "Master hits the lane loudness target",
+      "weight": 1,
+      "type": "measured",
+      "anchor": "Streaming -14 LUFS; game-asset delivery favours consistent loudness with real dynamics (boss cues need wide dynamic range — 'quiet dread to full assault', tunee).",
+      "evidence": "mean_volume_db vs -14 for streaming-lane tracks.",
+      "guide": "10 = within +/-1 dB. 7 = within +/-3 dB. 4 = 3-6 dB off. 1 = 6+ dB off."
+    }
+  ],
+  "reject_signals": [
+    "chiptune claim with reverb/pads/realistic instruments or >2-note chords per channel (hardware-impossible = OUT of genre)",
+    "boss/battle claim with no fast-tempo candidate (under 130 BPM)",
+    "fade-out or truncated ending on a game-loop claim",
+    "clipped master (max_volume_db >= -0.1)",
+    "no stated BPM/key for a game-asset product"
+  ],
+  "sources": [
+    {"id": "nesdev-apu", "title": "APU - NESdev Wiki (2A03 channel spec)", "url": "https://www.nesdev.org/wiki/APU"},
+    {"id": "nesdev-basics", "title": "APU basics - NESdev Wiki", "url": "https://www.nesdev.org/wiki/APU_basics"},
+    {"id": "mpw-chiptune", "title": "How to Recreate the Chiptune Sound (8-Bit / NES)", "url": "https://musicproductionwiki.com/articles/how-to-recreate-the-chiptune-sound"},
+    {"id": "chilelli-boss", "title": "Writing a Boss Battle Track - Matthew Chilelli", "url": "https://www.matthewchilelli.com/blog-2/2020/7/14/writing-a-boss-battle-track"},
+    {"id": "tunee-boss", "title": "Boss Battle Music Generator guide", "url": "https://www.tunee.ai/music-generator/boss-battle-music"},
+    {"id": "vgms-oot", "title": "Inside The Score: Zelda OoT Boss Battle", "url": "https://videogamemusicshrine.com/inside-the-score-the-legend-of-zelda-ocarina-of-time-boss-battle/"},
+    {"id": "arch", "title": "Music Lane Architecture §5/§13 (local)", "url": "brain/playbooks/music-lane-architecture.md"}
+  ],
+  "notes": "Two sub-idioms live in this family: chip (hardware-constraint timbre) and orchestral battle (tempo/ostinato/phase). elemental-* tracks choose per their prompt; chiptune-8bit MUST pass chip_timbre_authenticity; battle tracks MUST pass battle_energy. Loop safety is common to all game-asset delivery."
+}
