@@ -1,23 +1,42 @@
 #!/usr/bin/env bash
-# Production pipeline driver — walks the faceless-youtube kanban board and
-# advances each card through the stages by dispatching the right bot.
+# Production pipeline driver — walks a kanban board and advances
+# each card through the stages by dispatching the right bot.
 # Run by cron (e.g. every 30 min during the day).
 #
-# Stage → bot mapping:
-#   opportunity → (oracle already created the card)
-#   research → researcher
-#   script   → scriptwriter
-#   voice    → voicebot
-#   visuals  → videobot
-#   thumbnail→ thumbnailbot
-#   seo      → seobot
-#   upload   → publishbot (needs review gate + OAuth)
-#   analyze  → analyst
+# BOARD-PARAMETERIZED (t_b17ddffc): the board and the stage→bot
+# map are DATA, not code.
+#   BOARD  from env (BOARD) or --board <slug>; default
+#          faceless-youtube so the existing lane keeps working
+#          byte-for-byte.
+#   The stage→bot map is read from a per-board config file:
+#     faceless-youtube -> scripts/automation/stages/faceless-youtube.yaml
+#     music            -> music/stages.yaml
+#   Add a lane = add a yaml file. Never edit this driver.
+#
+# Stage→bot map format (yaml):
+#   stages:
+#     - stage: <label>
+#       bot: <hermes profile>        # dispatch `hermes -p <bot> chat`
+#       prompt: "..."                # {card} and {board} are substituted
+#     - stage: <label>
+#       human_gate: true             # NEVER auto-dispatch (parked)
+#
+# Run by cron (e.g. every 30 min during the day).
 set -euo pipefail
 
 REPO="${REPO:-$HOME/Projects/ai-content-pipeline}"
-BOARD="faceless-youtube"
 LOG="$REPO/performance/pipeline-driver.log"
+
+# ---- Board selection: env BOARD or --board <slug>, default unchanged ----
+# Env var BOARD (exported, non-empty) wins over the default; an explicit
+# --board <slug> wins over both. Default is faceless-youtube so the
+# existing lane keeps working byte-for-byte when neither is given.
+BOARD="${BOARD:-faceless-youtube}"
+if [ "${1:-}" = "--board" ] && [ -n "${2:-}" ]; then
+  BOARD="$2"
+  shift 2
+fi
+
 mkdir -p "$(dirname "$LOG")"
 
 # Concurrency cap: how many bots may run at once. Default 1 (sequential) —
@@ -27,12 +46,109 @@ MAX_CONCURRENT="${MAX_CONCURRENT_BOTS:-1}"
 
 log() { echo "$(date -Is) $1" >> "$LOG"; }
 
-# Count bots currently running (any hermes -p <bot> chat in the crew)
+# ---- Stage→bot map: per-board config file (yaml) ----
+# Resolve the config file for the board. Convention: a board named X maps
+# to scripts/automation/stages/X.yaml; the music board maps to music/stages.yaml.
+stage_config_file() {
+  local board="$1"
+  if [ "$board" = "music" ] && [ -f "$REPO/music/stages.yaml" ]; then
+    echo "$REPO/music/stages.yaml"
+  elif [ -f "$REPO/scripts/automation/stages/$board.yaml" ]; then
+    echo "$REPO/scripts/automation/stages/$board.yaml"
+  else
+    return 1
+  fi
+}
+
+STAGES_FILE="$(stage_config_file "$BOARD" || true)"
+if [ -z "$STAGES_FILE" ]; then
+  log "ERROR: no stage config file for board '$BOARD' (looked for scripts/automation/stages/$BOARD.yaml or music/stages.yaml)"
+  echo "pipeline-driver: no stage config for board '$BOARD'" >&2
+  exit 2
+fi
+
+# Parse the yaml config once into a temp file of "stage<TAB>bot<TAB>human_gate"
+# rows plus a prompt file per stage. Uses python3 + PyYAML (present in the
+# hermes runtime; validated at boot of every run).
+CONFIG_PARSE="$(mktemp "${TMPDIR:-/tmp}/pipeline-driver.XXXXXX")"
+if ! python3 - "$STAGES_FILE" "$CONFIG_PARSE" <<'PYEOF'
+import sys, os
+import yaml
+
+cfg_path, out_path = sys.argv[1], sys.argv[2]
+with open(cfg_path) as f:
+    cfg = yaml.safe_load(f) or {}
+
+stages = cfg.get("stages") or []
+rows = []
+for entry in stages:
+    if not isinstance(entry, dict) or "stage" not in entry:
+        continue
+    stage = str(entry["stage"])
+    bot = entry.get("bot")
+    human_gate = bool(entry.get("human_gate", False))
+    prompt = entry.get("prompt", "")
+    rows.append("\t".join([stage, str(bot) if bot else "", "1" if human_gate else "0"]))
+    # Write the prompt to a sidecar file: <out>.prompts/<stage>
+    pdir = out_path + ".prompts"
+    os.makedirs(pdir, exist_ok=True)
+    with open(os.path.join(pdir, stage), "w") as pf:
+        pf.write(str(prompt))
+
+# The board's default stage (faceless-youtube: opportunity,
+# music: brief). stage_of uses it when a card carries no
+# "stage:" marker yet.
+default_stage = str(cfg.get("default_stage", "opportunity"))
+# stash the default stage name in its own sidecar file
+with open(out_path + ".default", "w") as f:
+    f.write(default_stage + "\n")
+
+with open(out_path, "w") as f:
+    f.write("\n".join(rows) + "\n")
+PYEOF
+then
+  log "ERROR: failed to parse stage config $STAGES_FILE"
+  rm -f "$CONFIG_PARSE"
+  exit 2
+fi
+
+PROMPTS_DIR="$CONFIG_PARSE.prompts"
+
+# Look up a stage's row. Echoes "bot" or "HUMAN_GATE" or "" (unknown).
+# NOTE: called as `bot=$(lookup_stage ...)` — a command substitution runs
+# in a SUBSHELL, so nothing assigned here survives to the caller. This
+# function only echoes the routing token; the prompt is read separately
+# in dispatch_stage (in the parent shell) from the sidecar files.
+lookup_stage() {
+  local stage="$1"
+  local row
+  row=$(awk -F'\t' -v s="$stage" '$1 == s {print; exit}' "$CONFIG_PARSE")
+  if [ -z "$row" ]; then
+    return 1
+  fi
+  local bot human
+  bot=$(echo "$row" | cut -f2)
+  human=$(echo "$row" | cut -f3)
+  if [ "$human" = "1" ]; then
+    echo "HUMAN_GATE"
+    return 0
+  fi
+  if [ -z "$bot" ]; then
+    return 1
+  fi
+  echo "$bot"
+  return 0
+}
+
+# Count bots currently running (any hermes -p <bot> chat in the crew).
+# Covers BOTH lanes' bots: the faceless-youtube crew AND the music crew
+# (producer, writer, reviewer-deepseek, distributor), so the concurrency
+# cap sees every bot the driver might dispatch, whichever board it walks.
 running_bots() {
   # Count crew bot processes. pgrep -fc returns exit 1 when no matches,
   # which would trigger || echo 0 and produce "0\n0" — capture instead.
   local count
-  count=$(pgrep -fc "hermes.*-p (researcher|scriptwriter|voicebot|videobot|thumbnailbot|seobot|publishbot|analyst|storyteller|oracle).*chat" 2>/dev/null) || count=0
+  count=$(pgrep -fc "hermes.*-p (researcher|scriptwriter|voicebot|videobot|thumbnailbot|seobot|publishbot|analyst|storyteller|oracle|producer|writer|reviewer-deepseek|distributor|socialbot).*chat" 2>/dev/null) || count=0
   echo "$count"
 }
 
@@ -49,11 +165,15 @@ stage_of() {
   body=$(hermes kanban --board "$BOARD" show "$1" 2>/dev/null)
   local s
   # Read the LAST (most recent) stage marker — the first one is stale.
-  s=$(echo "$body" | grep -oE "stage: [a-z]+" | tail -1 | awk '{print $2}' || true)
+  # Stage names may contain hyphens (music lane: genre-select,
+  # human-approval), so the class is [a-z-]+, not [a-z]+.
+  s=$(echo "$body" | grep -oE "stage: [a-z-]+" | tail -1 | awk '{print $2}' || true)
   if [ -z "$s" ]; then
-    # No stage label yet → the oracle created it as an opportunity; treat as
-    # opportunity stage so the driver picks it up and starts research.
-    s="opportunity"
+    # No stage label yet → the oracle created it; treat as the
+    # board's default stage (faceless-youtube: opportunity,
+    # music: brief).
+    s=$(cat "$CONFIG_PARSE.default" 2>/dev/null || true)
+    s="${s:-opportunity}"
   fi
   echo "$s"
 }
@@ -61,25 +181,31 @@ stage_of() {
 # Dispatch the bot for a stage (async — each bot runs its own chat)
 dispatch_stage() {
   local card="$1" stage="$2"
-  case "$stage" in
-    opportunity) bot="researcher"; prompt="Run the research stage for kanban task $card. Read the opportunity card, build the evidence package (3-7 verified claims with URLs), save to the campaign folder, then advance the card: run scripts/automation/advance-stage.sh $card research." ;;
-    research)  bot="researcher";  prompt="Run the research stage. Read the opportunity card (kanban task $card), build the evidence package (3-7 verified claims with URLs), save to the campaign folder, then advance the card: run scripts/automation/advance-stage.sh $card script. Comment on the kanban task with the result." ;;
-    script)    bot="scriptwriter"; prompt="Run the script stage for kanban task $card. Read the evidence package, write the retention-optimized TTS-paced script with per-section visual notes. Save + comment." ;;
-    voice)     bot="voicebot";    prompt="Run the voice stage for kanban task $card. Check pick-provider.sh voice, generate narration from the script. Save audio + log tier." ;;
-    visuals)   bot="videobot";    prompt="Run the visuals stage for kanban task $card. Check pick-provider.sh video, render the video (manim or fallback). Save MP4 + log tier." ;;
-    thumbnail) bot="thumbnailbot"; prompt="Run the thumbnail stage for kanban task $card. Generate 2-3 thumbnail variants. Save + comment." ;;
-    seo)       bot="seobot";      prompt="Run the SEO stage for kanban task $card. Write title/description/tags/chapters from the script. Save metadata JSON." ;;
-    upload)    bot="publishbot";  prompt="Run the upload stage for kanban task $card. Upload the finished video as PRIVATE (review gate). Do NOT make public without human approval. Report the video ID." ;;
-    analyze)   bot="analyst";     prompt="Run the analyze stage for kanban task $card. Pull performance, produce keep/test/stop. Post to kanban." ;;
-    review)    bot="default";     prompt="You are SPOC (chief of staff). Run the critic/review pass on kanban task $card (board $BOARD). Read the card's latest artifact (research/script/audio/video), judge it: does it meet the definition of done? Is it original (not template-slop)? Does it match the voice/brain rules? If it passes, advance it: run scripts/automation/advance-stage.sh $card <next-stage>. If it fails, comment with the specific critique and keep the card at its current stage (do NOT advance). You review; you do not redo the work." ;;
-    story)     bot="storyteller"; prompt="Run the story/audio-drama stage for kanban task $card. Read the story script (or write one from the opportunity), run storyteller.py (scripts/audio/storyteller.py) to synthesize the audio drama with VoxCPM TTS (self-hosted). Save the finished audio + comment with the output path." ;;
-    escalate)  # Human gate: the card is parked awaiting j_kro. Never dispatch it,
-               # never log-loop it (pre-fix this hit the *) branch every 30 min —
-               # 198 lines of "unknown stage escalate" in the surviving log).
-               return 1 ;;
-    *) log "unknown stage $stage for card $card"; return ;;
-  esac
-  log "dispatching $bot for card $card (stage $stage)"
+  local bot
+  bot=$(lookup_stage "$stage" || true)
+  if [ -z "$bot" ]; then
+    log "unknown stage $stage for card $card (board $BOARD, config $STAGES_FILE)"
+    return
+  fi
+  if [ "$bot" = "HUMAN_GATE" ]; then
+    # Human gate: the card is parked awaiting j_kro. Never dispatch it,
+    # never log-loop it (pre-fix this hit the *) branch every 30 min —
+    # 198 lines of "unknown stage escalate" in the surviving log).
+    log "card $card stage $stage is a HUMAN GATE — parked (board $BOARD)"
+    return 1
+  fi
+  # Read the prompt from the per-stage sidecar file (the config parser
+  # wrote it). {card} and {board} tokens are substituted here, in the
+  # parent shell, so the substitution survives.
+  local prompt
+  prompt=$(cat "$PROMPTS_DIR/$stage" 2>/dev/null || true)
+  if [ -z "$prompt" ]; then
+    log "stage $stage (card $card, board $BOARD) has an empty prompt — skipping"
+    return
+  fi
+  prompt="${prompt//\{card\}/$card}"
+  prompt="${prompt//\{board\}/$BOARD}"
+  log "dispatching $bot for card $card (stage $stage, board $BOARD)"
   # DRY_RUN=1 proves routing without launching a bot (used by the D6 test).
   if [ "${DRY_RUN:-0}" = "1" ]; then
     log "[dry-run] would dispatch $bot"
@@ -91,7 +217,7 @@ dispatch_stage() {
   nohup hermes -p "$bot" chat -q "$prompt" --oneshot -Q >> "$LOG" 2>&1 &
 }
 
-log "pipeline driver run start"
+log "pipeline driver run start (board $BOARD)"
 dispatched=0
 for card in $(get_ready_cards); do
   # Respect the concurrency cap: stop dispatching once we're at the limit.
@@ -111,4 +237,7 @@ for card in $(get_ready_cards); do
     dispatched=$((dispatched+1))
   fi
 done
-log "pipeline driver run complete (dispatched $dispatched, running $(running_bots)/$MAX_CONCURRENT)"
+log "pipeline driver run complete (board $BOARD, dispatched $dispatched, running $(running_bots)/$MAX_CONCURRENT)"
+
+# Cleanup the parsed-config temp files.
+rm -rf "$CONFIG_PARSE" "$PROMPTS_DIR"

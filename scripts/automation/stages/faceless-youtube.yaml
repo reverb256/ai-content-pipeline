@@ -1,0 +1,71 @@
+# scripts/automation/stages/faceless-youtube.yaml — stage → bot map
+# for the faceless-youtube board. The pipeline driver reads this file
+# instead of a hardcoded case statement, so the lane is data-driven.
+#
+# Schema (driver contract):
+#   stage:            kanban stage label (the "stage: <stage>" marker
+#                     the oracle sets on a card, or advance-stage.sh sets)
+#   bot:              hermes profile to dispatch (`hermes -p <bot> chat`)
+#   prompt:           the stage prompt. The literal token {card} is
+#                     replaced with the kanban task id at dispatch time.
+#   human_gate: true  NEVER auto-dispatch. The card is parked for
+#                     j_kro / a human gate. The driver logs and skips.
+#   auto_next: <stage>  (human gates only) what the card advances to
+#                     once the human approves — used by the gate tooling.
+#
+# Faceless-youtube stages (unchanged from the driver's original inline
+# case statement — same stages, same bots, same prompts).
+version: 1
+
+stages:
+  - stage: opportunity
+    bot: researcher
+    prompt: "Run the research stage for kanban task {card}. Read the opportunity card, build the evidence package (3-7 verified claims with URLs), save to the campaign folder, then advance the card: run scripts/automation/advance-stage.sh {card} research."
+
+  - stage: research
+    bot: researcher
+    prompt: "Run the research stage. Read the opportunity card (kanban task {card}), build the evidence package (3-7 verified claims with URLs), save to the campaign folder, then advance the card: run scripts/automation/advance-stage.sh {card} script. Comment on the kanban task with the result."
+
+  - stage: script
+    bot: scriptwriter
+    prompt: "Run the script stage for kanban task {card}. Read the evidence package, write the retention-optimized TTS-paced script with per-section visual notes. Save + comment."
+
+  - stage: voice
+    bot: voicebot
+    prompt: "Run the voice stage for kanban task {card}. Check pick-provider.sh voice, generate narration from the script. Save audio + log tier."
+
+  - stage: visuals
+    bot: videobot
+    prompt: "Run the visuals stage for kanban task {card}. Check pick-provider.sh video, render the video (manim or fallback). Save MP4 + log tier."
+
+  - stage: thumbnail
+    bot: thumbnailbot
+    prompt: "Run the thumbnail stage for kanban task {card}. Generate 2-3 thumbnail variants. Save + comment."
+
+  - stage: seo
+    bot: seobot
+    prompt: "Run the SEO stage for kanban task {card}. Write title/description/tags/chapters from the script. Save metadata JSON."
+
+  - stage: upload
+    bot: publishbot
+    prompt: "Run the upload stage for kanban task {card}. Upload the finished video as PRIVATE (review gate). Do NOT make public without human approval. Report the video ID."
+
+  - stage: analyze
+    bot: analyst
+    prompt: "Run the analyze stage for kanban task {card}. Pull performance, produce keep/test/stop. Post to kanban."
+
+  - stage: review
+    bot: default
+    prompt: "You are SPOC (chief of staff). Run the critic/review pass on kanban task {card} (board {board}). Read the card's latest artifact (research/script/audio/video), judge it: does it meet the definition of done? Is it original (not template-slop)? Does it match the voice/brain rules? If it passes, advance it: run scripts/automation/advance-stage.sh {card} <next-stage>. If it fails, comment with the specific critique and keep the card at its current stage (do NOT advance). You review; you do not redo the work."
+
+  - stage: story
+    bot: storyteller
+    prompt: "Run the story/audio-drama stage for kanban task {card}. Read the story script (or write one from the opportunity), run storyteller.py (scripts/audio/storyteller.py) to synthesize the audio drama with VoxCPM TTS (self-hosted). Save the finished audio + comment with the output path."
+
+  # Human gate — parked for j_kro. Never auto-dispatched (the original
+  # case statement returned 1 here; that D6 fix stays).
+  - stage: escalate
+    human_gate: true
+
+# Cards whose stage label is missing entirely default to "opportunity"
+# (the oracle creates them there). Unknown stages are logged and skipped.
