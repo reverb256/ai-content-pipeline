@@ -1,0 +1,76 @@
+{
+  "family": "anisong",
+  "version": 1,
+  "genres": ["anime-opening", "anime-ending"],
+  "score_scale": "Each criterion scored 1-10. Overall = weighted mean. pass_threshold applies to the geometric-median aggregate across the panel.",
+  "pass_threshold": 7.0,
+  "criteria": [
+    {
+      "id": "tempo_idiom",
+      "name": "Tempo matches the idiom (opening vs ending)",
+      "weight": 3,
+      "type": "measured",
+      "anchor": "Openings 130-180 BPM (J-rock often 170+); endings 70-120 BPM (Virtual Reflections CAMPAIGN.md anisong craft table; genres.yaml anime-opening notes).",
+      "evidence": "measure.py bpm + bpm_candidates. Accept a candidate in range at confidence >= 0.25.",
+      "guide": "10 = in-range candidate with confidence >= 0.35. 7 = in-range at lower confidence. 4 = 5+ BPM outside. 1 = nothing in range."
+    },
+    {
+      "id": "royal_road",
+      "name": "IV-V-iii-vi 'royal road' progression (王道進行)",
+      "weight": 3,
+      "type": "craft",
+      "anchor": "The IV-V-iii-vi progression is nicknamed 'the anime progression'; a 2023 Music Theory Spectrum study found it across a large share of Japan's best-selling songs for decades. Opens on the subdominant, lands on the minor vi (CAMPAIGN.md anisong craft reference).",
+      "evidence": "The ABC score / chord annotation when present; otherwise the style prompt's harmony claim. Unverifiable from measurements alone — mark it so.",
+      "guide": "10 = progression present in the score/prompt verbatim. 7 = claimed, unverified. 4 = different progression claimed. 1 = no harmonic claim or contradiction."
+    },
+    {
+      "id": "final_chorus_key_change",
+      "name": "FINAL CHORUS JUMPS UP ONE KEY (openings) / gentle key lift (endings)",
+      "weight": 3,
+      "type": "craft",
+      "anchor": "The final-chorus modulation up ONE KEY is the genre's DEFINING gesture — in J-pop practice that is a +1 semitone (or +2 semitone) lift; omit it and the track reads as generic rock (CAMPAIGN.md; genres.yaml anime-opening notes: 'A generation without the key-changed final chorus is OUT of genre - reject it'). The final chorus typically occupies the last ~20-30% of the track and is its loudest section. Endings: gentle key lift in the final chorus; hard-cut ending is a defect — the tail fades the light (genres.yaml anime-ending notes).",
+      "evidence": "ABC score modulation markers / prompt claim / RMS evidence of a final-section lift (a key-change chorus typically reads as the loudest section — rms_1s_max_db lands late).",
+      "guide": "10 = key-change claimed + late-track energy peak consistent. 7 = claimed, evidence ambiguous. 4 = no key change on an opening claim. 1 = no final-chorus lift AND flat ending energy."
+    },
+    {
+      "id": "tv_edit_density",
+      "name": "90-second TV-edit density (openings)",
+      "weight": 2,
+      "type": "craft",
+      "anchor": "Openings are written to survive a 90-second TV edit: maximum information density, no wasted bars; dense layers — piano AND strings together, busy drums, melodic bass (CAMPAIGN.md craft table).",
+      "evidence": "rms_1s_spread_db (density shifts), duration, the style prompt.",
+      "guide": "10 = dense-arrangement claim + dynamic evidence of tight section turns. 7 = claimed, partially verifiable. 4 = sparse arrangement on an opening claim. 1 = thin and wandering."
+    },
+    {
+      "id": "japanese_vocals",
+      "name": "Japanese vocals in Japanese script",
+      "weight": 2,
+      "type": "craft",
+      "anchor": "Japanese script (kana/kanji), NOT romaji. For Suno, lyrics must be written in Japanese script for correct pronunciation (CAMPAIGN.md craft table). Romaji lyrics produce wrong pronunciation; English vocals are out of idiom for the anison lane. Chorus lines typically 7-9 morae per phrase in J-pop lyric practice.",
+      "evidence": "The lyric sheet's script.",
+      "guide": "10 = lyrics in kana/kanji. 7 = mixed script with Japanese lines carrying the chorus. 4 = romaji. 1 = English-only on an anison claim."
+    },
+    {
+      "id": "loudness_target",
+      "name": "Master hits the lane loudness target",
+      "weight": 1,
+      "type": "measured",
+      "anchor": "Streaming -14 LUFS (pipeline gate_loudness spec).",
+      "evidence": "mean_volume_db vs -14.",
+      "guide": "10 = within +/-1 dB. 7 = within +/-3 dB. 4 = 3-6 dB off. 1 = 6+ dB off."
+    }
+  ],
+  "reject_signals": [
+    "anime-opening without the key-changed final chorus — OUT of genre, reject regardless of other scores (genres.yaml is explicit)",
+    "anime-ending with a hard-cut ending — defect, the tail fades the light",
+    "English-only lyrics on an anison claim",
+    "tempo outside the idiom range with no in-range candidate",
+    "clipped master (max_volume_db >= -0.1)"
+  ],
+  "sources": [
+    {"id": "campaign-vr", "title": "Virtual Reflections CAMPAIGN.md — anisong craft reference (local)", "url": "campaigns/virtual-reflections/CAMPAIGN.md"},
+    {"id": "genres-yaml", "title": "music/genres.yaml anisong blocks (local)", "url": "music/genres.yaml"},
+    {"id": "arch", "title": "Music Lane Architecture (local)", "url": "brain/playbooks/music-lane-architecture.md"}
+  ],
+  "notes": "Anisong family added to the registry by task t_5e35a231. The key-changed final chorus is the single highest-weight authenticity signal for openings — treat its absence as fatal, per the registry's own note."
+}

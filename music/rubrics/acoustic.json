@@ -1,0 +1,69 @@
+{
+  "family": "acoustic",
+  "version": 1,
+  "genres": ["sentimental-piano"],
+  "score_scale": "Each criterion scored 1-10. Overall = weighted mean. pass_threshold applies to the geometric-median aggregate across the panel.",
+  "pass_threshold": 7.0,
+  "criteria": [
+    {
+      "id": "tempo_emotion",
+      "name": "Tempo serves the emotion",
+      "weight": 2,
+      "type": "measured",
+      "anchor": "Sentimental piano / emotional underscore: slow, typically 50-90 BPM (TunePocket emotional piano cue: 50 BPM; Artyfile 'Softer Beat': 72 BPM; Artyfile 'Two Become One': 62 BPM). Faster than ~110 reads as pop, not sentimental.",
+      "evidence": "measure.py bpm + bpm_candidates; the style prompt's tempo claim.",
+      "guide": "10 = measured candidate in 50-90 with confidence >= 0.3 and prompt agrees. 7 = in range at lower confidence or prompt/prompt-measurement mismatch resolved plausibly (half/double). 4 = 5+ BPM outside. 1 = nothing in range."
+    },
+    {
+      "id": "felt_piano_presence",
+      "name": "Felt/soft piano character (or honest equivalent)",
+      "weight": 3,
+      "type": "craft",
+      "anchor": "The genre's defining timbre: felt or soft piano, gentle attack, close intimate sound, 'as if the listener is in the room' (ende.app review of Sascha Ende Emotional Piano Vol. 2). Felt hammers soften the attack; the melody must breathe with space around it.",
+      "evidence": "crest_factor_db (soft attacks preserve dynamics; a felt-piano claim with crest < 6 dB is suspicious of squash), the style prompt's timbre claim, pct_energy_above_8khz (soft-piano strings read low-bright).",
+      "guide": "10 = soft-piano timbre claimed AND dynamics consistent (crest >= 10). 7 = claimed, dynamics plausible, timbre itself unverifiable. 4 = brightness/dynamics contradict a soft claim (pct > 20 with soft-piano claim). 1 = hard bright attack piano on a sentimental claim."
+    },
+    {
+      "id": "arc_breathing_room",
+      "name": "Emotional arc with breathing room",
+      "weight": 3,
+      "type": "craft",
+      "anchor": "Solo piano states the theme; strings/pads enter around 30s; emotional peak ~1/3-1/2 through with fuller chords; graceful recession to quiet contemplation (ende.app structural review). Slow, predictable structure = easy to clear for sync (genres.yaml notes).",
+      "evidence": "rms_1s_spread_db and rms_1s_min/max (an arc shows as a rise then fall across windows), silences_ge_1s (space between phrases), duration_s.",
+      "guide": "10 = measured dynamics show a clear rise-and-recede arc and phrase gaps. 7 = some arc evidence. 4 = flat dynamics or wall-of-sound. 1 = no arc and no phrase space on an emotional-build claim."
+    },
+    {
+      "id": "sync_clarity",
+      "name": "Sync usability: predictable, clean, clearable",
+      "weight": 2,
+      "type": "craft",
+      "anchor": "Sync-friendly = slow, predictable structure, easy to clear (genres.yaml). Production leaves ample space for voiceover (ende.app: 'clean production leaves ample space for voiceover'). Bed under speech sits ~20-30 dB below the spoken voice (Podmuse mixing benchmark); no sudden swells, drops, or impacts — changes happen gently at section boundaries.",
+      "evidence": "rms_1s_spread_db (a sync cue's windows stay within a band; sudden spikes hurt), silences_ge_1s, the style prompt.",
+      "guide": "10 = steady band + phrase space + no spikes. 7 = minor spikes only. 4 = 2-3 hard swells. 1 = dramatic build/drop dynamics on a sync claim."
+    },
+    {
+      "id": "loudness_target",
+      "name": "Master hits the lane loudness target",
+      "weight": 1,
+      "type": "measured",
+      "anchor": "Streaming -14 LUFS, sync -16 LUFS, tolerance +/-1 dB (pipeline gate_loudness spec; Apple Podcasts ~-16 LUFS for spoken-word adjacents). Sentimental piano benefits from crest >= 12 dB (dynamics are the emotion).",
+      "evidence": "mean_volume_db vs the lane target for this track's declared lanes.",
+      "guide": "10 = within +/-1 dB and crest >= 12. 7 = within +/-3 dB, crest >= 9. 4 = 3-6 dB off or crest 5-9. 1 = far off or crushed."
+    }
+  ],
+  "reject_signals": [
+    "hard build/drop dynamics on a sentimental/sync claim (sync buyers need predictable; the lane note is explicit)",
+    "bright percussive attack reading (pct_energy_above_8khz > 25) with a felt/soft claim",
+    "no measured phrase space (no silences, no low-RMS windows) on an intimate-piano claim",
+    "clipped master (max_volume_db >= -0.1)",
+    "tempo outside 45-110 BPM with no in-range candidate"
+  ],
+  "sources": [
+    {"id": "ende-piano", "title": "Emotional Piano Vol. 2 review (Sascha Ende)", "url": "https://ende.app/en/song/13052-emotional-piano-vol-2"},
+    {"id": "tunepocket-piano", "title": "Emotional Piano Cue - Sentimental Romantic Royalty Free Music", "url": "https://www.tunepocket.com/royalty-free-music/emotional-piano-cue/"},
+    {"id": "artyfile-softer", "title": "Softer Beat - Cinematic (72 BPM, C major)", "url": "https://artyfile.com/music/softer-beat"},
+    {"id": "artyfile-two", "title": "Two Become One - Cinematic (62 BPM piano+strings)", "url": "https://artyfile.com/music/two-become-one"},
+    {"id": "arch", "title": "Music Lane Architecture S5 gate table (local)", "url": "brain/playbooks/music-lane-architecture.md"}
+  ],
+  "notes": "Sync-friendly by design. The 'mood discovery' trend favours this family; bad arcs kill sync value. A quiet ending matters (loading-screen ballad precedent: 'quiet ending' in the real track's request)."
+}

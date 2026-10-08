@@ -1,0 +1,70 @@
+{
+  "family": "ambient",
+  "version": 1,
+  "genres": ["chill-lounge"],
+  "score_scale": "Each criterion scored 1-10. Overall = weighted mean. pass_threshold applies to the geometric-median aggregate across the panel.",
+  "pass_threshold": 7.0,
+  "criteria": [
+    {
+      "id": "tempo_pocket",
+      "name": "Tempo sits in the meditative pocket",
+      "weight": 3,
+      "type": "measured",
+      "anchor": "Lo-fi/chill lounge: 70-90 BPM, sweet spot 75-85, most-streamed lo-fi cluster 75-85; above 90 it drifts to boom-bap, ambient lo-fi can drop to 60-65 (BeatKey lo-fi guide; musicproductionwiki lo-fi hip hop; Soundtrap lo-fi production).",
+      "evidence": "measure.py bpm + bpm_candidates. Accept a candidate inside the range at confidence >= 0.25.",
+      "guide": "10 = in-pocket candidate with confidence >= 0.35. 7 = in pocket at lower confidence or within 3 BPM of an edge. 4 = 5+ BPM outside. 1 = nothing in range."
+    },
+    {
+      "id": "loop_texture",
+      "name": "The loop is the point",
+      "weight": 3,
+      "type": "craft",
+      "anchor": "4-8 bar loop, minimal development, small per-pass variation (filter movement, crackle shift, one melody note); repetition IS the product for 30-60 min album videos; transitions feel like the tide, not a wave (musicproductionwiki; violetrecording lo-fi guide; chill-lounge prompt craft notes).",
+      "evidence": "rms_1s_spread_db (a loop-based texture shows moderate, rhythmic spread, not song-arc spread), duration_s, the style prompt.",
+      "guide": "10 = evidence consistent with a stable hypnotic loop (no hard drops; spread from gentle layer changes). 7 = mostly stable with one questionable event. 4 = song-arc dynamics (build/drop) on a loop claim. 1 = chaotic or broken texture."
+    },
+    {
+      "id": "warm_degradation",
+      "name": "Warmth and degradation are present, not decoration",
+      "weight": 2,
+      "type": "measured",
+      "anchor": "Vinyl crackle bed at -18 to -22 dBFS (felt not heard), tape saturation on the master, high end rolled off 8-12 kHz (never deleted), swing 55-70% on hats (BeatKey; musicproductionwiki; dlklounge vinyl texture: crackle 2-8 kHz, hiss 5-15 kHz, saturation adds 2nd/3rd harmonics).",
+      "evidence": "pct_energy_above_8khz — a warm chill-lounge master should show LOW single-digit-to-teen percent energy above 8 kHz; a bright modern top end is out of genre. Guide numbers: bright EDM/pop reads 20%+; warm lo-fi reads under ~12%.",
+      "guide": "10 = pct_energy_above_8khz <= 12 with a warmth claim. 7 = 12-18. 4 = 18-25 (bright modern top end on a warm claim = genre miss). 1 = 25+ or sterile-digital-flat with a warmth claim."
+    },
+    {
+      "id": "harmony_language",
+      "name": "Jazz harmony, not pop triads",
+      "weight": 2,
+      "type": "craft",
+      "anchor": "maj7/min7/dom9 and 9th/11th extensions, close voicings, ii-V-I canon (Dm7-G7-Cmaj7), voice-leading with shared notes (BeatKey; musicproductionwiki; violetrecording). Plain minor triads sound too basic for the genre.",
+      "evidence": "The style prompt's harmony claim vs the corpus anchor. You cannot hear voicings from measurements; mark unverifiable if the prompt is silent.",
+      "guide": "10 = prompt claims extended jazz voicings AND nothing contradicts. 7 = claimed, unverified. 4 = only triads claimed or unison. 1 = harmony claim contradicts genre (e.g. big synth saw chords)."
+    },
+    {
+      "id": "loudness_target",
+      "name": "Master hits the lane loudness target",
+      "weight": 1,
+      "type": "measured",
+      "anchor": "Long-form YouTube album lane + streaming: -14 LUFS mean (pipeline gate_loudness spec). Lo-fi should also feel soft-squashed: crest_factor typical 12-20 dB for dynamic material (musicproductionwiki: do not crush the master).",
+      "evidence": "mean_volume_db, crest_factor_db.",
+      "guide": "10 = within +/-1 dB of -14 and crest >= 10. 7 = within +/-3 dB, crest >= 8. 4 = outside 3-6 dB or crest 5-8. 1 = far off or crushed flat."
+    }
+  ],
+  "reject_signals": [
+    "a vocal hook, chorus, or build-drop structure on a chill-lounge claim (out of genre - reject)",
+    "bright modern top end (pct_energy_above_8khz > 25) with a warmth/warm-degradation claim",
+    "measured tempo outside 60-95 BPM with no in-range candidate",
+    "clipped master (max_volume_db >= -0.1)",
+    "hard abrupt digital ending on a loop claim (the lane needs loopable ends; fade or resolve)"
+  ],
+  "sources": [
+    {"id": "beatkey-lofi", "title": "How to Make Lo-Fi Hip Hop - Complete Production Guide", "url": "https://beatkey.app/how-to-make-lofi-hip-hop-music"},
+    {"id": "mpw-lofi", "title": "How To Make Lo Fi Hip Hop", "url": "https://musicproductionwiki.com/articles/how-to-make-lo-fi-hip-hop"},
+    {"id": "soundtrap-lofi", "title": "Lofi Music Production: How To Embrace Imperfection", "url": "https://blog.soundtrap.com/lofi-music-production/"},
+    {"id": "dlk-lounge", "title": "Vinyl Texture Elements Explained (lounge mixes)", "url": "https://dlklounge.com/vinyl-texture-elements-explained-crafting-warmth-depth-and-character-in-lounge-mixes/"},
+    {"id": "violet-lofi", "title": "How to Make Lofi Music: Beats, Samples & Mix", "url": "https://violetrecording.com/how-to-make-lofi-music/"},
+    {"id": "arch", "title": "Music Lane Architecture S5 gate table (local)", "url": "brain/playbooks/music-lane-architecture.md"}
+  ],
+  "notes": "Highest-volume lane: 30-60 min album videos; watch time is the product. YouTube inauthentic-content risk: uniformity = demonetization; visual identity + disclosure carry the lane, audio rubric covers the sound half."
+}

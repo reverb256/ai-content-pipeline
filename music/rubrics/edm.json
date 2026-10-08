@@ -1,0 +1,80 @@
+{
+  "family": "edm",
+  "version": 1,
+  "genres": ["trance", "jungle-dnb"],
+  "score_scale": "Each criterion scored 1-10. Overall = weighted mean. pass_threshold applies to the geometric-median aggregate across the panel.",
+  "pass_threshold": 7.0,
+  "criteria": [
+    {
+      "id": "tempo_pocket",
+      "name": "Tempo sits in the genre pocket",
+      "weight": 3,
+      "type": "measured",
+      "anchor": "Trance: uplifting pocket 136-142 BPM, 138 is the standard DJs mix at; progressive 128-134; outside 128-145 it is a different genre wearing trance's clothes (classictrance.com production playbook; BeatKey substyle table). Jungle: 160-175 BPM, classic jungle 160-170, modern DnB 170-176 with 174 the centre (EDMProd jungle guide; Veena DnB table; tunaryinstruments DnB guide).",
+      "evidence": "measure.py bpm + bpm_candidates. Accept a candidate inside the range when confidence >= 0.25. If the top candidate is a clean double/half of an in-range candidate, prefer the interpretation that matches the claimed substyle.",
+      "guide": "10 = a measured candidate sits inside the pocket with confidence >= 0.35. 7 = in-pocket candidate at lower confidence, or within 3 BPM of the edge. 4 = 5+ BPM outside the pocket. 1 = nothing near any pocket."
+    },
+    {
+      "id": "dance_structure",
+      "name": "DJ-usable phrase structure",
+      "weight": 2,
+      "type": "craft",
+      "anchor": "Sections are multiples of 8 bars, usually 32. Trance: DJ intro/outro 16-64 bars drums-only for beatmixing; breakdown 32-96 bars with no kick where the melody reveals; drop capped 32-64 bars; two beats of near-silence before the drop (myloops 8-minute blueprint; Veena trance arrangement). Jungle: 32-bar intro, drop 32, breakdown 16, build 8, drop 32, outro 32 (Veena DnB arrangement).",
+      "evidence": "duration_s, silences_ge_1s, rms_1s_spread_db (a real breakdown shows as a long low-RMS window), plus the style prompt's structure claim.",
+      "guide": "10 = evidence shows intro/peak/breakdown/peak dynamics AND duration fits an extended mix (trance 5:30-9:00 club, 3-4 min edit; jungle 4-7 min). 7 = clear dynamics arc but section lengths not verifiable. 4 = wall-of-sound, no breakdown (rms spread < 6 dB and no long low-RMS window in a trance claim). 1 = static single-loop texture with a dance-structure claim."
+    },
+    {
+      "id": "genre_engine",
+      "name": "The load-bearing genre element is present",
+      "weight": 3,
+      "type": "craft",
+      "anchor": "Trance engine = four-on-floor kick + rolling 16th offbeat bass on chord roots + detuned supersaw lead; harmony i-VI-III-VII (Am-F-C-G class); dotted-8th delay ~326 ms at 138 BPM; hall reverb on the lead; classic-era trance has almost no energy below 40 Hz. Jungle engine = chopped sampled break (amen lineage) with snare on 2 and 4, ghost notes, reese bass = two detuned saws (~ +/-30 cents) or deep reggae-style sub, half-time bass feel against fast drums, 12-bit-era crunch, ragga vocal lifts.",
+      "evidence": "pct_energy_above_8khz (hats/cymbal activity), crest_factor_db, the style prompt (what was asked), rms_1s_spread_db. You CANNOT hear the waveform: score the coherence between what was asked and what the numbers permit, and say so.",
+      "guide": "10 = style claim is the canonical engine and measured dynamics are consistent with it. 7 = engine claimed, numbers plausible, at least one element unverifiable from evidence. 4 = style claim contradicts genre canon (e.g. trance prompt without offbeat-bass/kick language; jungle prompt without break/reese language). 1 = generic 'EDM' with none of the family's load-bearing elements."
+    },
+    {
+      "id": "low_end_discipline",
+      "name": "Low end behaves like the substyle",
+      "weight": 2,
+      "type": "measured",
+      "anchor": "Trance: kick around 60 Hz, high-pass the master below 40 Hz before mastering, bass gated below 60 Hz (classictrance playbook; beatkey drum table). Jungle/DnB: pure sine sub carries the low, reese/mid-bass filtered above it, sub mono, kick and sub never fight (transmissionsamples reese guide; veena DnB).",
+      "evidence": "max_volume_db (digital-bass clipping check), crest_factor_db (over-compressed low end reads as low crest).",
+      "guide": "10 = no clipping evidence (max < -0.5 dB) and crest >= 9 dB. 7 = crest 6-9 dB or minor peak touches. 4 = crest < 6 dB with a club-mix claim (squashed). 1 = clipping AND squashed."
+    },
+    {
+      "id": "loudness_target",
+      "name": "Master hits the lane loudness target",
+      "weight": 1,
+      "type": "measured",
+      "anchor": "Streaming lanes: -14 LUFS integrated (pipeline gate_loudness spec, music-lane-architecture.md S5; Spotify/Apple normalization era). Sync lanes: -16 LUFS. Tolerance +/-1 dB (measured as volumedetect mean_volume, the pipeline's loudness dialect).",
+      "evidence": "mean_volume_db vs the lane target implied by the genre's registry lanes.",
+      "guide": "10 = within +/-1 dB of target. 7 = within +/-3 dB. 4 = 4-6 dB off. 1 = 7+ dB off."
+    },
+    {
+      "id": "arrangement_development",
+      "name": "The track earns its length",
+      "weight": 1,
+      "type": "craft",
+      "anchor": "Change something small every 8 bars, bigger every 16, sections every 32; the breakdown is the emotional centre with its own three-act arc (myloops). One 64-bar loop twice is not development.",
+      "evidence": "rms_1s_spread_db, silences_ge_1s, duration_s.",
+      "guide": "10 = evidence of a multi-section arc with real dynamic contrast. 7 = some contrast. 4 = near-flat. 1 = flat and long."
+    }
+  ],
+  "reject_signals": [
+    "measured BPM has no candidate inside any substyle pocket (tempo fraud: wrong genre wearing the label)",
+    "trance claim with a half-time/trap-style structure evidence pattern (long silence-free flat wall with no breakdown)",
+    "jungle claim with straight un-chopped feel and no reese/sub evidence in the style claim",
+    "clipped master (max_volume_db >= -0.1) — digital clipping is never genre-authentic",
+    "duration under 3:00 for a club-mix claim (no DJ can use it)"
+  ],
+  "sources": [
+    {"id": "classictrance", "title": "How To Make Classic Trance - The Production Playbook", "url": "https://www.classictrance.com/blog/how-to-make-classic-trance"},
+    {"id": "beatkey-trance", "title": "How to Make Trance Music: BPM, Supersaws, Builds & Drops", "url": "https://beatkey.app/how-to-make-trance-music"},
+    {"id": "myloops-trance", "title": "Uplifting Trance Arrangement: The 8-Minute Blueprint (Bar by Bar)", "url": "https://www.myloops.net/how-to-arrange-an-uplifting-trance-track-from-start-to-finish"},
+    {"id": "edmprod-jungle", "title": "How to Make Jungle Music: The Complete Producer's Guide", "url": "https://www.edmprod.com/how-to-make-jungle-music/"},
+    {"id": "transmission-reese", "title": "How to Create a Reese Bass - DnB & Jungle Sound Design", "url": "https://www.transmissionsamples.com/tutorials/sound-design/reese-bass-create"},
+    {"id": "veena-dnb", "title": "How to Make Drum and Bass: Breaks, Reese Bass & 174 BPM", "url": "https://www.veena.studio/make/drum-and-bass"},
+    {"id": "arch", "title": "Music Lane Architecture S5 gate table (local)", "url": "brain/playbooks/music-lane-architecture.md"}
+  ],
+  "notes": "Beatport is BANNED for both genres (2026-08-12). Lanes are streaming/youtube-mix/direct-license/sync only. A track that would only work on Beatport is worthless to this operation regardless of score."
+}

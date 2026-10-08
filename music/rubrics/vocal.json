@@ -1,0 +1,78 @@
+{
+  "family": "vocal",
+  "version": 1,
+  "genres": ["activist"],
+  "score_scale": "Each criterion scored 1-10. Overall = weighted mean. pass_threshold applies to the geometric-median aggregate across the panel.",
+  "pass_threshold": 7.0,
+  "criteria": [
+    {
+      "id": "chantable_chorus",
+      "name": "The chorus works as a chant",
+      "weight": 3,
+      "type": "craft",
+      "anchor": "The chorus is what a crowd sings at a rally without your recording: short (one to three lines, ~5 words per phrase), strong open vowels (ah/oh carry in a street), clear stress on strong beats, repeatable after one listen ('Get Up Stand Up' is the canon; Lyric Assistant protest-song guide; Berklee: 'the audience IS the chorus').",
+      "evidence": "The lyric sheet (line lengths, repetition, vowel ends) and the style prompt.",
+      "guide": "10 = chorus is short, stress-matched, obviously shoutable, repeated verbatim. 7 = chantable with one weak line. 4 = chorus is poetic/abstract, not chantable. 1 = no distinct chorus."
+    },
+    {
+      "id": "named_target",
+      "name": "Names the problem, not vague fury",
+      "weight": 3,
+      "type": "craft",
+      "anchor": "Clarity: say who or what the problem is; abstract fury is less useful than a named target; concrete images turn slogans into stories ('One heater for three apartments', 'The bus stops running at midnight' — 5 specific grievances is the working exercise; Lyric Assistant). Verses carry the details; the chorus carries the demand in <= 5 words (Berklee: verses = your platform).",
+      "evidence": "The lyric sheet: count concrete named targets/images vs abstract emotion words.",
+      "guide": "10 = verses name specific targets and images; the chorus states the demand plainly. 7 = one verse concrete, chorus clear. 4 = all-abstract emotion, nothing named. 1 = no discernible message."
+    },
+    {
+      "id": "sincerity_delivery",
+      "name": "Vocal reads as sincere, in a true voice",
+      "weight": 2,
+      "type": "craft",
+      "anchor": "Protest vocals must reflect sincerity and honesty other songs don't require — 'the listener experiences a truth' (Berklee vocal-production note). Over-produced autotune kills the document function of the genre. The idiom's dynamic signature is wide-open: crest factor >= 10 dB is consistent with an unprocessed lead vocal.",
+      "evidence": "The style prompt's vocal direction; crest_factor_db (an over-processed squash reads wrong for the idiom); unverifiable from measurements alone — say so.",
+      "guide": "10 = plain human vocal delivery claimed and dynamics consistent. 7 = claimed, unverified. 4 = heavily processed vocal claim. 1 = explicitly synthetic/robotic vocal on a protest document."
+    },
+    {
+      "id": "prosody",
+      "name": "Words sit on the music naturally",
+      "weight": 2,
+      "type": "craft",
+      "anchor": "Prosody: stressed syllables of key words on strong beats; speak the line from a rooftop — if the stress fights the meter, rewrite (Lyric Assistant). Test: a chorus line must scan in <= 5 strong beats and survive shouted repetition; scansion errors compound every repeated chorus pass.",
+      "evidence": "The lyric sheet + ABC/transcript timing when present; bpm measurement for the meter.",
+      "guide": "10 = scansion fits the claimed meter with no forced stress. 7 = one forced line. 4 = several stresses land wrong. 1 = words fight the groove throughout."
+    },
+    {
+      "id": "structure_service",
+      "name": "Structure serves the movement",
+      "weight": 1,
+      "type": "craft",
+      "anchor": "Working structures: verse-chorus-verse-chorus-bridge-chorus; intro-hook-verse-chorus-...-outro-chant; call-and-response (response <= 5 words) (Lyric Assistant structure options). Title = the main chorus line, not poetry (Berklee title rule).",
+      "evidence": "The lyric sheet's section map.",
+      "guide": "10 = clear section map, chorus arrives early, title = chorus line. 7 = clear map, title drifts. 4 = structure present but muddy. 1 = no structure."
+    },
+    {
+      "id": "loudness_target",
+      "name": "Master hits the lane loudness target",
+      "weight": 1,
+      "type": "measured",
+      "anchor": "Streaming -14 LUFS (pipeline gate_loudness spec). Ad-suitability risk: audience-funded > ad-funded for this family (genres.yaml note) — loudness follows streaming target regardless.",
+      "evidence": "mean_volume_db vs -14.",
+      "guide": "10 = within +/-1 dB. 7 = within +/-3 dB. 4 = 3-6 dB off. 1 = 6+ dB off."
+    }
+  ],
+  "reject_signals": [
+    "no chantable chorus (the genre's function fails)",
+    "vague fury with no named target or concrete image",
+    "heavy autotune/robotic processing claim on a protest document",
+    "clipped master (max_volume_db >= -0.1)",
+    "lyrics that are a list of slogans with no verse-level story"
+  ],
+  "sources": [
+    {"id": "berklee-protest", "title": "How to Write a Protest Song - Berklee Online Take Note", "url": "https://online.berklee.edu/takenote/how-to-write-a-protest-song/"},
+    {"id": "lyricassistant", "title": "How to Write Protest Song Lyrics", "url": "https://lyricassistant.com/how-to-write-protest-song-lyrics/"},
+    {"id": "rcm-sparks", "title": "RCM Sparks: Protest Songs - Music Used for Social Change (PDF)", "url": "https://www.rcm.ac.uk/media/RCM%20Sparks%20Digital%20Resource%20Protest%20Songs%20-%20Teachers.pdf"},
+    {"id": "folkways", "title": "Protest Songs: A Musical Introduction - Smithsonian Folkways lesson (PDF)", "url": "https://folkways-media.si.edu/docs/lesson_plans/FLP10025_usa_protest_songs.pdf"},
+    {"id": "arch", "title": "Music Lane Architecture S5 gate table (local)", "url": "brain/playbooks/music-lane-architecture.md"}
+  ],
+  "notes": "Ad-suitability risk (genres.yaml): audience-funded > ad-funded. Sync for documentary/film is the pro outlet. The lyric review uses the human-authored lyrics file; AI-slop slogan strings must fail named_target and chantable_chorus."
+}
