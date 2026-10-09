@@ -166,6 +166,31 @@ def load_blueprint(genre: str) -> dict:
         return yaml.safe_load(fh) or {}
 
 
+def bpm_in_caption(caption: str):
+    """The BPM the genre's own caption states, e.g. "ragga jungle, 168 BPM".
+
+    Every template in music/prompts/ states one. It is the researched tempo for
+    the genre and the only tempo signal available for the 11 genres that have no
+    blueprint yet - without it the draft path fell back to a flat 100, which is
+    right for almost nothing: jungle-dnb came out at 100 against its own stated
+    168, and anime-opening at 100 against its stated 160.
+    """
+    m = re.search(r"(\d{2,3})\s*BPM", caption or "", re.I)
+    return int(m.group(1)) if m else None
+
+
+def bpm_anchor_for(ctx: dict):
+    """One resolution order, used by the draft path, the AI prompt and
+    validation alike, so all three agree on what "the genre's tempo" means.
+
+    Blueprint first: it is hand-researched and may deliberately differ from the
+    caption (chill-lounge is 72 in the blueprint, 75 in the caption - the
+    blueprint is the decision). Caption second. Nothing third: better to say we
+    do not know than to invent a tempo and validate against it.
+    """
+    return ctx["blueprint"].get("bpm_anchor") or ctx.get("template_bpm")
+
+
 def context_for(genre: str) -> dict:
     reg = load_registry()
     if genre not in reg["genres"]:
@@ -174,7 +199,8 @@ def context_for(genre: str) -> dict:
     entry = reg["genres"][genre]
     tmpl = load_template(genre)
     bp = load_blueprint(genre)
-    return {"genre": genre, "registry": entry, "template": tmpl, "blueprint": bp}
+    return {"genre": genre, "registry": entry, "template": tmpl, "blueprint": bp,
+            "template_bpm": bpm_in_caption(tmpl.get("caption") or "")}
 
 
 # ---------------------------------------------------------------------------
@@ -315,8 +341,10 @@ def build_user_prompt(brief: str, ctx: dict, language: str, title: str | None,
         parts.append(f"RHYME: {bp['rhyme']}")
     if bp.get("line_length"):
         parts.append(f"LINE LENGTH: {bp['line_length']}")
-    if bp.get("bpm_anchor"):
-        parts.append(f"BPM ANCHOR: {bp['bpm_anchor']}")
+    anchor = bpm_anchor_for(ctx)
+    if anchor:
+        src = "blueprint" if bp.get("bpm_anchor") else "the genre's own caption"
+        parts.append(f"BPM ANCHOR: {anchor} (from {src})")
     if bp.get("mood_words"):
         parts.append(f"MOOD WORDS (use some): {', '.join(map(str, bp['mood_words']))}")
     if bp.get("avoid"):
@@ -393,7 +421,7 @@ def validate(plan: dict, ctx: dict, brief: str, language: str) -> list[str]:
         problems.append(f"section(s) with no lyrics: {', '.join(empty)}")
 
     # bpm anchor
-    anchor = bp.get("bpm_anchor")
+    anchor = bpm_anchor_for(ctx)
     if anchor and isinstance(plan.get("bpm"), (int, float)):
         if abs(plan["bpm"] - anchor) > max(8, anchor * 0.12):
             problems.append(f"bpm {plan['bpm']} is more than 12% off the anchor {anchor}")
@@ -467,7 +495,7 @@ def cmd_plan(args) -> int:
         plan = {
             "title": args.title or (ctx["blueprint"].get("title_candidates") or ["Untitled"])[0],
             "caption": ctx["template"]["caption"],
-            "bpm": ctx["blueprint"].get("bpm_anchor") or 100,
+            "bpm": bpm_anchor_for(ctx) or 100,
             "key": args.key or "C minor",
             "duration": args.duration or 180,
             "timesignature": "4",
