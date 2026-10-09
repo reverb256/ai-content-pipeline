@@ -275,9 +275,13 @@ Rules, in priority order:
    Never substitute a generic or seasonal scene (no winter, snow, holidays,
    or "city lights" unless the brief asks for them).
 2. Use the SECTION STRUCTURE exactly: same tags, same order, same count.
-3. Obey every craft note and every item in the avoid-list.
-4. Write in the requested LANGUAGE only. Never mix languages.
-5. Respect bpm_anchor if given.
+3. EVERY section carries lyrics. No section may be left as a bare tag. An
+   [Intro] or [Outro] may be short - two to four lines - but it must have
+   lines; a bare tag renders as a vocal-shaped hole and reads as a model
+   failure when it is a plan defect.
+4. Obey every craft note and every item in the avoid-list.
+5. Write in the requested LANGUAGE only. Never mix languages.
+6. Respect bpm_anchor if given.
 
 JSON shape (no other keys):
 {
@@ -368,6 +372,25 @@ def validate(plan: dict, ctx: dict, brief: str, language: str) -> list[str]:
     if want and got != want:
         problems.append(f"structure mismatch: planner used {got}, "
                         f"blueprint requires {want}")
+
+    # EVERY section must carry singable lines. A section tag with nothing under
+    # it renders as a vocal-shaped hole: the generator sings nothing there and
+    # the result reads as a model failure when it is a plan defect. Observed on
+    # the first live anime-opening plan, which left [Intro] and [Outro] bare.
+    #
+    # NOTE the separator is `[ \t]*\n`, NOT `\s*\n`. `\s` matches newlines, so
+    # `\s*\n` lets an empty section swallow the blank lines AND the next
+    # section's tag, giving it the following section's lyrics and reporting it
+    # as full. That is exactly how the first version of this check passed a
+    # plan whose Intro was bare. Verified with a negative control that empties
+    # one section and expects this list to be non-empty.
+    blocks = re.findall(r"^\[([^\]]+)\][ \t]*\n(.*?)(?=\n\[|\Z)",
+                        plan.get("lyrics", ""), re.M | re.S)
+    empty = [tag for tag, content in blocks
+             if not [ln for ln in content.splitlines()
+                     if ln.strip() and not ln.strip().startswith(("#", "("))]]
+    if empty:
+        problems.append(f"section(s) with no lyrics: {', '.join(empty)}")
 
     # bpm anchor
     anchor = bp.get("bpm_anchor")
