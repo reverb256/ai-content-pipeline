@@ -299,9 +299,10 @@ stage: brief
         body_path = f.name
 
     try:
+        # title is a POSITIONAL arg for `hermes kanban create`, not --title.
         cmd = [
             "hermes", "kanban", "--board", "music", "create",
-            "--title", title,
+            title,
             "--body-file", body_path,
             "--assignee", "music-producer",
         ]
