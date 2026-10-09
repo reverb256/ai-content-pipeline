@@ -290,22 +290,37 @@ stage: brief
         print(f"           Body: {body[:200]}...")
         return None
 
-    cmd = [
-        "hermes", "kanban", "create",
-        "--board", "music",
-        "--title", title,
-        "--body", body,
-        "--assignee", "music-producer",
-    ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        print(f"ERROR: failed to create card: {result.stderr}", file=sys.stderr)
-        return None
+    # --board is a TOP-LEVEL flag (hermes kanban --board music create ...),
+    # not a create-subcommand flag. Body goes through --body-file so embedded
+    # newlines survive shell quoting.
+    import tempfile
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+        f.write(body)
+        body_path = f.name
 
-    output = result.stdout.strip()
-    task_id = output.split("\n")[-1].strip()
-    print(f"  Created card: {task_id} — {title}")
-    return task_id
+    try:
+        cmd = [
+            "hermes", "kanban", "--board", "music", "create",
+            "--title", title,
+            "--body-file", body_path,
+            "--assignee", "music-producer",
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"ERROR: failed to create card: {result.stderr}", file=sys.stderr)
+            return None
+
+        output = result.stdout.strip()
+        # hermes kanban create prints the task id as the last line
+        task_id = output.split("\n")[-1].strip()
+        print(f"  Created card: {task_id} — {title}")
+        return task_id
+    finally:
+        import os
+        try:
+            os.unlink(body_path)
+        except OSError:
+            pass
 
 
 def run_oracle(dry_run: bool = False) -> dict:
