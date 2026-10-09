@@ -44,8 +44,10 @@ from pathlib import Path
 
 import yaml
 
-REPO = Path("/home/j_kro/Projects/ai-content-pipeline")
-MUSIC_DIR = REPO / "music"
+# Resolve REPO from this file's location: music/oracle.py is always at
+# <repo>/music/oracle.py, so the repo root is the parent of this dir.
+MUSIC_DIR = Path(__file__).resolve().parent
+REPO = MUSIC_DIR.parent
 PERF_DIR = REPO / "performance"
 
 # ── Scoring weights (sum to 1.0) ────────────────────────────────────────────
