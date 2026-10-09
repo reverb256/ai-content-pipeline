@@ -1,0 +1,23 @@
+# music/scheduler/music-policy-watch.service
+# systemd service unit — daily platform AI-policy change watcher.
+# Scans for policy changes on: Suno, YouTube (inauthentic content),
+# DistroKid, Songtradr, itch.io, Gumroad.
+# A stale policy gets accounts terminated — this is the fastest-moving
+# fact in the domain.
+#
+# Timer: music-policy-watch.timer (daily at 07:00, before the oracle)
+# Host: nexus (always-on)
+
+[Unit]
+Description=Music Policy Watch — daily platform AI-policy change scan
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'cd /home/j_kro/Projects/ai-content-pipeline && hermes -p analyst chat -q "Run the daily music policy watch. Scan for AI-policy changes on: Suno (suno.com), YouTube (inauthentic content / AI disclosure), DistroKid, Songtradr, itch.io, Gumroad. Use web search to check for policy updates in the last 24h. If a policy change is detected, create an URGENT card on the music kanban board with stage: escalate (human gate). If no changes, log to performance/music-policy-watch.log. Never auto-adapt to a policy change — surface it to j_kro." --oneshot -Q'
+WorkingDirectory=/home/j_kro/Projects/ai-content-pipeline
+Environment=HOME=/home/j_kro
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=300

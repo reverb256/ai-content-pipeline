@@ -1,0 +1,112 @@
+# music/autonomy.yaml — autonomy-rung state for each music lane.
+#
+# Implements the ladder from architecture §11.2:
+#   advisory -> supervised -> monitored -> full
+#
+# Lanes start at advisory. Promotion is proposed on the board with
+# evidence; j_kro approves the rung change.
+#
+# Evidence thresholds:
+#   supervised: 10 clean advisory publishes
+#   monitored:  20 clean supervised publishes, zero platform strikes
+#   full:       50 clean monitored publishes, revenue positive
+
+version: 1
+
+lanes:
+  youtube-longform:
+    rung: advisory
+    evidence:
+      clean_publishes: 0
+      platform_strikes: 0
+      revenue_usd: 0
+    notes: "Highest-volume lane. Needs visual identity for authentic-content review."
+
+  youtube-mix:
+    rung: advisory
+    evidence:
+      clean_publishes: 0
+      platform_strikes: 0
+      revenue_usd: 0
+    notes: "DJ mixes + Beatport-banned genres. No label path."
+
+  youtube-gaming:
+    rung: advisory
+    evidence:
+      clean_publishes: 0
+      platform_strikes: 0
+      revenue_usd: 0
+    notes: "Gaming music channels; loopable visual + tracklist."
+
+  streaming:
+    rung: advisory
+    evidence:
+      clean_publishes: 0
+      platform_strikes: 0
+      revenue_usd: 0
+    notes: "DistroKid/TuneCore. $24.99/yr DistroKid, no caps."
+
+  sync:
+    rung: advisory
+    evidence:
+      clean_publishes: 0
+      platform_strikes: 0
+      revenue_usd: 0
+    notes: "Songtradr/AudioSparx. Stems + clearance doc required."
+
+  sync-documentary:
+    rung: advisory
+    evidence:
+      clean_publishes: 0
+      platform_strikes: 0
+      revenue_usd: 0
+    notes: "Documentary/film sync. Same clearance as sync."
+
+  direct-license:
+    rung: advisory
+    evidence:
+      clean_publishes: 0
+      platform_strikes: 0
+      revenue_usd: 0
+    notes: "Own-site license sales. Stems + license tiers required."
+
+  direct-fan:
+    rung: advisory
+    evidence:
+      clean_publishes: 0
+      platform_strikes: 0
+      revenue_usd: 0
+    notes: "Patreon/Ko-fi. Audience-funded."
+
+  game-assets:
+    rung: advisory
+    evidence:
+      clean_publishes: 0
+      platform_strikes: 0
+      revenue_usd: 0
+    notes: "itch.io/Unity asset store. Loop packs + SFX."
+
+  stock-ai-native:
+    rung: advisory
+    evidence:
+      clean_publishes: 0
+      platform_strikes: 0
+      revenue_usd: 0
+    notes: "Loudly/Soundraw/MusicAPI. Only remaining stock door."
+
+# ── Promotion thresholds (architecture §11.2) ───────────────────────────────
+promotion_thresholds:
+  supervised:
+    requires: "10 clean advisory publishes"
+  monitored:
+    requires: "20 clean supervised publishes, zero platform strikes"
+  full:
+    requires: "50 clean monitored publishes, revenue positive"
+
+# ── Failure handling (architecture §11.4) ──────────────────────────────────
+failure_handling:
+  cooldown:
+    platform_429_5xx: "cooldown, retry with backoff (max 3 retries)"
+    gate_failure: "return to maker with specific finding; never advance"
+    credential_expiry: "surface in daily digest as human-gated item"
+    sustained_failure: "pause the lane and page the digest; never loop"

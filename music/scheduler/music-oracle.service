@@ -1,0 +1,24 @@
+# music/scheduler/music-oracle.service
+# systemd service unit — runs the music oracle daily.
+# Installs to ~/.config/systemd/user/ on nexus.
+#
+# The oracle scans lane performance, genre ROI, platform policy signals,
+# and trend signals. It emits scored cards to the `music` kanban board.
+#
+# Timer: music-oracle.timer (daily at 08:00)
+# Host: nexus (always-on; not zephyr — workstation crons pause on sleep)
+
+[Unit]
+Description=Music Oracle — daily opportunity scan for the music lane
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /home/j_kro/Projects/ai-content-pipeline/music/oracle.py
+WorkingDirectory=/home/j_kro/Projects/ai-content-pipeline
+Environment=HOME=/home/j_kro
+Nice=10
+IOSchedulingClass=idle
+# Timeout: 5 minutes — the oracle should never hang
+TimeoutStartSec=300

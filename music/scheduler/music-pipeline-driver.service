@@ -1,0 +1,23 @@
+# music/scheduler/music-pipeline-driver.service
+# systemd service unit — runs the pipeline driver for the music board.
+# The driver walks the music kanban board and dispatches the owning bot
+# per stage (brief → genre-select → lyrics → generate → curate → stems
+# → master → gate → package → visual → publish → track).
+#
+# Timer: music-pipeline-driver.timer (every 30 min)
+# Host: nexus (always-on)
+
+[Unit]
+Description=Music Pipeline Driver — walks the music board and dispatches stage bots
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /home/j_kro/Projects/ai-content-pipeline/scripts/automation/pipeline-driver.sh --board music
+WorkingDirectory=/home/j_kro/Projects/ai-content-pipeline
+Environment=HOME=/home/j_kro
+Nice=10
+IOSchedulingClass=idle
+# Timeout: 10 minutes — the driver should never hang
+TimeoutStartSec=600

@@ -1,0 +1,14 @@
+# music/scheduler/music-oracle.timer
+# Daily timer for the music oracle. Fires at 08:00 local time.
+# Persistent: if nexus was off at fire time, it runs on boot.
+
+[Unit]
+Description=Music Oracle daily scan (08:00)
+
+[Timer]
+OnCalendar=*-*-* 08:00:00
+Persistent=true
+AccuracySec=60s
+
+[Install]
+WantedBy=timers.target

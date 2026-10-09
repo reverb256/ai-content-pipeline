@@ -1,0 +1,14 @@
+# music/scheduler/music-pipeline-driver.timer
+# Every-30-min timer for the music pipeline driver.
+# Persistent: catches up on missed runs after downtime.
+
+[Unit]
+Description=Music Pipeline Driver (every 30 min)
+
+[Timer]
+OnCalendar=*:0/30
+Persistent=true
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
