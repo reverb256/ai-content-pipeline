@@ -1,0 +1,39 @@
+# anisong genre blocks — MERGE FRAGMENT for music/genres.yaml
+# Owner: music-producer (task t_5e35a231, anisong genre templates)
+# For:   t_a8e2b160 "genre + lane registries and quota ledger"
+# Status: music/genres.yaml does not exist yet (verified 2026-10-08).
+# Per the anisong task's coordination clause, the two blocks are
+# written here and the dependency is noted on the registry card.
+# Merge the two blocks below into the `genres:` map when t_a8e2b160
+# creates genres.yaml.
+#
+# Cross-references:
+#   prompts:  music/prompts/anime-opening.md, music/prompts/anime-ending.md
+#     validated: python3 music/prompts/validate_templates.py anime-opening anime-ending
+#     -> PASS, style blocks 752/576 chars, 2/2 valid
+#   visuals:  music/visuals/anime-opening.md, music/visuals/anime-ending.md
+#   campaign: campaigns/virtual-reflections/CAMPAIGN.md (anison craft table;
+#     the album's explosive end is anime-opening style)
+#   family:   "anisong" is a NEW family. The registry validator
+#     (music/registry.py, t_a8e2b160) validates lane references, not
+#     families, so a new family needs no lane change.
+
+# ---- append under `genres:` in music/genres.yaml ----
+
+anime-opening:
+  family: anisong
+  prompt_template: prompts/anime-opening.md
+  visual_style: visuals/anime-opening.md
+  lanes: [streaming, sync, direct-license, youtube-gaming]
+  cadence: 1/wk
+  video_shape: single-4min
+  notes: "Anison idiom: 130-180 BPM, IV-V-iii-vi royal road, FINAL CHORUS JUMPS UP ONE KEY (the defining gesture), 90-second TV-edit density, Japanese vocals in Japanese script. Required by the Virtual Reflections album (tracks 7-8). A generation without the key-changed final chorus is OUT of genre - reject it."
+
+anime-ending:
+  family: anisong
+  prompt_template: prompts/anime-ending.md
+  visual_style: visuals/anime-ending.md
+  lanes: [streaming, sync, direct-license, youtube-longform]
+  cadence: 1/wk
+  video_shape: album-30-60min
+  notes: "Anison ballad idiom: 70-120 BPM, IV-V-iii-vi royal road, gentle key lift in the final chorus, brushed drums from verse 2, Japanese vocals in Japanese script. Required by the Virtual Reflections album (track 9). Hard-cut ending is a defect - the tail fades the light."
