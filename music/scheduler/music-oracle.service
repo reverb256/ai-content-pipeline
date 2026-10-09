@@ -15,8 +15,8 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/python3 /home/j_kro/Projects/ai-content-pipeline/music/oracle.py
-WorkingDirectory=/home/j_kro/Projects/ai-content-pipeline
+ExecStart=/usr/bin/python3 /home/j_kro/ai-content-pipeline/music/oracle.py
+WorkingDirectory=/home/j_kro/ai-content-pipeline
 Environment=HOME=/home/j_kro
 Nice=10
 IOSchedulingClass=idle
