@@ -1,0 +1,10 @@
+{
+  "period": "2026-10",
+  "standard_downloads_used": 0,
+  "standard_downloads_limit": 60,
+  "studio_exports": 0,
+  "credits_used": 0,
+  "credits_limit": 10000,
+  "warn_at": 55,
+  "hard_stop_at": 58
+}
