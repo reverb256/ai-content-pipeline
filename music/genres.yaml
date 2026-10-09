@@ -1,0 +1,155 @@
+# music/genres.yaml — declarative genre registry.
+# Add a genre = add a block. Never edit a script to add a genre.
+#
+# Schema per block (all keys REQUIRED — registry.py validate enforces):
+#   family:         free-form family label (validator checks lane refs, not families)
+#   prompt_template: path relative to music/ — MUST resolve to a real file
+#   visual_style:   path relative to music/ — MUST resolve to a real file
+#   lanes:          every entry MUST exist as a lane in lanes.yaml
+#   cadence:        <int>/wk
+#   video_shape:    platform-native video shape for the videobot
+#   notes:          lane rationale, platform bans, target market
+#
+# Source: brain/playbooks/music-lane-architecture.md §2.
+# anime-opening / anime-ending merged from music/prompts/anisong-genre-blocks.yaml
+# (delivered by task t_5e35a231, anisong genre templates; required by the
+# Virtual Reflections album, tracks 7-9).
+
+version: 1
+
+defaults:
+  export: studio              # Studio = unlimited downloads (see quota gate)
+  stems: true                 # stems mandatory for sync + direct-licensing
+  lyrics: human-original      # original lyrics -> copyrightable -> SOCAN
+  release_private: true       # never auto-publish
+  gate_profile: reviewer-deepseek
+
+genres:
+
+  chill-lounge:
+    family: ambient
+    prompt_template: prompts/chill-lounge.md
+    visual_style: visuals/lofi-room-rain.md
+    lanes: [youtube-longform, streaming, sync, direct-license]
+    cadence: 3/wk
+    video_shape: album-30-60min
+    notes: "Highest-volume lane. Needs visual identity to survive inauthentic-content review."
+
+  trance:
+    family: edm
+    prompt_template: prompts/trance.md
+    visual_style: visuals/neon-horizon.md
+    lanes: [streaming, youtube-mix, direct-license, sync]
+    cadence: 2/wk
+    video_shape: mix-60min
+    notes: "Beatport BANNED (2026-08-12). Independent release + DJ mixes only. No label path."
+
+  jungle-dnb:
+    family: edm
+    prompt_template: prompts/jungle-dnb.md
+    visual_style: visuals/urban-grain.md
+    lanes: [streaming, youtube-mix, direct-license]
+    cadence: 2/wk
+    video_shape: mix-60min
+    notes: "Same Beatport ban applies. Amen-break / ragga vocal direction."
+
+  sentimental-piano:
+    family: acoustic
+    prompt_template: prompts/sentimental-piano.md
+    visual_style: visuals/soft-window-light.md
+    lanes: [sync, streaming, direct-license, youtube-longform]
+    cadence: 3/wk
+    video_shape: album-30-60min
+    notes: "Sync-friendly: slow, predictable structure, easy to clear. Mood discovery trend."
+
+  commentary-beds:
+    family: utility
+    prompt_template: prompts/commentary-beds.md
+    visual_style: visuals/none.md
+    lanes: [direct-license, sync]
+    cadence: 5/wk
+    video_shape: none
+    notes: "Loopable + stemmed. Market: 82% of podcasts license stock themes."
+
+  activist:
+    family: vocal
+    prompt_template: prompts/activist.md
+    visual_style: visuals/documentary-grain.md
+    lanes: [direct-fan, sync-documentary, streaming]
+    cadence: 1/wk
+    video_shape: lyric-video
+    notes: "Ad-suitability risk — audience-funded > ad-funded. Sync for doc/film is the pro outlet."
+
+  # ---- elemental / gamer family -------------------------------------------
+  # One block per element. Copy the block, change prompt + visual. Infinite variety.
+
+  elemental-fire:
+    family: gamer
+    prompt_template: prompts/elemental-fire.md
+    visual_style: visuals/element-fire.md
+    lanes: [game-assets, youtube-gaming, streaming]
+    cadence: 2/wk
+    video_shape: loop-10min
+    notes: "Boss/battle theme. Target indie devs + gaming music channels."
+
+  elemental-water:
+    family: gamer
+    prompt_template: prompts/elemental-water.md
+    visual_style: visuals/element-water.md
+    lanes: [game-assets, youtube-gaming, streaming]
+    cadence: 2/wk
+    video_shape: loop-10min
+
+  elemental-earth:
+    family: gamer
+    prompt_template: prompts/elemental-earth.md
+    visual_style: visuals/element-earth.md
+    lanes: [game-assets, youtube-gaming, streaming]
+    cadence: 2/wk
+    video_shape: loop-10min
+
+  elemental-air:
+    family: gamer
+    prompt_template: prompts/elemental-air.md
+    visual_style: visuals/element-air.md
+    lanes: [game-assets, youtube-gaming, streaming]
+    cadence: 2/wk
+    video_shape: loop-10min
+
+  chiptune-8bit:
+    family: gamer
+    prompt_template: prompts/chiptune-8bit.md
+    visual_style: visuals/pixel-scene.md
+    lanes: [game-assets, youtube-gaming, streaming]
+    cadence: 2/wk
+    video_shape: loop-10min
+
+  epic-orchestral-boss:
+    family: gamer
+    prompt_template: prompts/epic-orchestral-boss.md
+    visual_style: visuals/dark-fantasy.md
+    lanes: [game-assets, youtube-gaming, sync, streaming]
+    cadence: 1/wk
+    video_shape: single-4min
+
+  # ---- anisong family -----------------------------------------------------
+  # Merged from music/prompts/anisong-genre-blocks.yaml (task t_5e35a231).
+  # Required by the Virtual Reflections album (campaigns/virtual-reflections/CAMPAIGN.md).
+
+  anime-opening:
+    family: anisong
+    prompt_template: prompts/anime-opening.md
+    visual_style: visuals/anime-opening.md
+    lanes: [streaming, sync, direct-license, youtube-gaming]
+    cadence: 1/wk
+    video_shape: single-4min
+    notes: "Anison idiom: 130-180 BPM, IV-V-iii-vi royal road, FINAL CHORUS JUMPS UP ONE KEY (the defining gesture), 90-second TV-edit density, Japanese vocals in Japanese script. Required by the Virtual Reflections album (tracks 7-8). A generation without the key-changed final chorus is OUT of genre - reject it."
+
+  anime-ending:
+    family: anisong
+    prompt_template: prompts/anime-ending.md
+    visual_style: visuals/anime-ending.md
+    lanes: [streaming, sync, direct-license, youtube-longform]
+    cadence: 1/wk
+    video_shape: album-30-60min
+    notes: "Anison ballad idiom: 70-120 BPM, IV-V-iii-vi royal road, gentle key lift in the final chorus, brushed drums from verse 2, Japanese vocals in Japanese script. Required by the Virtual Reflections album (track 9). Hard-cut ending is a defect - the tail fades the light."
