@@ -1,0 +1,3 @@
+# Plans are outputs, not source. The planner (music/planner/planner.py) is the
+# artifact; a plan is one brief's result and is regenerated on demand.
+*.json
