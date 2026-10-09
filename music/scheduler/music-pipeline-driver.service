@@ -14,8 +14,8 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash /home/j_kro/Projects/ai-content-pipeline/scripts/automation/pipeline-driver.sh --board music
-WorkingDirectory=/home/j_kro/Projects/ai-content-pipeline
+ExecStart=/bin/bash /home/j_kro/ai-content-pipeline/scripts/automation/pipeline-driver.sh --board music
+WorkingDirectory=/home/j_kro/ai-content-pipeline
 Environment=HOME=/home/j_kro
 Nice=10
 IOSchedulingClass=idle

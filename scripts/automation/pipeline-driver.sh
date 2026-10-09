@@ -24,7 +24,17 @@
 # Run by cron (e.g. every 30 min during the day).
 set -euo pipefail
 
-REPO="${REPO:-$HOME/Projects/ai-content-pipeline}"
+# REPO is auto-resolved: if the script is inside a git worktree, use the
+# git root; otherwise fall back to $HOME/Projects/ai-content-pipeline so the
+# local dev path still works byte-for-byte. Override via env REPO= explicitly.
+if [ -z "${REPO:-}" ]; then
+  git_root=$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || true)
+  if [ -n "$git_root" ]; then
+    REPO="$git_root"
+  else
+    REPO="$HOME/Projects/ai-content-pipeline"
+  fi
+fi
 LOG="$REPO/performance/pipeline-driver.log"
 
 # ---- Board selection: env BOARD or --board <slug>, default unchanged ----
