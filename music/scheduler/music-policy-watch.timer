@@ -1,0 +1,14 @@
+# music/scheduler/music-policy-watch.timer
+# Daily timer — 07:00 local time, before the oracle (08:00).
+# Persistent: catches up on missed runs.
+
+[Unit]
+Description=Music Policy Watch daily scan (07:00)
+
+[Timer]
+OnCalendar=*-*-* 07:00:00
+Persistent=true
+AccuracySec=60s
+
+[Install]
+WantedBy=timers.target

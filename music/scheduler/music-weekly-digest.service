@@ -1,0 +1,21 @@
+# music/scheduler/music-weekly-digest.service
+# systemd service unit — runs the weekly digest for the music lane.
+# The digest collects: lane performance, oracle card outcomes, quota
+# consumption, gate results, and platform policy changes.
+#
+# Timer: music-weekly-digest.timer (weekly, Monday 06:00)
+# Host: nexus (always-on)
+
+[Unit]
+Description=Music Weekly Digest — weekly performance summary for the music lane
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'cd /home/j_kro/Projects/ai-content-pipeline && hermes -p analyst chat -q "Run the weekly music digest. Collect: (1) lane performance from performance/weekly/ for the music lane, (2) oracle card outcomes from the music kanban board, (3) quota consumption from music/quota-ledger.json, (4) gate results from music/gates/ logs, (5) any platform policy changes detected by the music-policy-watch. Write the digest to performance/weekly/music-YYYY-WW.md. Post a summary card to the music kanban board." --oneshot -Q'
+WorkingDirectory=/home/j_kro/Projects/ai-content-pipeline
+Environment=HOME=/home/j_kro
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=600
