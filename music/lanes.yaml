@@ -1,0 +1,92 @@
+# music/lanes.yaml — declarative lane registry.
+# Genre x lane are orthogonal axes: a genre declares its lane set, this file
+# defines what each lane IS (surface, bot, gate, requirements).
+#
+# Schema per lane (required keys: surface, bot, gate — registry.py enforces):
+#   surface:      platform(s) the lane publishes to
+#   bot:          owning bot for the stage
+#   publisher:    upload executor (where different from bot)
+#   gate:         the gate that must pass before publish
+#   requires:     artifacts the package must carry
+#   notes:        platform policy, bans, economics
+#
+# Source: brain/playbooks/music-lane-architecture.md §3.
+#
+# sync-documentary is ADDED here (not in the doc's §3 listing) because the
+# doc's §2 activist genre block declares it in its lanes. It is the sync
+# specialization for documentary/film — the activist notes call it "the pro
+# outlet". registry.py validate FAILS on any genre lane that has no block
+# here, so the lane must exist for the registry to pass.
+
+version: 1
+
+lanes:
+
+  youtube-longform:
+    surface: youtube
+    shape: album-30-60min
+    bot: videobot
+    publisher: publishbot
+    gate: gate_youtube_authentic     # inauthentic-content policy check
+    revenue: ads                      # $1-5 RPM music; 2-3x for 30-60min albums
+
+  youtube-mix:
+    surface: youtube
+    shape: mix-60min
+    bot: videobot
+    publisher: publishbot
+    gate: gate_youtube_authentic
+
+  youtube-gaming:
+    surface: youtube
+    shape: loop-10min
+    bot: videobot
+    publisher: publishbot
+    gate: gate_youtube_authentic
+    notes: "Gaming-music channels; loopable visual + tracklist."
+
+  streaming:
+    surface: distributor
+    bot: distributor
+    publisher: distributor
+    distributor: distrokid             # $24.99/yr, no caps, no exclusions
+    alt_distributor: tunecore          # Suno partner-model tracks eligible
+    gate: gate_release_ready
+    requires: [ai_disclosure, isrc, metadata, master]
+
+  sync:
+    surface: songtradr,audiosparx
+    bot: distributor
+    gate: gate_sync_ready              # stems + metadata + clearance doc
+    requires: [stems, metadata, clearance_doc, instrumental_version]
+
+  sync-documentary:
+    surface: songtradr,audiosparx
+    bot: distributor
+    gate: gate_sync_ready
+    requires: [stems, metadata, clearance_doc, instrumental_version]
+    notes: "Sync specialization for documentary/film — the activist genre's pro outlet. Same clearance requirements as sync; buyer is a production, not a library."
+
+  direct-license:
+    surface: own-site
+    bot: distributor
+    gate: gate_sync_ready
+    requires: [stems, license_tiers]
+
+  direct-fan:
+    surface: patreon,ko-fi
+    bot: socialbot
+    gate: gate_human_approval
+
+  game-assets:
+    surface: itch.io,unity-asset-store,gamedev-market
+    bot: distributor
+    gate: gate_sync_ready
+    requires: [stems, loop_point, seamless_loop, metadata]
+    notes: "Loopable + seamless loop points mandatory. Indie devs buy asset packs."
+
+  stock-ai-native:
+    surface: loudly,soundraw,musicapi
+    bot: distributor
+    gate: gate_release_ready
+    notes: "ONLY remaining stock door. Pond5/AudioJungle/Artlist/Epidemic all ban AI."
