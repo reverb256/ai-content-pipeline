@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 DEFAULT_SCRIPT = (
-    "/opt/sunolocal/scripts/acestep_plan_direct.py"
+    "/opt/sunolocal/music/scripts/acestep_plan_direct.py"
 )
 
 
