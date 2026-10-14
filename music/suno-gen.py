@@ -138,6 +138,43 @@ def load_style_prompt(genre: str) -> str:
     return m.group(1).strip()
 
 
+def is_instrumental_template(genre: str) -> bool:
+    """True when the genre's own prompt template declares no vocals.
+
+    This is the decision that lets the CDP rail accept an instrumental
+    without a human lyric sheet. The writer's template IS the spec: if
+    its lyrics guidance says the box stays empty, the genre is
+    instrumental and no sheet is required. Nothing here guesses — the
+    template must say it explicitly, in one of the forms the 8
+    instrumental templates actually use.
+
+    The 8 instrumental templates (chill-lounge, sentimental-piano,
+    commentary-beds, elemental-fire/water/earth/air, chiptune-8bit,
+    epic-orchestral-boss) all say some form of:
+      "Leave the **lyrics box empty** — that is Suno's instrumental path"
+    The 6 vocal templates (trance, jungle-dnb, activist, anime-opening,
+    anime-ending, plus any future one) carry singable lines in
+    `[Verse]`/`[Chorus]` blocks and never say it.
+    """
+    path = PROMPTS_DIR / f"{genre}.md"
+    if not path.exists():
+        return False
+    text = path.read_text()
+    # Look in the Lyrics guidance section only — a style field may
+    # mention "no vocals" as an arrangement note without the genre
+    # being instrumental.
+    m = re.search(r"## Lyrics guidance\n(.*?)(?=\n## |\Z)", text, re.S)
+    section = m.group(1) if m else text
+    lowered = section.lower()
+    markers = (
+        "lyrics box empty",
+        "leave the lyrics box empty",
+        "suno's instrumental path",
+        "that is suno's instrumental path",
+    )
+    return any(marker in lowered for marker in markers)
+
+
 def load_track(track_dir: Path, instrumental: bool = False) -> dict:
     """Load a track's title + Suno-tagged lyrics from the lyrics stage.
     Rejects any sheet whose provenance header is not human-original.
@@ -829,13 +866,25 @@ def cmd_generate(args) -> int:
     registry = load_registry()
     genre_entry = resolve_genre(registry, args.genre)
     style = load_style_prompt(args.genre)
-    track = load_track(args.track_dir, instrumental=args.instrumental)
+
+    # Instrumental mode is decided from the genre's own prompt template,
+    # not from a CLI flag. The template is the spec: if its lyrics
+    # guidance says the box stays empty, the genre is instrumental and no
+    # human lyric sheet is required. This is what unblocks the 8
+    # instrumental templates — before this they could not be generated
+    # because the rail demanded a sheet for a genre that has none.
+    instrumental = bool(genre_entry.get("instrumental")) or is_instrumental_template(args.genre)
+    if args.instrumental:
+        instrumental = True
+    track = load_track(args.track_dir, instrumental=instrumental)
     ledger = load_ledger()
 
     print(f"genre:    {args.genre} (family {genre_entry.get('family')})")
+    print(f"mode:     {'INSTRUMENTAL' if instrumental else 'vocal'} "
+          f"(template-declared; lyrics box {'empty' if instrumental else 'filled'})")
     print(f"title:    {track['title']}")
     print(f"style:    {len(style)} chars from prompts/{args.genre}.md")
-    if args.instrumental:
+    if instrumental:
         # Suno's instrumental path is an empty lyrics box. Say that plainly, so
         # a reader of the log does not read the blank as a missing sheet.
         print("lyrics:   (none - instrumental, the lyrics box is left empty)")
@@ -935,6 +984,7 @@ def cmd_generate(args) -> int:
         "standard_download_used": False,
         "style_prompt_chars": len(style),
         "lyrics_chars": len(track["lyrics"]),
+        "instrumental": instrumental,
         "cdp_port": CDP_PORT,
         "clip_source": clip.get("source"),
     }
