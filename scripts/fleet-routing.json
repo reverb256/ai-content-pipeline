@@ -5,6 +5,7 @@
   "dead_slugs": [
     "meituan/longcat-2.0:free",
     "inclusionai/ling-3.0-flash-fin:free",
+    "inclusionai/ling-3.0-flash-sante:free",
     "minimax/minimax-m3:free"
   ],
   "providers": {
@@ -198,7 +199,7 @@
     },
     "analyst": {
       "provider": "openrouter-free",
-      "model": "inclusionai/ling-3.0-flash-sante:free",
+      "model": "nvidia/nemotron-3.5-lightning:free",
       "chain": "free_o"
     },
     "producer": {
@@ -233,7 +234,7 @@
     },
     "researcher": {
       "provider": "nous",
-      "model": "inclusionai/ling-3.0-flash-sante:free",
+      "model": "poolside/laguna-s-2.1:free",
       "chain": "free_n"
     },
     "clipbot": {
