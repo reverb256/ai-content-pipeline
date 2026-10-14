@@ -2,9 +2,56 @@
   "period": "2026-10",
   "standard_downloads_used": 0,
   "standard_downloads_limit": 60,
-  "studio_exports": 0,
+  "studio_exports": 5,
   "credits_used": 0,
   "credits_limit": 10000,
   "warn_at": 55,
-  "hard_stop_at": 58
+  "hard_stop_at": 58,
+  "exports": [
+    {
+      "ts": "2026-10-09T04:00:00Z",
+      "campaign": "virtual-reflections",
+      "track": "Welcome",
+      "clip_id": "af1e57f0-6595-460b-a0e7-7bb0bdd41f37",
+      "studio_export": true,
+      "standard_download_used": false,
+      "credits_used": 0
+    },
+    {
+      "ts": "2026-10-09T04:01:00Z",
+      "campaign": "virtual-reflections",
+      "track": "These Worlds Are Made of Light",
+      "clip_id": "63ce63d8-9888-4626-a431-d225ff9019cb",
+      "studio_export": true,
+      "standard_download_used": false,
+      "credits_used": 0
+    },
+    {
+      "ts": "2026-10-09T04:02:00Z",
+      "campaign": "virtual-reflections",
+      "track": "Erasing the Distance",
+      "clip_id": "23937711-dbfe-4612-95a7-39a20a64379b",
+      "studio_export": true,
+      "standard_download_used": false,
+      "credits_used": 0
+    },
+    {
+      "ts": "2026-10-09T04:03:00Z",
+      "campaign": "virtual-reflections",
+      "track": "World of Blue",
+      "clip_id": "4e23725e-e4ec-4b55-ad72-ed965fa822db",
+      "studio_export": true,
+      "standard_download_used": false,
+      "credits_used": 0
+    },
+    {
+      "ts": "2026-10-09T04:04:00Z",
+      "campaign": "virtual-reflections",
+      "track": "Sincerely",
+      "clip_id": "6db57655-f2c7-4929-b6ad-3ab948155962",
+      "studio_export": true,
+      "standard_download_used": false,
+      "credits_used": 0
+    }
+  ]
 }
