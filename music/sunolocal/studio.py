@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import urllib.parse
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal, Optional
@@ -187,7 +188,7 @@ def _run_job(job_id: str, request: SunoGenerateRequest) -> None:
             ext = "flac"
         elif engine == "ace":
             audio_bytes, mime, meta = render_acestep(suno_to_aceplan(request), seed=request.seed)
-            ext = "wav"
+            ext = meta.get("output", "").rsplit(".", 1)[-1] or "wav"
         else:
             raise ValueError(f"unknown engine: {engine!r} (expected ace, yue2, or fixture)")
         audio_path = _artifacts_dir() / f"{stem}.{ext}"
@@ -198,7 +199,7 @@ def _run_job(job_id: str, request: SunoGenerateRequest) -> None:
             {
                 "engine": engine,
                 "mime": mime,
-                "audio_url": f"/api/v1/audio?path={audio_path}",
+                "audio_url": f"/api/v1/audio?path={urllib.parse.quote(str(audio_path))}",
                 "bytes": len(audio_bytes),
                 "manifest": meta,
             },
