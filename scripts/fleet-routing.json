@@ -261,6 +261,11 @@
       "model": "poolside/laguna-s-2.1:free",
       "chain": "free_n"
     },
+    "music-producer": {
+      "provider": "nous",
+      "model": "poolside/laguna-s-2.1:free",
+      "chain": "free_n"
+    },
     "thumbnailbot": {
       "provider": "nous",
       "model": "poolside/laguna-xs-2.1:free",
