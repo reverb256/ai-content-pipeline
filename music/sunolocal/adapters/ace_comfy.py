@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 DEFAULT_SCRIPT = (
-    "/home/j_kro/Work/Projects/mining-k8s/helm/charts/music-pipeline/files/music/scripts/acestep_plan.py"
+    "/opt/sunolocal/scripts/acestep_plan_direct.py"
 )
 
 
@@ -32,7 +32,7 @@ def _script() -> Path:
 
 
 def _output_base() -> Path:
-    default = Path.home() / "Music" / "acestep"
+    default = Path("/var/lib/sunolocal/acestep")
     base = Path(os.environ.get("SUNOLOCAL_ACESTEP_OUTPUT", str(default)))
     base.mkdir(parents=True, exist_ok=True)
     return base
@@ -77,20 +77,28 @@ def render_acestep(
         tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-6:]
         raise RuntimeError(f"acestep_plan.py failed rc={proc.returncode}: {' / '.join(tail)}")
 
-    wav = out_base / f"{stem}.wav"
-    if not wav.is_file():
-        found = sorted(out_base.glob(f"{stem}*.wav"))
-        if found:
-            wav = found[0]
-        else:
-            raise RuntimeError(f"renderer reported success but no WAV was found at {wav}")
-
-    data = wav.read_bytes()
+    # Look for the produced file in the output base with the given stem and either .wav or .flac extension
+    wav_candidates = list(out_base.glob(f"{stem}.wav"))
+    flac_candidates = list(out_base.glob(f"{stem}.flac"))
+    candidates = wav_candidates + flac_candidates
+    if not candidates:
+        raise RuntimeError(f"renderer reported success but no audio file was found for stem {stem} in {out_base}")
+    # If there are multiple, pick the first one (shouldn't happen)
+    audio_file = candidates[0]
+    data = audio_file.read_bytes()
+    # Determine MIME type based on extension
+    if audio_file.suffix == ".wav":
+        mime = "audio/wav"
+    elif audio_file.suffix == ".flac":
+        mime = "audio/flac"
+    else:
+        # Fallback
+        mime = "application/octet-stream"
     meta = {
         "engine": "ace",
         "stem": stem,
-        "output": str(wav),
+        "output": str(audio_file),
         "plan": plan_dict,
         "stdout_tail": (proc.stdout or "").strip().splitlines()[-3:],
     }
-    return data, "audio/wav", meta
+    return data, mime, meta
