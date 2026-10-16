@@ -115,5 +115,14 @@
   "_lyrics": "none - instrumental genre by design (music/prompts/elemental-air.md); no music/lyrics/elemental-air/ directory exists",
   "_assets_on_disk": "none - no master, no stems, no render for this genre anywhere in the tree",
   "_duplicate_card": "t_3cb6e654 (music-oracle: elemental-air, score 7.7, status ready) duplicates card t_92a09bdc (score 7.5). Briefs are keyed by genre, so both resolve to this brief - do not produce it twice.",
+  "_handoffs": {
+    "t_25a6499c": "(nexus-core, ready) engine defects D1/D2/D3 - bpm hardcoded 120, key = style caption, queue schema has no instrumental field. Already filed by the sentimental-piano brief; this brief adds the elemental-air numbers (92 BPM, styleWeight 0.2667) and files nothing new there.",
+    "t_8a715681": "(nexus-core, ready) reconcile the diverged live checkout (local main 7 ahead / 15 behind origin/main; music/suno-gen.py unreachable from this tree). Already filed; this brief re-measured the counts.",
+    "t_5ed495eb": "(distributor, ready) asset-pack output does not satisfy the game-assets gate. Blocks the game-assets pack for this genre (finding O5).",
+    "t_b8afb055": "(NEW, nexus-core; parents = t_92a09bdc + t_25a6499c) queue this track into the live generation path. Carries the measured render parameters from _generation_request, the reason engine must be 'ace' (yue2 0/0) and the fact that /api/v1/stems is a deferred stub. Gated on t_25a6499c.",
+    "t_5a93164a": "(NEW, nexus-core; parent = t_92a09bdc) no music stage can advance its own card: advance-stage.sh is refused for dispatcher-spawned workers (HERMES_DELEGATED_CHILD_CONTEXT is set), script exit 1, silent no-op; all four previous brief cards ended 'done' at stage brief. Decision needed (finding O6).",
+    "t_426a82a3": "(NEW, editor; parent = t_92a09bdc) the gamer rubric's battle_energy criterion is id-scoped to all elemental-* while the rubric's own notes say sub-idiom is per-prompt; elemental-air scores 1 by construction (finding F2)."
+  },
+
   "_written_by": "music-producer, card t_92a09bdc, 2026-10-16"
 }
