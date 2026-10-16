@@ -391,6 +391,32 @@ fail_expected "direct-license lane requires license tiers" 1 \
   "$PY" "$GATES/gate_sync_ready.py" --package-dir "$GOOD_SYNC" \
   --lane direct-license
 
+# --- the lane name the registry assigns it (card t_d9983bb9) ---------------
+# `music/lanes.yaml` gives sync-documentary `gate: gate_sync_ready`, but the
+# gate's argparse rejected the name and exited 2 — a USAGE error a stage reads
+# as a gate FAILURE. The lane's `requires:` are byte-for-byte the `sync` set,
+# so the lane name must run the same checks, and an empty package must fail
+# with exit 1 (never 2), with output identical to the `--lane sync` path.
+EMPTY_PKG="$F/empty_pkg"; mkdir -p "$EMPTY_PKG"
+pass "sync-documentary: the lane's own gate accepts its name" \
+  "$PY" "$GATES/gate_sync_ready.py" --package-dir "$GOOD_SYNC" \
+  --lane sync-documentary
+fail_expected "sync-documentary on an empty package fails 1, not the incident rc=2" 1 \
+  "$PY" "$GATES/gate_sync_ready.py" --package-dir "$EMPTY_PKG" \
+  --lane sync-documentary
+sync_sd_out="$SCRATCH/sync_empty.out"; syncdoc_out="$SCRATCH/syncdoc_empty.out"
+"$PY" "$GATES/gate_sync_ready.py" --package-dir "$EMPTY_PKG" --lane sync \
+  >"$sync_sd_out" 2>&1
+"$PY" "$GATES/gate_sync_ready.py" --package-dir "$EMPTY_PKG" \
+  --lane sync-documentary >"$syncdoc_out" 2>&1
+if diff -q "$sync_sd_out" "$syncdoc_out" >/dev/null; then
+  echo "SAME  sync-documentary prints the same requirement lines as --lane sync"
+else
+  echo "BAD   sync-documentary and --lane sync print different requirement lines"
+  diff "$sync_sd_out" "$syncdoc_out" | sed 's/^/        /'
+  fails=$((fails+1))
+fi
+
 # ------------------------------------------------------------------
 # 7. gate_release_ready
 # ------------------------------------------------------------------

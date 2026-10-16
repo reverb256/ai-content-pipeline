@@ -90,3 +90,40 @@ lanes:
     bot: distributor
     gate: gate_release_ready
     notes: "ONLY remaining stock door. Pond5/AudioJungle/Artlist/Epidemic all ban AI."
+
+# ------------------------------------------------------------------
+# Stage gates — which gate guards a producing stage (added 2026-10-16,
+# card t_d9983bb9).
+#
+# music/stages.yaml named `gate_youtube_authentic` in the `visual` stage prompt
+# unconditionally, so a genre with no YouTube lane (activist: direct-fan,
+# sync-documentary, streaming) had its video gated against a surface it never
+# publishes to. That is the same defect shape as a gate rejecting a lane name:
+# the stage machine could not see that the gate and the genre's lane set disagree.
+#
+# So each stage gate is resolved from the GENRE'S OWN LANES rather than hardcoded
+# in the stage prompt:
+#   selector:    lane_gate  — resolve from the genre's lane set
+#   gate:        the gate that guards the surfaces those lanes publish to
+#   when_absent: none       — no lane in this genre is guarded by `gate`; the
+#                             stage runs NO gate for it and must SAY SO on the
+#                             card. A gate for a surface the genre never
+#                             publishes to is a false check, not a missing one.
+#   why:         the reasoning, so the choice is auditable without code reading.
+#
+# Read it with:
+#   /usr/bin/python3 music/registry.py gate-for-stage --stage visual --genre <g>
+# `registry.py validate` fails when the named gate has no script, or when no lane
+# declares it (a stage gate that can never fire is a silent no-op).
+stage_gates:
+
+  visual:
+    selector: lane_gate
+    gate: gate_youtube_authentic
+    when_absent: none
+    why: "The rendered video is gated against the policy of the platform it is
+      published to. Only the YouTube lanes are guarded by gate_youtube_authentic
+      (inauthentic-content policy: shot diversity, variation vs prior uploads) —
+      their `surface: youtube` is what makes that gate the right one. A genre with
+      no YouTube lane publishes no video through a lane that has such a policy,
+      so the stage runs no video gate and states that on the card."

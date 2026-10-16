@@ -44,6 +44,8 @@ MUSIC_DIR = Path(__file__).resolve().parent
 GENRES_YAML = MUSIC_DIR / "genres.yaml"
 LANES_YAML = MUSIC_DIR / "lanes.yaml"
 QUOTA_LEDGER = MUSIC_DIR / "quota-ledger.json"
+GATES_DIR = MUSIC_DIR / "gates"
+STAGES_YAML = MUSIC_DIR / "stages.yaml"
 
 GENRE_REQUIRED_KEYS = (
     "family",
@@ -54,6 +56,13 @@ GENRE_REQUIRED_KEYS = (
     "video_shape",
 )
 LANE_REQUIRED_KEYS = ("surface", "bot", "gate")
+
+# Stage gates (card t_d9983bb9). A gate named in a stage prompt cannot see that
+# the gate and the genre's lane set disagree — the `visual` stage ran the YouTube
+# inauthentic-content gate for a genre with no YouTube lane. So a stage's gate is
+# declared here and resolved from the GENRE'S lanes.
+STAGE_GATE_SELECTORS = ("lane_gate",)
+WHEN_ABSENT_NONE = "none"
 
 
 class RegistryError(Exception):
@@ -148,6 +157,126 @@ def load_genres(lanes: dict) -> dict:
     return genres
 
 
+def load_stage_gates(lanes: dict) -> dict:
+    """Load + validate the `stage_gates:` block of lanes.yaml (card t_d9983bb9).
+
+    A stage's gate is DECLARED here and resolved from the genre's lanes, so a
+    gate cannot be run for a genre that has no lane publishing to the surface it
+    guards. Validation is deliberately loud: a declared gate with no script, or
+    one no lane declares, would be a silent no-op.
+    """
+    doc = load_yaml(LANES_YAML)
+    block = doc.get("stage_gates")
+    if not isinstance(block, dict) or not block:
+        raise RegistryError(
+            f"{LANES_YAML}: 'stage_gates:' must be a non-empty mapping of "
+            "stage -> {selector, gate, when_absent} — a gate hardcoded in a stage "
+            "prompt cannot see that the gate and genre's lanes disagree"
+        )
+
+    stage_names: set[str] | None = None
+    if STAGES_YAML.is_file():
+        try:
+            stages_doc = load_yaml(STAGES_YAML)
+            stage_names = {
+                str(entry.get("stage"))
+                for entry in (stages_doc.get("stages") or [])
+                if isinstance(entry, dict) and entry.get("stage")
+            }
+        except RegistryError:
+            stage_names = None
+
+    problems = []
+    for stage, spec in block.items():
+        where = f"{LANES_YAML.name}::stage_gates::{stage}"
+        if not isinstance(spec, dict):
+            problems.append(f"{where}: must be a mapping")
+            continue
+        if stage_names is not None and stage not in stage_names:
+            problems.append(
+                f"{where}: no such stage in {STAGES_YAML.name} — the rule can "
+                f"never fire (stages: {', '.join(sorted(stage_names))})"
+            )
+        if spec.get("selector") not in STAGE_GATE_SELECTORS:
+            problems.append(
+                f"{where}: 'selector' must be one of "
+                f"{', '.join(STAGE_GATE_SELECTORS)}"
+            )
+        gate = spec.get("gate")
+        if not isinstance(gate, str) or not gate.strip():
+            problems.append(f"{where}: 'gate' must be a non-empty gate name")
+        elif not (GATES_DIR / f"{gate}.py").is_file():
+            problems.append(
+                f"{where}: gate '{gate}' has no script "
+                f"music/gates/{gate}.py"
+            )
+        elif not any(lane.get("gate") == gate for lane in lanes.values()):
+            problems.append(
+                f"{where}: no lane in {LANES_YAML.name} declares "
+                f"gate: {gate} — the stage gate could never be selected"
+            )
+        absent = spec.get("when_absent")
+        if absent != WHEN_ABSENT_NONE and not (
+            isinstance(absent, str) and (GATES_DIR / f"{absent}.py").is_file()
+        ):
+            problems.append(
+                f"{where}: 'when_absent' must be {WHEN_ABSENT_NONE!r} or a gate "
+                "whose script exists (what runs when no lane selects 'gate')"
+            )
+    if problems:
+        raise RegistryError("stage gate errors:\n  " + "\n  ".join(problems))
+    return block
+
+
+def gate_for_stage(stage: str, genre: str) -> dict:
+    """The gate that guards `stage` for `genre`, resolved from the genre's LANES.
+
+    Returns stage, genre, the genre's lanes, the resolved gate (None when the
+    genre has no lane guarded by the declared gate), the lane that selected it,
+    the script to run, and a reason a human can audit. Raises RegistryError for
+    an unknown stage or genre.
+    """
+    registry = load_registry()
+    rules = registry["stage_gates"]
+    if stage not in rules:
+        raise RegistryError(
+            f"no stage_gates rule for stage {stage!r} in {LANES_YAML.name} "
+            f"(declared: {', '.join(sorted(rules))})"
+        )
+    spec = rules[stage]
+    genres = registry["genres"]
+    if genre not in genres:
+        raise RegistryError(f"no genre {genre!r} in {GENRES_YAML.name}")
+    lanes_spec = registry["lanes"]
+    declared = genres[genre].get("lanes") or []
+    if isinstance(declared, str):
+        declared = [declared]
+    declaring = spec["gate"]
+
+    selector_lane = next(
+        (lane for lane in declared
+         if isinstance(lane, str) and lanes_spec.get(lane, {}).get("gate") == declaring),
+        None,
+    )
+    base = {"stage": stage, "genre": genre, "lanes": list(declared),
+            "declared_gate": declaring}
+    if selector_lane is not None:
+        return {**base, "gate": declaring, "lane": selector_lane,
+                "script": GATES_DIR / f"{declaring}.py",
+                "reason": f"lane {selector_lane!r} is guarded by {declaring} "
+                          f"(surface: {lanes_spec[selector_lane].get('surface')})"}
+    absent = spec.get("when_absent")
+    if absent == WHEN_ABSENT_NONE:
+        return {**base, "gate": None, "lane": None, "script": None,
+                "reason": f"no lane in this genre declares gate: {declaring} "
+                          f"(lanes: {', '.join(declared)}) — when_absent: none, "
+                          f"so the {stage} stage runs no gate for it"}
+    return {**base, "gate": absent, "lane": None,
+            "script": GATES_DIR / f"{absent}.py",
+            "reason": f"no lane in this genre declares gate: {declaring}; "
+                      f"when_absent: {absent}"}
+
+
 def load_quota_ledger() -> dict:
     if not QUOTA_LEDGER.is_file():
         raise RegistryError(f"missing quota ledger: {QUOTA_LEDGER}")
@@ -167,13 +296,14 @@ def load_quota_ledger() -> dict:
 
 
 def load_registry() -> dict:
-    """Full registry: genres, lanes, defaults, quota. Raises RegistryError."""
+    """Full registry: genres, lanes, stage gates, defaults, quota. Raises RegistryError."""
     lanes = load_lanes()
     genres_doc = load_yaml(GENRES_YAML)
     genres = load_genres(lanes)
     return {
         "genres": genres,
         "lanes": lanes,
+        "stage_gates": load_stage_gates(lanes),
         "defaults": genres_doc.get("defaults", {}),
         "quota": load_quota_ledger(),
     }
@@ -184,14 +314,62 @@ def cmd_validate() -> int:
     genre_count = len(registry["genres"])
     lane_count = len(registry["lanes"])
     quota = registry["quota"]
-    print(f"registry OK: {genre_count} genres, {lane_count} lanes")
+    print(f"registry OK: {genre_count} genres, {lane_count} lanes, "
+          f"{len(registry['stage_gates'])} stage gate rule(s)")
     print("genres: " + ", ".join(sorted(registry["genres"])))
     print("lanes: " + ", ".join(sorted(registry["lanes"])))
+    for stage, spec in registry["stage_gates"].items():
+        print(f"stage gate {stage}: {spec['selector']} -> {spec['gate']} "
+              f"(when_absent: {spec['when_absent']})")
     print(
         "quota ledger: period {period}, standard {standard_downloads_used}/"
         "{standard_downloads_limit} "
         "(warn_at {warn_at}, hard_stop_at {hard_stop_at})".format(**quota)
     )
+    return 0
+
+
+def cmd_gate_for_stage(argv: list[str]) -> int:
+    """`gate-for-stage --stage <stage> --genre <genre>` — the resolved gate.
+
+    A stage prompt calls this instead of naming a gate, so the gate follows the
+    genre's lanes (card t_d9983bb9). Exit 0 whether or not a gate applies:
+    `gate: none` is a resolved answer, not an error.
+    """
+    stage = genre = None
+    index = 2
+    while index < len(argv):
+        if argv[index] == "--stage" and index + 1 < len(argv):
+            stage = argv[index + 1]
+            index += 2
+        elif argv[index] == "--genre" and index + 1 < len(argv):
+            genre = argv[index + 1]
+            index += 2
+        else:
+            print(f"usage: {Path(argv[0]).name} gate-for-stage "
+                  "--stage <stage> --genre <genre>", file=sys.stderr)
+            return 2
+    if not stage or not genre:
+        print(f"usage: {Path(argv[0]).name} gate-for-stage "
+              "--stage <stage> --genre <genre>", file=sys.stderr)
+        return 2
+
+    resolved = gate_for_stage(stage, genre)
+    print(f"stage   : {resolved['stage']}")
+    print(f"genre   : {resolved['genre']}")
+    print(f"lanes   : {', '.join(resolved['lanes'])}")
+    if resolved["gate"] is None:
+        print("gate    : none")
+        print(f"reason  : {resolved['reason']}")
+        print("action  : run NO gate for this stage, and state that on the card "
+              "explicitly — a gate for a surface this genre never publishes to "
+              "is a false check")
+    else:
+        print(f"gate    : {resolved['gate']}")
+        print(f"script  : "
+              f"{resolved['script'].relative_to(MUSIC_DIR.parent).as_posix()}")
+        print(f"reason  : {resolved['reason']}")
+        print("action  : run that script against this stage's artifact")
     return 0
 
 
@@ -208,7 +386,11 @@ def main(argv: list) -> int:
             return cmd_validate()
         if command == "show":
             return cmd_show()
-        print(f"usage: {Path(argv[0]).name} [validate|show]", file=sys.stderr)
+        if command == "gate-for-stage":
+            return cmd_gate_for_stage(argv)
+        print(f"usage: {Path(argv[0]).name} "
+              "[validate|show|gate-for-stage --stage S --genre G]",
+              file=sys.stderr)
         return 2
     except RegistryError as exc:
         print(f"REGISTRY ERROR: {exc}", file=sys.stderr)
