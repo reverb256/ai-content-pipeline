@@ -57,13 +57,47 @@ GENRES_YAML = REPO / "music" / "genres.yaml"
 BLUEPRINT_DIR = REPO / "music" / "lyrics" / "blueprints"
 
 # --- Suno section metatags (structure tags Suno's Custom mode understands).
-# Kept in sync with music/prompts/<genre>.md templates.
+# Kept in sync with music/prompts/<genre>.md templates. Re-synced 2026-10-16
+# (card t_53da62e5): a scan of every template's Lyrics-guidance tag sheet found
+# six distinct tags the list was missing — "Break" (elemental-fire, jungle-dnb)
+# and "Choir" (epic-orchestral-boss) are plain metatags and are added here; the
+# composed ones ("Final Chorus — KEY CHANGE UP ONE SEMITONE/TONE",
+# "Final Chorus — KEY LIFT", "Instrumental Break") are handled by
+# is_known_section() below, not by listing every genre's phrasing.
 KNOWN_SECTIONS = [
     "Intro", "Verse", "Verse 1", "Verse 2", "Verse 3", "Verse 4", "Pre-Chorus",
-    "Chorus", "Post-Chorus", "Bridge", "Refrain", "Hook", "Breakdown",
+    "Chorus", "Post-Chorus", "Bridge", "Refrain", "Hook", "Breakdown", "Break",
     "Drop", "Build", "Rise", "Interlude", "Solo", "Instrumental", "Vamp",
-    "Outro", "Fadeout", "End", "Spoken Word", "Ad-Lib",
+    "Choir", "Outro", "Fadeout", "End", "Spoken Word", "Ad-Lib",
 ]
+
+# A genre may qualify a known metatag, and those tags are mandatory in the
+# genre's own template: anime-opening's structure is not in genre without
+# "[Final Chorus — KEY CHANGE UP ONE SEMITONE/TONE]" (music/prompts/anime-opening.md).
+# The strict check must accept them WITHOUT this file naming a genre — the design
+# contract above is "add a genre = add data, zero code edits" — so the rule is
+# structural: a tag is known when it IS a metatag, or when the head before an
+# em/en dash is a metatag carrying a qualifier at one EDGE ("final chorus",
+# "instrumental break"). Edge-only on purpose: a known word buried in the middle
+# of a label ("Mic Drop Into Space") is not a section, and a guard that accepts it
+# stops guarding anything.
+_QUALIFIER_SPLIT_RE = re.compile(r"\s*[—–]\s*")
+
+
+def _is_metatag_at_an_edge(head: str, known: set[str]) -> bool:
+    if head in known:
+        return True
+    return any(head.startswith(k + " ") or head.endswith(" " + k) for k in known)
+
+
+def is_known_section(tag: str) -> bool:
+    """True when `tag` is a Suno metatag this pipeline uses, qualifiers allowed."""
+    t = " ".join(tag.strip().lower().split())
+    known = {s.lower() for s in KNOWN_SECTIONS}
+    if t in known:
+        return True
+    head = _QUALIFIER_SPLIT_RE.split(t, maxsplit=1)[0].strip()
+    return _is_metatag_at_an_edge(head, known)
 
 # --- AI-generated-lyric markers (detection layer, see gate_lyrics_original).
 # The pipeline must never ship a lyric that Suno's generator authored.
@@ -96,6 +130,24 @@ SUNO_GEN_MARKERS: list[tuple[str, str]] = [
 MIN_UNIQUE_WORDS = 25
 MIN_SECTIONS = 2
 MAX_TITLE_LEN = 64
+
+# What counts as one token in the unique-word measure. The Latin alternative is
+# the original pattern, character for character, so an English sheet's count is
+# identical before and after the script-aware extension (proved in
+# music/tests/test_lyrics_gate_language.py, which recomputes both).
+#
+# The CJK alternative exists because two registry genres (anisong: anime-opening,
+# anime-ending) REQUIRE kana/kanji and forbid romaji, and the Latin-only pattern
+# measures such a sheet as 0 unique words — the gate then refuses a complete,
+# in-genre sheet no matter who wrote it (measured 2026-10-16, card t_53da62e5).
+# A maximal run of kana/kanji counts as one token: an approximation, since no
+# morphological segmenter is available here, but the floor's job is to prove a
+# sheet is a lyric rather than a stub, and both readings are honest about scale.
+WORD_TOKEN_RE = re.compile(
+    r"[a-z']+"                                                     # Latin words
+    r"|[\u3005\u3041-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff"
+    r"\uff66-\uff9d]+"                                             # kana / kanji
+)
 
 SLUG_RE = re.compile(r"[^a-z0-9]+")
 
@@ -170,10 +222,11 @@ def lyric_text_of(sections: list[tuple[str, list[str]]]) -> str:
 
 
 def unique_word_count(sections: list[tuple[str, list[str]]]) -> int:
+    """Distinct tokens in the sung lines, script-aware (see WORD_TOKEN_RE)."""
     words: set[str] = set()
     for _, lines in sections:
         for line in lines:
-            for token in re.findall(r"[a-z']+", line.lower()):
+            for token in WORD_TOKEN_RE.findall(line.lower()):
                 words.add(token)
     return len(words)
 
@@ -379,10 +432,8 @@ def validate_sheet(sections: list[tuple[str, list[str]]], strict: bool) -> list[
             elif s.startswith("#"):
                 problems.append(f"[{tag}] comment/meta line inside lyric body: '{s[:60]}'")
     if strict:
-        seen_tags = [tag for tag, _ in sections]
-        known = set(KNOWN_SECTIONS)
-        for tag in seen_tags:
-            if tag not in known:
+        for tag, _ in sections:
+            if not is_known_section(tag):
                 problems.append(f"unknown section tag [{tag}] (not a Suno metatag)")
     return problems
 
