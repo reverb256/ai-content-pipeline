@@ -5,13 +5,13 @@
   "title": "Above The Weather",
   "duration": 334,
   "instrumental": true,
-  "lyricsMode": null,
+  "lyricsMode": "instrumental",
   "language": null,
 
-  "_genre_is_instrumental": "Measured, not inferred. music/prompts/elemental-air.md, section '## Lyrics guidance': 'Instrumental. Leave the **lyrics box empty** - that is Suno's instrumental path.' Census over music/prompts/*.md reading only the Lyrics guidance section: 8 of 14 genres are instrumental (chill-lounge, chiptune-8bit, commentary-beds, elemental-air, elemental-earth, elemental-fire, elemental-water, sentimental-piano). lyricsMode is null because neither value applies: 'draft' (a scaffold for a human) is what an instrumental genre does not have, and 'ai' is out of genre and would void the authorship claim this pipeline registers.",
+  "_genre_is_instrumental": "Measured, not inferred. music/prompts/elemental-air.md, section '## Lyrics guidance': 'Instrumental. Leave the **lyrics box empty** - that is Suno's instrumental path.' Census over music/prompts/*.md reading only the Lyrics guidance section, re-measured 2026-10-16 16:07 CDT: 8 of 14 genres are instrumental (chill-lounge, chiptune-8bit, commentary-beds, elemental-air, elemental-earth, elemental-fire, elemental-water, sentimental-piano). lyricsMode is 'instrumental' because the queue schema now has that value (card t_25a6499c): the live entry for this track carries it, and the render rail reads it as INSTRUMENTAL ('no lyrics; the template declares an empty lyrics box. The renderer's draft refusal does not apply.').",
 
   "_registry": {
-    "source": "music/genres.yaml (validated live: /usr/bin/python3 music/registry.py validate -> 'registry OK: 14 genres, 10 lanes', rc=0)",
+    "source": "music/genres.yaml (validated live: /usr/bin/python3 music/registry.py validate -> 'registry OK: 14 genres, 10 lanes, 1 stage gate rule(s)', rc=0, 2026-10-16 16:07 CDT)",
     "family": "gamer",
     "prompt_template": "music/prompts/elemental-air.md",
     "visual_style": "music/visuals/element-air.md",
@@ -19,126 +19,170 @@
     "cadence": "2/wk",
     "video_shape": "loop-10min",
     "bpm_anchor": 92,
-    "bpm_source": "caption, because this genre has no blueprint in music/lyrics/blueprints/ (only activist, chill-lounge, trance exist) - the resolution order adopted by commit dda0d32 (blueprint first, caption second, nothing third)",
+    "bpm_source": "caption, because this genre has no blueprint in music/lyrics/blueprints/ (7 files as of 2026-10-16 16:07 CDT: activist, anime-ending, anime-opening, chill-lounge, epic-orchestral-boss, jungle-dnb, trance; none is elemental-air) - the resolution order adopted by commit dda0d32 (blueprint first, caption second, nothing third)",
     "timesignature": "4",
     "caption_chars": 494,
     "style_exclusions": "bass drops, heavy drums, EDM, dark minor, tense thriller, epic brass"
   },
 
   "_queue": {
-    "note": "CANONICAL FIELDS ONLY for the music-pipeline queue. That schema is {name, genre, brief, lyricsMode?, language?, title?, duration?} - it has NO 'instrumental' field, and music/planner/planner.py --lyrics-mode accepts only draft|ai. A draft plan's empty sections are refused by acestep_plan.py. So queueing this genre through music-pipeline yields a vocal-shaped void or an AI lyric sheet, both wrong. See D3 in the brief.",
+    "note": "The queue schema carries lyricsMode 'instrumental' since card t_25a6499c, so the defect D3 this file used to record is closed. The live entry for this track is elemental-air-above-the-weather in mining-k8s/helm/charts/music-pipeline/values.yaml with bpm 92, keyscale C major, duration 334, lyricsMode instrumental.",
     "target": "mining-k8s/helm/charts/music-pipeline/values.yaml -> briefs:",
-    "configmap": "mining/music-pipeline-briefs key briefs.json (currently: 1 entry, smoke-chill-lounge)",
+    "configmap": "mining/music-pipeline-briefs key briefs.json (11 entries as of 2026-10-16 16:07 CDT, elemental-air-above-the-weather among them)",
     "planner_job": "mining/music-pipeline (17 */6 * * *)",
-    "plan_out": "/var/lib/music-plans/elemental-air-above-the-weather.json",
+    "plan_out": "/var/lib/music-plans/elemental-air-above-the-weather.json (1557 B, written 2026-10-16 14:57 CDT)",
     "render_job": "mining/music-pipeline-render (41 */4 * * *)",
-    "drift": "chart values.yaml briefs: [] is EMPTY while the live ConfigMap holds smoke-chill-lounge"
+    "rendered_marker": "/var/lib/music-plans/elemental-air-above-the-weather.rendered (0 B, 15:00 CDT) with NO audio file beside it - the rail reports 'already rendered' and produces nothing (card t_69cab80b, ready)",
+    "drift": "chart and cluster agree now: the chart's briefs list carries 11 entries and the live ConfigMap holds the same 11"
   },
 
   "_route": {
-    "live_engine": "mining/sunolocal - deployment sunolocal-source, 1/1 Running, image localhost/sunolocal:v0.1.2 (app version 0.1.2), ClusterIP 10.43.164.190:8123",
-    "verified": "curl http://10.43.164.190:8123/health -> {\"status\":\"ok\"}; /api/v1/models -> ace (ACE-Step 1.5, via acestep_plan.py -> comfyui-zephyr window), yue2 (YuE2-3B, via yue2-zephyr http), default ace. Read 2026-10-16.",
-    "why_not_the_planner_queue": "D3 - the planner queue cannot express an instrumental track (no instrumental field; --lyrics-mode draft|ai only).",
+    "live_engine": "mining/sunolocal - deployment sunolocal-source, 1/1 Running, image localhost/sunolocal:v0.1.3, pod sunolocal-source-75d58dbc97-7jfmc, ClusterIP 10.43.164.190:8123 (read 2026-10-16 16:07 CDT)",
+    "verified": "curl http://10.43.164.190:8123/health -> {\"status\":\"ok\"}; /api/v1/models -> ace (ACE-Step 1.5, via acestep_plan.py -> comfyui-zephyr window), yue2 (YuE2-3B, via yue2-zephyr http), default ace. Read 2026-10-16 16:07 CDT.",
+    "why_not_the_planner_queue": "obsolete: the planner queue CAN express an instrumental track now (lyricsMode 'instrumental'), and the plan for this track exists on disk with bpm 92 and key C major.",
     "generate": "POST http://sunolocal.mining.svc.cluster.local:8123/api/v1/generate",
     "status": "GET http://sunolocal.mining.svc.cluster.local:8123/api/v1/task/{task_id}",
     "audio": "GET http://sunolocal.mining.svc.cluster.local:8123/api/v1/audio?path=...",
     "renderer": "adapters/ace_comfy.py -> /opt/sunolocal/music/scripts/acestep_plan_direct.py --allow-empty (present in the running pod), then ComfyUI at comfyui-zephyr",
-    "deferred_stubs": "/api/v1/lyrics, /api/v1/stems, /api/v1/extend, /api/v1/cover are _deferred - they answer but do not work. STEMS CANNOT COME FROM THIS SERVICE.",
-    "yue2_is_down": "kubectl get deploy -n mining yue2-zephyr -> 0/0; endpoints <none>; curl to 10.43.95.191:8080/health -> 000. /api/v1/models still advertises it. Request engine 'ace'."
+    "deferred_stubs": "/api/v1/lyrics, /api/v1/stems, /api/v1/extend, /api/v1/cover are _deferred - they answer but do not work (pod /opt/sunolocal/music/sunolocal/studio.py lines 155-179). STEMS CANNOT COME FROM THIS SERVICE.",
+    "yue2_is_down": "kubectl get deploy -n mining yue2-zephyr -> 0/0; endpoints <none>; curl to 10.43.95.191:8080/health -> 000. /api/v1/models still advertises it. Request engine 'ace'.",
+    "pod_source_of_record": "mining-k8s/helm/charts/sunolocal/files/music/sunolocal/ (commit a80ab4e) - NOT this repo's music/sunolocal/ mirror, which is still the v0.1.2 text"
   },
 
   "_generation_request": {
-    "style": "<494-char caption from music/prompts/elemental-air.md>, with ', instrumental, no vocals' appended - the deployed translate.py appends that cue itself when instrumental=true and lyrics is empty",
+    "style": "<494-char caption from music/prompts/elemental-air.md>, with ', instrumental, no vocals' appended - the deployed translate.py appends that cue itself whenever instrumental=true (v0.1.3 appends it for every instrumental request, not only when lyrics is empty)",
     "instrumental": true,
     "lyrics": "",
     "duration": 334,
     "title": "Above The Weather",
     "engine": "ace",
     "customMode": true,
-    "styleWeight": 0.2667,
-    "_styleWeight_reason": "D1: the deployed translate.py computes bpm = int(60 + styleWeight*120) when styleWeight is set, else bpm = 120. styleWeight 0.2667 -> int(60 + 32.0) = 92, the genre anchor. Without it the render comes back at 120 BPM, 1.30x the anchor.",
-    "_structure_variant_b": "send the template tag sheet (6 tags, 16/16/32/16/32/16 bars) as 'lyrics' AND append ', instrumental, no vocals' to style yourself - translate.py only appends that cue when lyrics is empty, so a non-empty lyrics box must carry the cue",
-    "_key_warning": "D2: the deployed translate.py sets key = req.style, so the ACE keyscale receives the whole 494-character caption. Send the ACE plan directly, or accept the malformed keyscale."
+    "bpm": 92,
+    "_bpm_reason": "the deployed v0.1.3 honours an explicit tempo: 'if req.bpm is not None: bpm = int(req.bpm)'. No styleWeight trick is needed. The styleWeight 0.2667 value the first revisions of this brief prescribed worked only on v0.1.2, where bpm = int(60 + styleWeight*120).",
+    "keyscale": "C major",
+    "_structure_variant_b": "send the template tag sheet (6 tags, 16/16/32/16/32/16 bars) as 'lyrics' - v0.1.3 appends ', instrumental, no vocals' to the caption in both variants, so the earlier revision's warning about losing the cue is fixed (card t_909069f0)"
   },
 
-  "_duration_basis": "92 BPM, 4/4 -> one bar = 4*60/92 = 2.608696 s. 128 bars = 333.913 s -> plan duration 334 s (SunoGenerateRequest.duration is Optional[int]). Inside the planner rail (planner.py MIN_DURATION_S=30, MAX_DURATION_S=420). The binding check is the family rubric: music/rubrics/gamer.json criterion loop_safety states 'duration_s * bpm / 240 should land near a whole bar count' -> 334*92/240 = 128.03 bars. 128 = 8 x 16-bar phrases, so every section boundary in the tag sheet (16/16/32/16/32/16) is a whole phrase. Tradeoff recorded as O3: 334 s is 1.80 plays of the 600 s loop-10min shape (600 s = exactly 230 bars at 92 BPM); the exact-divisor alternative is 115 bars = 300.000 s, rejected because 115 = 7x16+3 breaks the phrase grid.",
+  "_duration_basis": "92 BPM, 4/4 -> one bar = 4*60/92 = 2.608696 s. 128 bars = 333.913 s -> plan duration 334 s (SunoGenerateRequest.duration is Optional[int]). Inside the planner rail (planner.py MIN_DURATION_S=30 at line 103, MAX_DURATION_S=600 at line 104 - the cap was 420 when this brief was written). The binding check is the family rubric: music/rubrics/gamer.json criterion loop_safety states 'duration_s * bpm / 240 should land near a whole bar count' -> 334*92/240 = 128.03 bars. 128 = 8 x 16-bar phrases, so every section boundary in the tag sheet (16/16/32/16/32/16) is a whole phrase. Tradeoff recorded as O3: 334 s is 1.80 plays of the 600 s loop-10min shape (600 s = exactly 230 bars at 92 BPM); the exact-divisor alternative is 115 bars = 300.000 s, rejected because 115 = 7x16+3 breaks the phrase grid.",
 
   "_rubric": {
-    "file": "music/rubrics/gamer.json",
+    "file": "music/rubrics/gamer.json (commit 56dc465, card t_426a82a3)",
     "pass_threshold": 7.0,
-    "binding": ["loop_safety (weight 3: bar math + tail/head RMS within ~6 dB + no fade-to-silence on a loop claim)", "asset_packaging (weight 1: stated BPM and key, stems time-aligned, loop-point marker)", "loudness_target (weight 1: -14 LUFS +/-1 for the streaming lane)"],
-    "not_binding": "chip_timbre_authenticity is scoped 'chiptune-8bit only'; battle_energy (weight 3) is id-scoped '(elemental-*, epic-orchestral-boss)' but the rubric's own notes say elemental-* tracks choose per their prompt - elemental-air is a 92 BPM suspension theme with no percussion by genre rule, so a literal read of battle_energy scores it 1. Finding F2, for the rubric owner.",
-    "reject_signals_that_apply": ["fade-out or truncated ending on a game-loop claim", "clipped master (max_volume_db >= -0.1)", "no stated BPM/key for a game-asset product"]
+    "applicable": "every criterion carries applies_to and panel.py scores only the genres it names; elemental-air scores four: elemental_atmosphere (3, craft, applies_to elemental-air/water/earth), loop_safety (3, measured, all), asset_packaging (1, craft, all), loudness_target (1, measured, all). Weights sum to 8.",
+    "not_applicable": "battle_energy (weight 3) is applies_to ['elemental-fire', 'epic-orchestral-boss'] - it no longer scores this genre. Finding F2 is closed. chip_timbre_authenticity (weight 3) is applies_to ['chiptune-8bit'].",
+    "binding": ["elemental_atmosphere (weight 3: in-pocket 70-100 BPM, a steady level, the element's signature device claimed in the caption - air: sus2 harmony / no kit - and pct_energy_above_8khz shimmer)", "loop_safety (weight 3: bar math + tail/head RMS within ~6 dB + no fade-to-silence on a loop claim)", "asset_packaging (weight 1: stated BPM and key, stems time-aligned, loop-point marker)", "loudness_target (weight 1: -14 LUFS +/-1 for the streaming lane)"],
+    "reject_signals_that_apply": ["elemental_fight_material (applies_to elemental-air/water/earth): 'drum-kit groove, bass drop, or a 130+ BPM battle claim on an exploration-theme label'", "fade-out or truncated ending on a game-loop claim", "clipped master (max_volume_db >= -0.1)", "no stated BPM/key for a game-asset product"]
   },
 
   "_engine_defects": [
     {
       "id": "D1",
-      "what": "BPM is not expressible; the 92 BPM genre anchor cannot be honoured by default",
-      "evidence": "DEPLOYED /opt/sunolocal/music/sunolocal/translate.py read inside pod sunolocal-source-65fcc845d-fd5r6 (2026-10-16): 'bpm = 120' then 'bpm = int(60 + req.style_weight * 120)'. A default request yields 120 BPM = 1.30x the anchor.",
-      "impact": "any elemental-air render on the default path is out of genre on tempo alone"
+      "what": "BPM was not expressible; the 92 BPM genre anchor could not be honoured by default",
+      "status": "FIXED in the deployed image v0.1.3 (card t_25a6499c, done)",
+      "evidence": "v0.1.2 (pod sunolocal-source-65fcc845d-fd5r6): 'bpm = 120' then 'bpm = int(60 + req.style_weight * 120)'. v0.1.3 (pod sunolocal-source-75d58dbc97-7jfmc, read 2026-10-16 16:07 CDT): 'if req.bpm is not None: bpm = int(req.bpm)' - an explicit tempo wins, styleWeight is a documented fallback.",
+      "impact": "none now: send bpm 92. Any render taken at the old defaults would have come back at 120 BPM, 1.30x the anchor."
     },
     {
       "id": "D2",
-      "what": "The key field receives the whole style caption",
-      "evidence": "DEPLOYED translate.py: 'key = req.style or \"C major\"'. acestep_plan.py passes plan['key'] as the ACE keyscale, so the engine is handed a 494-character paragraph where a key signature belongs.",
-      "impact": "every genre on this route, not just this one"
+      "what": "The key field received the whole style caption",
+      "status": "FIXED in the deployed image v0.1.3 (card t_25a6499c, done)",
+      "evidence": "v0.1.2: 'key = req.style or \"C major\"'. v0.1.3: 'key = req.keyscale or \"C major\"' - req.style is never read. The pod's spec.py declares bpm: Optional[int] and keyscale: Optional[str].",
+      "impact": "none now on the pod. The malformed keyscale would have hit every genre on this route."
     },
     {
       "id": "D3",
-      "what": "The planner queue cannot express an instrumental track",
-      "evidence": "mining-k8s/helm/charts/music-pipeline/values.yaml brief schema = {name, genre, brief, lyricsMode?, language?, title?, duration?} (comment above 'briefs: []'); music/planner/planner.py --lyrics-mode choices are draft|ai only (line 'pp.add_argument(\"--lyrics-mode\", choices=[\"draft\", \"ai\"], default=\"draft\")'). music/scripts/acestep_plan.py refuses a draft plan's empty sections unless --allow-empty.",
-      "impact": "8 of 14 genres cannot be queued instrumentally through music-pipeline; compose the request against the sunolocal studio API instead"
+      "what": "The planner queue could not express an instrumental track",
+      "status": "FIXED (card t_25a6499c, done)",
+      "evidence": "The queue schema and planner now carry lyricsMode 'instrumental'; the live chart entry for this track has it, and the render log prints 'mode : INSTRUMENTAL - no lyrics; the template declares an empty lyrics box. The renderer's draft refusal does not apply.'",
+      "impact": "none: the 8 instrumental genres can be queued through music-pipeline."
     },
     {
       "id": "D4",
-      "what": "Stale stage prompt names a script this checkout does not contain",
-      "evidence": "music/stages.yaml generate stage -> 'music/suno-gen.py'. 'ls music/suno-gen.py' in /home/j_kro/ai-content-pipeline -> No such file or directory. It exists on origin/main (commit 295fc49, completed by ba28f55). git rev-list --left-right --count main...origin/main -> 7 ahead / 15 behind at this brief; re-measured 2026-10-16 13:45 CDT by the duplicate pass (t_3cb6e654) -> 24 ahead / 15 behind on local tip 7f0b3cc. The local count rises as this lane commits briefs to the same tree; the upstream deficit does not.",
-      "impact": "the generate stage instructs its bot to run a file that is not here; reconcile the branches"
+      "what": "Stale stage prompt named a script this checkout did not contain",
+      "status": "FIXED (card t_8a715681, done)",
+      "evidence": "music/suno-gen.py is present here (42652 B, mtime 2026-10-16 14:23). git rev-list --left-right --count main...origin/main -> 72 ahead / 0 behind, local tip c296db6, origin/main ba28f55. The earlier revisions recorded 7/15 then 24/15.",
+      "impact": "the generate stage can run against this checkout"
     },
     {
       "id": "D5",
       "what": "The local service cannot deliver stems",
-      "evidence": "DEPLOYED /opt/sunolocal/music/sunolocal/studio.py: @app.post('/api/v1/stems') -> _deferred('/api/v1/stems'), likewise /lyrics, /extend, /cover.",
-      "impact": "stems (mandatory for game-assets and sync) must come from Suno Studio via the CDP rail, or from the upstream HPSS asset-pack path (music/assets/pack.py), which is not in this checkout"
+      "status": "STILL LIVE in the pod",
+      "evidence": "pod /opt/sunolocal/music/sunolocal/studio.py lines 155-179: @app.post('/api/v1/stems') -> _deferred('/api/v1/stems'), likewise /lyrics, /extend, /cover.",
+      "impact": "stems (mandatory for game-assets) must come from Suno Studio via the CDP rail, or from the asset-pack HPSS path (music/assets/pack.py, now in this checkout)"
     },
     {
       "id": "D6",
-      "what": "Instrumental documentation counts are wrong in the deployed code",
-      "evidence": "Misattributed in the first revision of this brief (corrected 2026-10-16 13:45 CDT by the duplicate pass, t_3cb6e654). The DEPLOYED /opt/sunolocal/music/sunolocal/translate.py (line 29, read inside pod sunolocal-source-65fcc845d-fd5r6) says '8 of the 14 genre templates are instrumental' and then names NINE (chill-lounge, sentimental-piano, commentary-beds, the four elementals, chiptune-8bit, epic-orchestral-boss) - denominator right, list wrong. origin/main music/suno-gen.py line 184 says '8 of the 12 genre templates' and repeats epic-orchestral-boss. 'grep -rn \"8 of the 12\" /opt/sunolocal' inside the pod returns nothing (rc=1), so that string is NOT in the deployed translator. Measured census over the '## Lyrics guidance' section of music/prompts/*.md: 8 of 14 genres are instrumental, and epic-orchestral-boss is NOT one of them.",
+      "what": "Instrumental documentation counts",
+      "status": "HALF FIXED",
+      "evidence": "The deployed translator is correct now: v0.1.3 line 29 says '8 of the 14 genre templates are instrumental' and names exactly eight, with a comment recording that the previous list wrongly included epic-orchestral-boss (card t_25a6499c). music/suno-gen.py line 184 still says '8 of the 12 genre templates' and still repeats epic-orchestral-boss; that file is now in this checkout (42652 B), not origin/main-only.",
       "impact": "documentation only; behaviour is correct because is_instrumental_template() reads the template instead of a list"
+    },
+    {
+      "id": "D7",
+      "what": "The checkout's loudness ruler is not the one the lane decided on",
+      "status": "OPEN as a checkout drift",
+      "evidence": "music/gates/gate_loudness.py in this checkout still measures ffmpeg volumedetect mean_volume. Card t_9546841b is done and chose EBU R128 integrated loudness; its commit e783a96 is on origin/publish/audio-lane-2026-10-16 only, 5 commits this branch does not carry. music/mix/master.py (card t_568c67d2) is on that branch only and is not in this checkout at all.",
+      "impact": "a volumedetect FAIL on a light mix is not by itself evidence of a bad master (RMS vs gated LUFS diverge widest on exactly this material)"
+    },
+    {
+      "id": "D8",
+      "what": "The repo mirror of the engine is two versions behind the pod",
+      "status": "OPEN as a checkout drift",
+      "evidence": "music/sunolocal/translate.py here is the v0.1.2 text (no req.bpm branch, key = req.style or 'C major') and music/sunolocal/spec.py has no bpm or keyscale field. The pod is built from mining-k8s/helm/charts/sunolocal/files/music/sunolocal/ (commit a80ab4e).",
+      "impact": "anyone reading this repo to learn the engine's request shape will learn the pre-fix shape"
     }
   ],
 
-  "_gate_path": "generate -> curate -> stems (Suno Studio only) -> master (-14 LUFS +/-1 for streaming; note gate_loudness measures volumedetect mean_volume, not LUFS - card t_9546841b) -> gate (gate_quality, reviewer model different from producer, sha256-bound) -> package (game-assets: full_mix.wav, stems/ >=4 within +/-0.5 s, instrumental.wav not byte-identical to master, manifest metadata{title,artist,bpm,key,mood,genre}, clearance_doc.pdf starting %PDF-, ai_disclosure.txt, loop_points.json; streaming: gate_release_ready with ISRC + PIL-openable artwork) -> visual (loop-10min 600 s, gate_youtube_authentic: >=10 distinct frame signatures, Jaccard <=0.85 vs upload_index.json, disclosure, rotate dawn/noon/high-wind scenes per upload) -> human-approval (j_kro; gate_human_approval has no --force flag) -> publish (private/draft only) -> track",
+  "_gate_path": "generate -> curate -> stems (Suno Studio only) -> master (-14 LUFS +/-1 for streaming; this checkout's gate_loudness still measures volumedetect mean_volume, not LUFS - see D7) -> gate (gate_quality, reviewer model different from producer, sha256-bound) -> package (game-assets: full_mix.wav, stems/ >=4 within +/-0.5 s, instrumental.wav not byte-identical to master, manifest metadata{title,artist,bpm,key,mood,genre}, clearance_doc.pdf starting %PDF-, ai_disclosure.txt, loop_points.json; streaming: gate_release_ready with ISRC + PIL-openable artwork) -> visual (loop-10min 600 s, gate_youtube_authentic: >=10 distinct frame signatures, Jaccard <=0.85 vs upload_index.json, disclosure, rotate dawn/noon/high-wind scenes per upload) -> human-approval (j_kro; gate_human_approval has no --force flag) -> publish (private/draft only) -> track",
 
-  "_lyrics": "none - instrumental genre by design (music/prompts/elemental-air.md); no music/lyrics/elemental-air/ directory exists",
-  "_assets_on_disk": "none - no master, no stems, no render for this genre anywhere in the tree",
-  "_duplicate_card": "t_3cb6e654 (music-oracle: elemental-air, score 7.7) duplicated card t_92a09bdc (score 7.5). Briefs are keyed by genre, so both resolve to this brief - do not produce it twice. CLOSED AS A DUPLICATE of t_92a09bdc on 2026-10-16 13:45 CDT by the worker that claimed it: no second brief written, no second stage chain started.",
-  "_duplicate_resolution": {
-    "card": "t_3cb6e654 (score 7.7, second oracle wave 2026-10-09 03:37:53; survivor t_92a09bdc score 7.5, first wave 03:27:53 - performance/music-oracle-runs.log)",
-    "disposition": "duplicate of t_92a09bdc; no second brief written; briefs are genre-keyed so both cards resolve to this artifact",
-    "pass": "re-measured every figure against live state 2026-10-16 13:45 CDT; see brief.md 'Duplicate-card pass' + Provenance",
+  "_lyrics": "none - instrumental genre by design (music/prompts/elemental-air.md); no music/lyrics/elemental-air/ directory",
+  "_assets_on_disk": "no audio. The plan /var/lib/music-plans/elemental-air-above-the-weather.json (1557 B, 2026-10-16 14:57 CDT) carries bpm 92, key 'C major', duration 334, instrumental true and the template's six section tags; a 0 B .rendered marker sits beside it (15:00 CDT) with no audio file. No master, no stems, no render.",
+  "_oracle_score": {
+    "true_score": 7.0,
+    "reproduced_at": "2026-10-16 16:07 CDT, music/oracle.py (b2d11f7)",
+    "components": {"quota_headroom": 10.0, "lane_coverage": 6.0, "revenue_potential": 8.0, "cadence_fit": 3.3333, "policy_risk": 9.0, "trend_signal": 3.0},
+    "title_scores_not_reproducible": "7.2 (t_dd248457), 7.5 (t_92a09bdc), 7.7 (t_3cb6e654) - each came from a run whose trend fetch failed, when the except branch scored 5.0 against the no-signal floor of 3.0. The gap is WEIGHTS['trend_signal'] * (5.0 - 3.0) = 0.20.",
+    "produce_line": "all 14 genres scored 6.5 (jungle-dnb) to 8.4 (chill-lounge, sentimental-piano), so this correction moves no genre below the 6.0 produce line"
+  },
+  "_duplicate_cards": "Three oracle cards exist for this genre, one per wave: t_92a09bdc (7.5) and t_3cb6e654 (7.7), both done at the brief stage, and t_dd248457 (7.2, the surviving open card). Briefs are keyed by genre, so all three resolve to this brief - do not produce it twice. Neither twin wrote a second brief or started a second stage chain.",
+  "_surviving_card_pass": {
+    "card": "t_dd248457 (score 7.2 in the title, true score 7.0; oracle ruling 2026-10-16)",
+    "disposition": "surviving card; brief already delivered, so no second brief and no second stage chain. Every checkable claim re-measured against live state; corrections listed in brief.md SS15.",
     "corrections": [
-      "brief.md header: 'card created 2026-10-09 03:27:46 (epoch 1791534469)'. date -d @1791534469 -> 2026-10-09 03:27:49 CDT: the epoch was right, the wall-clock rendering was 3 s early.",
-      "brief.md SS7 / this file D6: the '8 of the 12 genre templates' string was attributed to the deployed translate.py. Measured: deployed translate.py line 29 says '8 of the 14' and names NINE incl. epic-orchestral-boss; only origin/main music/suno-gen.py:184 says '8 of the 12'. grep -rn '8 of the 12' /opt/sunolocal -> rc=1 (no match).",
-      "brief.md SS11 O4: 'upstream ships music/licences/perpetual_game_asset_v1.txt' is wrong. git cat-file -e origin/main:music/licences/perpetual_game_asset_v1.txt -> absent. The file exists only on origin/wip/atlas-backup-20261014 (commit 3882292, 'WIP backup 2026-10-14 (atlas)'). packages/welcome-asset-pack/README.md on origin/main points at that path, so upstream's own README carries a dangling reference."
+      "header: surviving card t_dd248457 and the reproduced 7.0",
+      "header: main @ c296db6, 72 ahead / 0 behind origin/main (ba28f55) - was 24/15",
+      "SS1: registry now prints '1 stage gate rule(s)' plus the visual stage-gate line",
+      "SS1: blueprints/ holds 7 files, not 3",
+      "SS3: music/assets/pack.py (52690 B) and scripts/gates/gate_asset_pack.py (2981 B) are in this checkout, with the sample pack",
+      "SS5: planner MAX_DURATION_S is 600, not 420",
+      "SS7: the deployed translator names eight (correct) at v0.1.3; the earlier reading described v0.1.2",
+      "SS7: music/suno-gen.py:184 is in this checkout, not origin/main-only",
+      "SS7: engine pod and image are sunolocal-source-75d58dbc97-7jfmc / localhost/sunolocal:v0.1.3",
+      "SS7: the request shape now declares bpm and keyscale",
+      "SS7: D1/D2 fixed in the deployed image; the repo mirror is the stale copy",
+      "SS7: the checkout can run the generate stage - music/suno-gen.py is present",
+      "SS8: pack.py present; the loudness-ruler fix is on origin/publish/audio-lane-2026-10-16 only",
+      "SS9: a plan and a .rendered marker exist, with no audio",
+      "SS10: applies_to is data; battle_energy excludes this genre; elemental_atmosphere (w 3) binds it",
+      "SS11: O1, O2, O5, O6, O7, F2 closed; O4 half closed with two residues; O3 open",
+      "SS12: all six handoff cards done; two new ready cards (t_69cab80b, t_eb079b91)",
+      "SS13: both brain/ documents exist now"
     ],
-    "remeasures_unchanged": "registry (14 genres / 10 lanes), elemental-air entry (gamer; game-assets+youtube-gaming+streaming; 2/wk; loop-10min), 92 BPM caption (494 chars), 334 s / 128 bars bar math, instrumental census 8/14, engine route (sunolocal-source image localhost/sunolocal:v0.1.2, /health ok, ace default, yue2 0/0), four _deferred stubs, gate constants, rubric weights and threshold 7.0, gate_quota 0/60, all six handoff cards and their parent links",
-    "divergence_re_measured": "main...origin/main = 24/15 on tip 7f0b3cc (7/15 when the brief was written)",
     "superseded_sha256": {
-      "brief.md": "ba6fbbf8f13d81a61f8cd7e58cfe47e8bf657169c48865991728953b2ea85cfd",
-      "brief.json": "8bfd6c7195525308877e0e98fad1ef02a57fa7ec08da1ec1585d10b7f4a84ad7"
+      "brief.md": "7c2c790faf648932f24e383824cc03014e55d388a466b79c721a8ad87d26e93f",
+      "brief.json": "de3ec94ee74d93a786b2f7d9e19a4e25f3c7fa1ebd6047cd5dfd67a5daf67c09"
     }
   },
   "_handoffs": {
-    "t_25a6499c": "(nexus-core, ready) engine defects D1/D2/D3 - bpm hardcoded 120, key = style caption, queue schema has no instrumental field. Already filed by the sentimental-piano brief; this brief adds the elemental-air numbers (92 BPM, styleWeight 0.2667) and files nothing new there.",
-    "t_8a715681": "(nexus-core, ready) reconcile the diverged live checkout (local main 7 ahead / 15 behind origin/main at this brief; re-measured 24 ahead / 15 behind on tip 7f0b3cc at the 13:45 duplicate pass; music/suno-gen.py unreachable from this tree). Already filed; this brief re-measured the counts.",
-    "t_5ed495eb": "(distributor, ready) asset-pack output does not satisfy the game-assets gate. Blocks the game-assets pack for this genre (finding O5).",
-    "t_b8afb055": "(NEW, nexus-core; parents = t_92a09bdc + t_25a6499c) queue this track into the live generation path. Carries the measured render parameters from _generation_request, the reason engine must be 'ace' (yue2 0/0) and the fact that /api/v1/stems is a deferred stub. Gated on t_25a6499c.",
-    "t_5a93164a": "(NEW, nexus-core; parent = t_92a09bdc) no music stage can advance its own card: advance-stage.sh is refused for dispatcher-spawned workers (HERMES_DELEGATED_CHILD_CONTEXT is set), script exit 1, silent no-op; all four previous brief cards ended 'done' at stage brief. Decision needed (finding O6).",
-    "t_426a82a3": "(NEW, editor; parent = t_92a09bdc) the gamer rubric's battle_energy criterion is id-scoped to all elemental-* while the rubric's own notes say sub-idiom is per-prompt; elemental-air scores 1 by construction (finding F2)."
+    "t_25a6499c": "(nexus-core, done) engine defects D1/D2/D3 - explicit bpm/keyscale in the deployed image, instrumental mode in the queue",
+    "t_8a715681": "(nexus-core, done) reconcile the diverged live checkout - main is now 72 ahead / 0 behind origin/main and music/suno-gen.py is here",
+    "t_5ed495eb": "(distributor, done) asset-pack output vs the game-assets gate - pack.py, gate_asset_pack.py and the licence of record are in this checkout",
+    "t_b8afb055": "(nexus-core, done) queue this track into the live generation path - the entry carries bpm 92, keyscale C major, duration 334, lyricsMode instrumental",
+    "t_5a93164a": "(nexus-core, done) no stage could advance its card - the stage prompt now names the kanban_comment tool and the script checks its exit status",
+    "t_426a82a3": "(editor, done) the gamer rubric's battle_energy scope - applies_to is now data and elemental_atmosphere covers this genre",
+    "t_69cab80b": "(nexus-core, ready) a refused or empty render is read as 'already rendered' forever - this track's marker is the live example",
+    "t_eb079b91": "(music-producer, ready) the asset-pack generator has no stage - nothing in the pipeline builds a pack yet"
   },
 
-  "_written_by": "music-producer, card t_92a09bdc, 2026-10-16"
+  "_written_by": "music-producer; brief written under card t_92a09bdc, duplicate pass under t_3cb6e654, surviving-card pass under t_dd248457 (2026-10-16)"
 }
