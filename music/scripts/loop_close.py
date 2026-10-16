@@ -71,14 +71,21 @@ MODES
 
   --claims-loop
       Exit 0 when the plan is a loop claim, 1 when it is not, 2 on usage error.
-      The claim is the genre's own `video_shape` in `music/genres.yaml`
-      (`loop-10min`), read out of the plan's `_meta.genre`. Reading it from the
-      registry, not from the brief's prose, keeps one definition of "a loop
-      claim" — a gate that greps is not a gate.
+      The claim is the genre's own REGISTRY entry in `music/genres.yaml`, read
+      out of the plan's `_meta.genre`, and there are two ways to make it:
+      `video_shape` in `loop-10min` (a video built by repeating the loop), or
+      `loop_bars: N` (the product IS the loop). Reading it from the registry,
+      not from the brief's prose, keeps one definition of "a loop claim" — a
+      gate that greps is not a gate. `commentary-beds` is the second case and
+      was the hole card t_8b4fcc48 names: `video_shape: none`, sold as a
+      loopable bed, never loop-closed by any stage.
 
   default (close)
       Build the loop artifact from the render:
-        1. bar-align at the plan's bpm (`choose_loop_bars`, ported);
+        1. bar-align at the plan's bpm (`choose_loop_bars`, ported), or at the
+           genre's declared `loop_bars` when the registry states one (the
+           delivered loop's length — card t_b75ccb4a; `--loop-bars N` overrides
+           it and DISAGREES with the registry at your peril: a mismatch exits 2);
         2. walk bar-aligned windows from the end of the musical region
            backwards (the tail is where a song resolves, so the latest full
            window is the first candidate);
@@ -298,16 +305,22 @@ def write_wav_pcm(path: Path, samples: array.array, sr: int) -> None:
 
 # ── the plan's loop claim, from the genre registry (one definition) ─────────
 
-def genre_video_shapes(genres_yaml: Path) -> dict:
-    """Parse {genre: video_shape} out of music/genres.yaml with no PyYAML.
+def genre_loop_specs(genres_yaml: Path) -> dict:
+    """Parse {genre: {video_shape, loop_bars}} out of music/genres.yaml, no PyYAML.
 
     The render rail's image carries no yaml module. This reader is bound to the
     registry by music/tests/test_loop_close.py, which parses the same file with
     PyYAML and requires the two maps to be identical — so it cannot drift.
     Structure read: a top-level `genres:` block, each genre at 2 spaces, its
     keys at 4 spaces.
+
+    `loop_bars: N` declares THE DELIVERED LOOP'S LENGTH, in bars (card
+    t_b75ccb4a: "the delivered loop is a per-genre `loop_bars` in
+    music/genres.yaml"), and it is also the registry's statement that this
+    genre's deliverable IS a loop — which is what `loop_claim_of_plan` reads
+    (card t_8b4fcc48, the commentary bed).
     """
-    shapes: dict = {}
+    specs: dict = {}
     in_genres = False
     genre = None
     for raw in genres_yaml.read_text(encoding="utf-8").splitlines():
@@ -324,14 +337,42 @@ def genre_video_shapes(genres_yaml: Path) -> dict:
         if indent == 2 and line.endswith(":"):
             genre = line[:-1].strip()
             continue
-        if indent == 4 and genre and line.startswith("video_shape:"):
-            shapes[genre] = line.split(":", 1)[1].strip()
-    return shapes
+        if indent == 4 and genre:
+            key, _, value = line.partition(":")
+            value = value.split("#", 1)[0].strip()
+            spec = specs.setdefault(genre, {"video_shape": None,
+                                            "loop_bars": None})
+            if key == "video_shape":
+                spec["video_shape"] = value
+            elif key == "loop_bars":
+                spec["loop_bars"] = int(value) if value.isdigit() else value
+    return specs
+
+
+def genre_video_shapes(genres_yaml: Path) -> dict:
+    """{genre: video_shape} — the reader's original shape, kept for its callers."""
+    return {g: s.get("video_shape")
+            for g, s in genre_loop_specs(genres_yaml).items()}
 
 
 def loop_claim_of_plan(plan_path: Path, genres_yaml: Path,
                        loop_shapes: tuple[str, ...] = ("loop-10min",)) -> dict:
-    """Is this plan a loop claim? Returns the evidence, not just a bool."""
+    """Is this plan a loop claim? Returns the evidence, not just a bool.
+
+    THE CLAIM IS THE REGISTRY'S, and a genre makes it in either of two ways
+    (card t_8b4fcc48):
+
+      * `video_shape` in `loop_shapes` — the product is a video built by
+        REPEATING the delivered loop, so a delivered loop must exist
+        (card t_b21aeb51);
+      * `loop_bars: N` — the product IS the loop: N bars at the genre's own
+        tempo. `commentary-beds` is that case: its `video_shape` is `none` (no
+        video product at all), the template's craft note 6 sells the bed as a
+        seamless wrap, and no stage loop-closed it — so the rail certified a
+        32 s render whose last 3.44 s is digital silence as a "loopable" bed
+        (measured 2026-10-16: sha256 e6a3b77a8d68615a5910be2118eed8a317d59c45
+        57faef43553ad155f44cff97, level delta 43.3 dB, gate_loop_points rc=1).
+    """
     try:
         plan = json.loads(plan_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -352,9 +393,22 @@ def loop_claim_of_plan(plan_path: Path, genres_yaml: Path,
         return {"claim": None,
                 "error": f"{plan_path} has no _meta.genre — cannot resolve a "
                          "loop claim"}
-    shape = genre_video_shapes(genres_yaml).get(genre)
-    return {"claim": shape in loop_shapes, "genre": genre,
-            "video_shape": shape, "source": "genres.yaml"}
+    spec = genre_loop_specs(genres_yaml).get(genre) or {}
+    shape = spec.get("video_shape")
+    bars = spec.get("loop_bars")
+    claim = bool(bars) or shape in loop_shapes
+    if bars:
+        reason = (f"the registry declares this genre's delivered loop: "
+                  f"loop_bars {bars} (video_shape {shape!r}) — the product IS "
+                  f"the loop, so it must be built and measured")
+    elif shape in loop_shapes:
+        reason = (f"video_shape {shape!r} is a video built by repeating the "
+                  f"delivered loop, so the loop must be built and measured")
+    else:
+        reason = (f"video_shape {shape!r} is not a tiled loop shape and no "
+                  f"loop_bars is declared — the product carries no loop claim")
+    return {"claim": claim, "genre": genre, "video_shape": shape,
+            "loop_bars": bars, "reason": reason, "source": "genres.yaml"}
 
 
 # ── the check (what the rail runs on the artifact it will certify) ─────────
@@ -412,12 +466,24 @@ def check_artifact(master: Path, level_window: float = DEFAULT_LEVEL_WINDOW_S,
 def close_loop(master: Path, bpm: float, out: Path, loop_points_out: Path,
                level_window: float = DEFAULT_LEVEL_WINDOW_S,
                level_delta_max: float = DEFAULT_LEVEL_DELTA_MAX_DB,
-               max_candidates: int = 12) -> tuple[int, dict]:
-    """Build a bar-aligned, seam-crossfaded loop from master. (rc, record)."""
+               max_candidates: int = 12,
+               loop_bars: int | None = None) -> tuple[int, dict]:
+    """Build a bar-aligned, seam-crossfaded loop from master. (rc, record).
+
+    `loop_bars` is THE DELIVERED LOOP'S LENGTH, in bars, when the genre's
+    registry entry declares one (card t_b75ccb4a: the delivered loop is a
+    per-genre `loop_bars`; card t_8b4fcc48: `commentary-beds` declares 16, the
+    kit's talk bed = 32.000 s at 120 BPM). The window must still fit the
+    musical region — a render that carries a loop must be LONGER than that
+    loop, because the engine emits 1.5-6.2 s of digital silence inside every
+    requested window. Without a declaration the pack lane's `BARS_PREFERRED`
+    port decides, exactly as before.
+    """
     record: dict = {"master": str(master), "out": str(out), "bpm": bpm,
                     "candidates": [], "method": None, "start_s": None,
                     "bars": None, "span_s": None, "level_delta_db": None,
-                    "head_db": None, "tail_db": None, "problems": []}
+                    "head_db": None, "tail_db": None, "problems": [],
+                    "declared_loop_bars": loop_bars}
     duration = probe_duration(master)
     if duration is None:
         record["problems"].append(f"{master} is not real audio")
@@ -434,7 +500,19 @@ def close_loop(master: Path, bpm: float, out: Path, loop_points_out: Path,
         record["problems"].append(f"could not decode {master} to PCM")
         return 1, record
 
-    bars, loop_len = choose_loop_bars(sr, bpm, len(pcm))
+    if loop_bars:
+        bars = int(loop_bars)
+        loop_len = int(round(bars * (60.0 / bpm * 4) * sr))   # one 4/4 bar
+        if loop_len <= 0 or loop_len > len(pcm):
+            record["problems"].append(
+                f"the registry declares a {bars}-bar loop "
+                f"({bars * 60.0 / bpm * 4:.3f}s at {bpm:g} BPM) and this render "
+                f"is only {duration:.3f}s long — the render must be LONGER than "
+                f"the loop it carries")
+            return 1, record
+        record["declared_loop_bars"] = bars
+    else:
+        bars, loop_len = choose_loop_bars(sr, bpm, len(pcm))
     if loop_len <= 0:
         record["problems"].append(
             f"no bar-aligned loop of at least {MIN_LOOP_SPAN_S:.0f}s fits a "
@@ -497,6 +575,7 @@ def close_loop(master: Path, bpm: float, out: Path, loop_points_out: Path,
              "source_master": str(master),
              "source_start_s": record["start_s"],
              "seam_method": method, "bars": bars, "bpm": bpm,
+             "declared_loop_bars": loop_bars,
              "level_head_db": info["head_db"],
              "level_tail_db": info["tail_db"],
              "level_delta_db": info["level_delta_db"]},
@@ -535,6 +614,10 @@ def main(argv: list[str] | None = None) -> int:
                    default=DEFAULT_LEVEL_DELTA_MAX_DB,
                    help="max |tail - head| in dB (default 6.0, the rubric's)")
     p.add_argument("--max-candidates", type=int, default=12)
+    p.add_argument("--loop-bars", type=int, default=None, dest="loop_bars",
+                   help="the DELIVERED loop's length in bars. Default: the "
+                        "genre's own `loop_bars` in music/genres.yaml. When "
+                        "both are given they must agree.")
     p.add_argument("--genres-yaml", default=None,
                    help="path to music/genres.yaml (default: beside this repo)")
     p.add_argument("--json", action="store_true")
@@ -615,9 +698,28 @@ def main(argv: list[str] | None = None) -> int:
     out = Path(args.out)
     lp_out = Path(args.loop_points_out) if args.loop_points_out else \
         out.with_suffix(".loop_points.json")
+
+    # The DELIVERED loop's length: the registry's declaration for this plan's
+    # genre, unless --loop-bars overrides it — and an override that DISAGREES
+    # with the registry is a defect, not a preference, so it fails closed
+    # (cards t_b75ccb4a / t_8b4fcc48).
+    declared = None
+    if args.plan and Path(args.plan).is_file():
+        claim = loop_claim_of_plan(Path(args.plan), genres)
+        declared = claim.get("loop_bars")
+    if args.loop_bars is not None and args.loop_bars <= 0:
+        p.error(f"--loop-bars must be a positive integer, got {args.loop_bars}")
+    if args.loop_bars is not None and declared is not None \
+            and int(args.loop_bars) != int(declared):
+        print(f"FAIL loop_close — --loop-bars {args.loop_bars} disagrees with "
+              f"the registry's loop_bars {declared} for this plan's genre; the "
+              f"registry is the contract (card t_b75ccb4a)", file=sys.stderr)
+        return 2
+    target_bars = args.loop_bars if args.loop_bars is not None else declared
+
     rc, record = close_loop(master, float(bpm), out, lp_out,
                             args.level_window, args.level_delta_max,
-                            args.max_candidates)
+                            args.max_candidates, target_bars)
     if args.json:
         print(json.dumps(record, indent=2))
     if rc == 0:

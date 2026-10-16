@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
-"""check_loop_tiling — a `loop_bars` in the registry must TILE its video shape.
+"""check_loop_tiling — a declared `loop_bars` must mean what it declares.
+
+TWO CASES (card t_8b4fcc48 added the second). A genre declares `loop_bars` to
+say "the delivered product includes a loop of this length":
+
+  * `video_shape` IS a tiled loop shape (`loop-10min`) — the loop must DIVIDE
+    the shape's bar count, or the video's last seam is a jump cut (the incident
+    below, card t_b75ccb4a);
+  * `video_shape` is NOT a tiled shape (`none`: `commentary-beds`, whose
+    product is a 16-bar / 32.000 s talk bed) — there is nothing to tile, so
+    only the span band (`--floor-s .. --ceiling-s`) applies.
 
 WHY THIS EXISTS (incident 2026-10-16, card t_b75ccb4a, measured on nexus)
 ------------------------------------------------------------------------
@@ -80,8 +90,11 @@ from pathlib import Path
 # Shapes that are built by REPEATING a loop, so a loop_bars declared for one of
 # them must tile it. A shape not in this set is not built by tiling: `none` has
 # no video at all, and an album/mix/lyric-video/single shape is a programme, not
-# a tile. A `loop_bars` on a non-tiling shape is reported as a violation rather
-# than ignored — a field that cannot mean anything is a defect (fail loudly).
+# a tile. A `loop_bars` on a non-tiling shape is NOT a violation — as of card
+# t_8b4fcc48 it is the genre's statement that its DELIVERED PRODUCT IS A LOOP of
+# this length (`commentary-beds`: `video_shape: none`, a 16-bar / 32.000 s talk
+# bed) — but it still has to sit inside the span band, and a `loop_bars` on a
+# genre that declares a tiled shape still has to divide that shape's bar count.
 TILING_SHAPES = ("loop-10min",)
 
 GENRES_YAML = "music/genres.yaml"
@@ -167,59 +180,76 @@ def audit(genre: str, spec: dict, shape_s: Fraction | None,
         return problems, info
 
     if shape not in TILING_SHAPES:
-        problems.append(
-            f"{genre}: `loop_bars: {declared}` is declared for video_shape "
-            f"{shape!r}, which is not a tiled loop shape "
-            f"({', '.join(TILING_SHAPES)}) — the field cannot mean anything here")
-        return problems, info
-
-    if shape_s is None or shape_s <= 0:
+        # A `loop_bars` on a shape that is NOT built by tiling is legal — it is
+        # the genre's statement that its delivered product IS a loop, of this
+        # length (card t_8b4fcc48: `commentary-beds` has `video_shape: none` and
+        # sells a 32.000 s talk bed; the render rail closes and measures it
+        # exactly as it does a `loop-10min` genre's). There is no shape to
+        # divide, so only the span band below applies — but a length out of band
+        # is still a refusal, and it still needs the genre's own tempo.
+        tiling = False
+    elif shape_s is None or shape_s <= 0:
         problems.append(f"{genre}: the shape artifact for '{shape}' "
                         f"({VISUALS_DIR}/{shape_template(str(shape))}) has no "
                         f"readable duration — the tiling cannot be checked, and a "
                         f"shape duration this check GUESSED would be a fabricated "
                         f"contract")
         return problems, info
+    else:
+        tiling = True
+    info["tiling"] = tiling
 
     if not bpm or bpm <= 0:
-        problems.append(f"{genre}: no tempo resolves (blueprint "
-                        f"`{BLUEPRINTS_DIR}/{genre}.yaml` `bpm_anchor`, then the "
-                        f"template caption) — the tiling is a function of tempo "
-                        f"(shape_bars = shape_s x bpm / 240), so it cannot be "
-                        f"checked without one")
+        problems.append(
+            f"{genre}: no tempo resolves (blueprint "
+            f"`{BLUEPRINTS_DIR}/{genre}.yaml` `bpm_anchor`, then the template "
+            f"caption) — "
+            + (f"the tiling is a function of tempo "
+               f"(shape_bars = shape_s x bpm / 240), so it cannot be checked "
+               f"without one" if tiling else
+               f"the loop's own span is a function of tempo "
+               f"(span = loop_bars x 240 / bpm), so it cannot be checked "
+               f"without one"))
         return problems, info
 
     bar_s = Fraction(240, bpm)
-    shape_bars_exact = shape_s / bar_s
-    info["bar_s"] = float(bar_s)
-    if shape_bars_exact.denominator != 1:
-        problems.append(
-            f"{genre}: the {float(shape_s):.6f} s shape is {shape_bars_exact} bars "
-            f"at {bpm} BPM — NOT a whole number of bars, so no whole-bar loop can "
-            f"tile it")
-        return problems, info
-    shape_bars = int(shape_bars_exact)
     span = declared * bar_s
-    tiles = shape_s / span
-    info.update(shape_bars=shape_bars, span_s=float(span),
-                tiles=float(tiles))
+    info["bar_s"] = float(bar_s)
+    info["span_s"] = float(span)
 
-    # The legal set, so a reader sees WHY the declared value is the one it is.
-    for d in divisors(shape_bars):
-        s = d * bar_s
-        if FLOOR_S <= float(s) <= ceiling_s:
-            info["legal"].append({"bars": d, "span_s": float(s),
-                                  "tiles": float(shape_s / s)})
+    if tiling:
+        shape_bars_exact = shape_s / bar_s
+        if shape_bars_exact.denominator != 1:
+            problems.append(
+                f"{genre}: the {float(shape_s):.6f} s shape is {shape_bars_exact} bars "
+                f"at {bpm} BPM — NOT a whole number of bars, so no whole-bar loop can "
+                f"tile it")
+            return problems, info
+        shape_bars = int(shape_bars_exact)
+        tiles = shape_s / span
+        info.update(shape_bars=shape_bars, tiles=float(tiles))
 
-    if shape_bars % declared != 0 or tiles.denominator != 1:
-        problems.append(
-            f"{genre}: `loop_bars: {declared}` is {float(span):.6f} s and tiles "
-            f"{float(tiles)} times into the {float(shape_s):.3f} s '{shape}' video "
-            f"— FRACTIONAL. {shape_bars} bars / {declared} is not a whole number, "
-            f"so the video's last seam is a jump cut. Legal values in "
-            f"[{floor_s:.1f}, {ceiling_s:.1f}] s: "
-            + ", ".join(f"{e['bars']} bars ({e['span_s']:.3f} s, "
-                        f"{e['tiles']:.0f} tiles)" for e in info["legal"]))
+        # The legal set, so a reader sees WHY the declared value is the one it is.
+        for d in divisors(shape_bars):
+            s = d * bar_s
+            if FLOOR_S <= float(s) <= ceiling_s:
+                info["legal"].append({"bars": d, "span_s": float(s),
+                                      "tiles": float(shape_s / s)})
+
+        if shape_bars % declared != 0 or tiles.denominator != 1:
+            problems.append(
+                f"{genre}: `loop_bars: {declared}` is {float(span):.6f} s and tiles "
+                f"{float(tiles)} times into the {float(shape_s):.3f} s '{shape}' video "
+                f"— FRACTIONAL. {shape_bars} bars / {declared} is not a whole number, "
+                f"so the video's last seam is a jump cut. Legal values in "
+                f"[{floor_s:.1f}, {ceiling_s:.1f}] s: "
+                + ", ".join(f"{e['bars']} bars ({e['span_s']:.3f} s, "
+                            f"{e['tiles']:.0f} tiles)" for e in info["legal"]))
+    else:
+        info["note"] = (f"video_shape {shape!r} is not built by tiling a loop, so "
+                        f"the declared length carries no tiling requirement — the "
+                        f"product IS the loop (card t_8b4fcc48); only the span "
+                        f"band applies")
 
     if float(span) > ceiling_s:
         problems.append(
@@ -261,9 +291,28 @@ def resolve_tempo(genre: str, music_dir: Path, override: int | None = None
         except Exception:
             blueprint = {}
     body = planner.load_template(genre)
+    # A template may declare MORE THAN ONE style field (card t_3497b627:
+    # `commentary-beds` declares INTRO STING and LOOPABLE TALK BED, and
+    # `load_template` then leaves `caption` empty on purpose). The tempo a
+    # template states is stated in its style fields, so read those; when they
+    # disagree, FAIL CLOSED rather than pick one — a tempo this check guessed
+    # would validate itself.
+    fields = body.get("style_fields") or []
+    captions = [f.get("caption") or "" for f in fields] or \
+        [body.get("caption") or ""]
+    stated: list = []
+    for text in captions:
+        value = planner.bpm_in_caption(text)
+        if value and value not in stated:
+            stated.append(value)
+    if len(stated) > 1:
+        return None, (f"the template states {len(stated)} tempos across its "
+                      f"{len(captions)} style fields "
+                      f"({', '.join(str(v) for v in stated)}) — the tempo is the "
+                      f"field's, so it cannot be resolved without one")
     bpm = planner.bpm_anchor_for(
         {"blueprint": blueprint,
-         "template_bpm": planner.bpm_in_caption(body.get("caption") or "")})
+         "template_bpm": stated[0] if stated else None})
     return (int(bpm) if bpm else None), source
 
 
@@ -392,11 +441,23 @@ def selftest() -> int:
     checks.append(("unreadable shape artifact FAILS (never guessed)",
                    any("no readable duration" in p for p in probs), f"{probs}"))
 
-    # 8. A loop_bars on a shape that is not tiled.
-    probs, _ = audit("chill-lounge", {"video_shape": "album-30-60min",
-                                      "loop_bars": 8}, shape_s, 150)
-    checks.append(("loop_bars on a non-tiling shape FAILS",
-                   any("not a tiled loop shape" in p for p in probs), f"{probs}"))
+    # 8. A loop_bars on a shape that is NOT tiled: no tiling requirement — the
+    #    product IS the loop (card t_8b4fcc48, the commentary bed) — but the
+    #    span band still applies, and the tempo is still needed.
+    probs, info = audit("commentary-beds", {"video_shape": "none",
+                                            "loop_bars": 16}, None, 120)
+    checks.append(("16 bars @120 BPM on video_shape none -> 32.000 s, in band",
+                   (not probs and info["span_s"] == 32.0
+                    and info["tiling"] is False),
+                   f"span={info['span_s']} problems={probs}"))
+    probs, _ = audit("commentary-beds", {"video_shape": "none",
+                                         "loop_bars": 4}, None, 120)
+    checks.append(("4 bars @120 BPM on video_shape none FAILS the phrase floor",
+                   any("below the" in p for p in probs), f"{probs}"))
+    probs, _ = audit("commentary-beds", {"video_shape": "none",
+                                         "loop_bars": 16}, None, None)
+    checks.append(("no tempo FAILS with no shape to tile (the span needs it)",
+                   any("no tempo resolves" in p for p in probs), f"{probs}"))
 
     width = max(len(name) for name, _, _ in checks)
     bad = 0

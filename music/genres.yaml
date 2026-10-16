@@ -70,6 +70,26 @@ genres:
     video_shape: album-30-60min
     notes: "Sync-friendly: slow, predictable structure, easy to clear. Mood discovery trend."
 
+  # loop_bars: 16 — THE DELIVERED LOOP'S LENGTH (card t_8b4fcc48, measured
+  # 2026-10-16). This genre has no video shape, but its BED is sold as a
+  # seamless wrap, so the registry declares the loop: 16 bars at the genre's own
+  # 120 BPM = exactly 32.000 s, the kit's talk-bed spec (template §8, the
+  # queue entry's own bar math). A declared `loop_bars` IS the loop claim that
+  # `loop_close.py --claims-loop` reads, so the render rail now BUILDS AND
+  # MEASURES this genre's loop exactly as it does a `loop-10min` genre's. Before
+  # this, `video_shape: none` was read as "not a loop claim" and the rail
+  # certified the master on `rc=0` alone: the delivered bed's last 3.44 s were
+  # digital silence (sha256 e6a3b77a8d68615a5910be2118eed8a317d59c4557faef435
+  # 53ad155f44cff97, level delta 43.3 dB, gate_loop_points rc=1).
+  #
+  # There is nothing to TILE here (no `loop-10min` shape), so only the span band
+  # applies — 32.000 s sits inside 24.0 .. 120.0 s (check_loop_tiling.py).
+  #
+  # The render must be LONGER than the loop it carries: the engine emits
+  # 1.5-6.2 s of digital silence inside every requested window, so the queue
+  # entry asks for 48 s and the delivered loop is the last whole 16 bars of that
+  # render's musical region (measured on the 32 s render: music stops at
+  # 28.560562 s, so a 32.0 s loop could not fit).
   commentary-beds:
     family: utility
     prompt_template: prompts/commentary-beds.md
@@ -77,6 +97,7 @@ genres:
     lanes: [direct-license, sync]
     cadence: 5/wk
     video_shape: none
+    loop_bars: 16
     notes: "Loopable + stemmed. Market: 82% of podcasts license stock themes."
 
   activist:

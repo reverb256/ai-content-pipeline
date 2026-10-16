@@ -198,10 +198,13 @@ class TestSyntheticCases(unittest.TestCase):
     def test_close_BUILDS_a_loop_that_passes_BOTH_rulers(self):
         """GREEN: the rail's closer turns a silence-tailed render into a loop.
 
-        The music ends at 25.2 s (15.75 bars at 150 BPM), so this also covers
-        the bar-alignment rounding: the window must land on a bar boundary.
+        elemental-fire's registry entry declares `loop_bars: 25` (40.000 s = 15
+        exact tiles of the 600 s video, card t_b75ccb4a), so the delivered loop
+        is 25 bars and the render must be LONGER than that. The music here ends
+        at 45.0 s (28.125 bars at 150 BPM), so this also covers the
+        bar-alignment rounding: the window must land on a bar boundary (44.8 s).
         """
-        src = build_tone_with_silence(self.tmp / "s3", 25.2, 5.0)
+        src = build_tone_with_silence(self.tmp / "s3", 45.0, 5.0)
         out = self.tmp / "s3_delivered" / "loop.wav"
         lp = self.tmp / "s3_delivered" / "loop_points.json"
         plan = self.tmp / "s3.plan.json"
@@ -217,7 +220,8 @@ class TestSyntheticCases(unittest.TestCase):
         idx = json.loads(lp.read_text(encoding="utf-8"))
         self.assertEqual(idx["loop_start_s"], 0.0)
         span = idx["loop_end_s"]
-        self.assertAlmostEqual(span, round(4 * BAR_S, 6), 6)
+        self.assertEqual(idx["bars"], 25)
+        self.assertAlmostEqual(span, round(25 * BAR_S, 6), 6)
         self.assertTrue(idx["seamless"])
 
         # the artifact's own ends, measured independently
@@ -271,6 +275,26 @@ class TestLoopClaim(unittest.TestCase):
             self.assertEqual(res.returncode, 0, f"{genre}: {res.stdout}")
             self.assertTrue(json.loads(res.stdout)["claim"])
 
+    def test_a_declared_loop_bars_is_a_claim_with_no_video_shape(self):
+        """REGISTRY, not prose: a genre whose product IS the loop (t_8b4fcc48).
+
+        `commentary-beds` has `video_shape: none`, so the rail used to take its
+        "not a loop claim" branch and certify the bed on `rc=0` alone. Its
+        `loop_bars: 16` is the claim, and the length is the kit's own bar math:
+        16 bars x 2.000 s at 120 BPM = 32.000 s.
+        """
+        res = run([sys.executable, str(LOOP_CLOSE), "--claims-loop",
+                   "--plan", str(self._plan("commentary-beds", "commentary-beds")),
+                   "--json"])
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+        claim = json.loads(res.stdout)
+        self.assertTrue(claim["claim"])
+        self.assertEqual(claim["video_shape"], "none")
+        self.assertEqual(claim["loop_bars"], 16)
+        bar_s = 240.0 / 120            # the genre's stated 120 BPM, 4/4
+        self.assertEqual(claim["loop_bars"] * bar_s, 32.0,
+                         "the registry's declared loop must be the kit's 32.0 s bed")
+
     def test_non_loop_shapes_are_not_claims(self):
         for genre in ("sentimental-piano", "chill-lounge", "trance"):
             res = run([sys.executable, str(LOOP_CLOSE), "--claims-loop",
@@ -284,6 +308,119 @@ class TestLoopClaim(unittest.TestCase):
         res = run([sys.executable, str(LOOP_CLOSE), "--claims-loop",
                    "--plan", str(p), "--json"])
         self.assertEqual(res.returncode, 2, res.stdout + res.stderr)
+
+
+class TestBedLoopRegression(unittest.TestCase):
+    """RED for card t_8b4fcc48 — the "loopable" bed that no stage loop-closed.
+
+    Measured on the delivered artifact (card t_3497b627 / t_640cc2a1,
+    /var/lib/music-plans/commentary-beds-lo-fi-jazz-bed.flac, 32.000000 s,
+    sha256 e6a3b77a8d68615a5910be2118eed8a317d59c4557faef43553ad155f44cff97):
+    the music stops at 28.560562 s, the last 3.411 s are digital silence, and
+    the wrap spliced -58.8 dB to -15.5 dB — a 43.3 dB drop the two-ruler gate
+    refuses (rc=1). Nothing caught it because the rail resolves "a loop claim"
+    from the genre's `video_shape`, and `commentary-beds` is `video_shape: none`:
+    it took the "not a loop claim - render recorded" branch and wrote
+    `.rendered` on `rc=0` alone.
+
+    The registry now declares this genre's delivered loop (`loop_bars: 16` = the
+    kit's 32.000 s talk bed at 120 BPM), so the rail builds and measures it. The
+    cases below are synthesized at the measured shape — the test must not depend
+    on a node's /var/lib — and they are the two halves of the rule:
+
+      RED    a render whose loop region is not filled with music (music stops
+             3.44 s inside a 32.0 s window) is REFUSED: no artifact, rc=1, and
+             the reason NAMES the arithmetic;
+      GREEN  a 48.000 s render of the same tone closes a 16-bar / 32.000 s loop
+             that passes the committed three-ruler gate_loop_points AND
+             loop_seam_check and the rail's own --check-only.
+    """
+
+    BPM120 = 120.0
+    BAR_S = 240.0 / BPM120            # 2.000 s
+    # the real artifact's shape, to the millisecond measured on nexus
+    REAL_MUSIC_S = 28.560562
+    REAL_TOTAL_S = 32.0
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = pathlib.Path(tempfile.mkdtemp(prefix="bedloop-test-"))
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tmp, ignore_errors=True)
+
+    def _plan(self, out_dir):
+        out_dir.mkdir(parents=True, exist_ok=True)
+        p = out_dir / "bed.plan.json"
+        p.write_text(json.dumps({"bpm": 120, "_meta": {
+            "genre": "commentary-beds"}}), encoding="utf-8")
+        return p
+
+    def test_the_delivered_32s_bed_shape_is_REFUSED(self):
+        """The exact shape of sha256 e6a3b77a...: music, then 3.44 s of silence."""
+        d = self.tmp / "red"
+        src = build_tone_with_silence(d, self.REAL_MUSIC_S,
+                                      self.REAL_TOTAL_S - self.REAL_MUSIC_S)
+        out = d / "delivered" / "loop.wav"
+        lp = d / "delivered" / "loop_points.json"
+        res = run([sys.executable, str(LOOP_CLOSE), "--master", str(src),
+                   "--plan", str(self._plan(d)), "--out", str(out),
+                   "--loop-points-out", str(lp), "--json"])
+        self.assertEqual(res.returncode, 1,
+                         "a 16-bar loop cannot be built from a render whose "
+                         "musical region is 28.56 s\n" + res.stdout + res.stderr)
+        self.assertFalse(out.exists(),
+                         "a refused render must leave no loop artifact behind")
+        rec = json.loads(res.stdout)
+        self.assertEqual(rec["declared_loop_bars"], 16)
+        self.assertAlmostEqual(rec["musical_end_s"], self.REAL_MUSIC_S, delta=0.01)
+        self.assertTrue(any("shorter than one 32.000s loop" in p
+                            for p in rec["problems"]),
+                        f"the refusal must name the arithmetic: {rec['problems']}")
+
+    def test_the_gate_and_the_rail_accept_the_closed_16_bar_loop(self):
+        """GREEN: 48.000 s render -> a 32.000 s loop that passes every ruler."""
+        d = self.tmp / "green"
+        # the engine's worst measured tail (6.24 s of silence) inside 48 s
+        src = build_tone_with_silence(d, 41.76, 48.0 - 41.76)
+        out = d / "delivered" / "loop.wav"
+        lp = d / "delivered" / "loop_points.json"
+        res = run([sys.executable, str(LOOP_CLOSE), "--master", str(src),
+                   "--plan", str(self._plan(d)), "--out", str(out),
+                   "--loop-points-out", str(lp)])
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+
+        idx = json.loads(lp.read_text(encoding="utf-8"))
+        self.assertEqual(idx["bars"], 16)
+        self.assertEqual(idx["declared_loop_bars"], 16)
+        self.assertEqual(idx["loop_start_s"], 0.0)
+        self.assertAlmostEqual(idx["loop_end_s"], 16 * self.BAR_S, 6)
+        head = mean_volume_db(out, 0.0, 1.0)
+        tail = mean_volume_db(out, idx["loop_end_s"] - 1.0, 1.0)
+        self.assertLessEqual(abs(tail - head), LEVEL_MAX,
+                             f"artifact ends do not match: {head} / {tail}")
+
+        g = run([sys.executable, str(GATE), "--master", str(out),
+                 "--loop-points", str(lp)])
+        self.assertEqual(g.returncode, 0, g.stdout + g.stderr)
+        self.assertIn("PASS gate_loop_points", g.stdout)
+        s = run([sys.executable, str(SEAM), "--master", str(out),
+                 "--loop-points", str(lp)])
+        self.assertEqual(s.returncode, 0, s.stdout + s.stderr)
+        c = check_only(out)
+        self.assertEqual(c.returncode, 0, c.stdout + c.stderr)
+
+    def test_an_override_that_disagrees_with_the_registry_is_refused(self):
+        """The registry is the contract (t_b75ccb4a): 8 bars here is a defect."""
+        d = self.tmp / "override"
+        src = build_tone_with_silence(d, 41.76, 48.0 - 41.76)
+        out = d / "delivered" / "loop.wav"
+        res = run([sys.executable, str(LOOP_CLOSE), "--master", str(src),
+                   "--plan", str(self._plan(d)), "--out", str(out),
+                   "--loop-bars", "8"])
+        self.assertEqual(res.returncode, 2, res.stdout + res.stderr)
+        self.assertFalse(out.exists())
 
 
 class TestGenreReaderParity(unittest.TestCase):
