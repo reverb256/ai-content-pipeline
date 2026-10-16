@@ -53,6 +53,18 @@
 #      scratch dir. Nothing ran that compared the record to the repo. This is its
 #      scheduled home. It exits 5, so a corpus that disagrees with its own record is
 #      never read as a gate, panel or render-log defect.
+#   2e. CHECK THE SHARED-TREE COMMIT FENCE (card t_6d0b7dd7): this tree is ONE
+#      working tree that every concurrently running card commits to (8 cards
+#      `running` at 18:13 CDT on 2026-10-16), so a whole-index commit carries
+#      whatever a sibling has staged — commit 545faa3 swept four files card
+#      t_96dfc521 had staged, and commit 5cb2e3d reverted card t_450e7f39's
+#      landing 7 s after it landed. music/scripts/git_commit_fence.sh refuses
+#      that commit; music/scripts/check_commit_fence_armed.py asserts the fence
+#      is ARMED on both lane repos AND that its mining-k8s copy is byte-equal.
+#      A hook is file state plus one local config key, and neither is versioned:
+#      nothing else notices when a clone, a `git config --unset` or a lost exec
+#      bit disarms it. It exits 6, so a disarmed fence is never read as a gate,
+#      panel, render-log or media defect.
 #   3. RECORD one summary line in performance/music-gate-matrix.log and a
 #      machine-readable performance/music-gate-matrix.status.json. Those are the
 #      files music-weekly-digest.service reads, so the result reaches the weekly
@@ -94,6 +106,10 @@
 #   MEDIA_CORPUS_CHECKS         "0" = skip the campaign-media phase (default 1 = run it).
 #                               For a checkout with no campaign media - never to silence
 #                               a record that names files git does not hold.
+#   COMMIT_FENCE_CHECKS         "0" = skip the shared-tree commit-fence phase (default 1
+#                               = run it). For a host with no ~/mining-k8s checkout, where
+#                               the fence's copy cannot be measured - never to silence a
+#                               fence that has been disarmed.
 set -uo pipefail
 
 REPO="${GATE_MATRIX_REPO:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
@@ -229,8 +245,45 @@ if [ "${MEDIA_CORPUS_CHECKS:-1}" != "0" ]; then
   fi
 fi
 
-DURATION=$(( $(date +%s) - START ))
+# --- 2e. the shared-tree commit fence (card t_6d0b7dd7) ----------------------
+# This checkout is ONE working tree that every concurrently running card commits
+# to: measured 2026-10-16 18:13 CDT, 8 cards `running` on the music board, all of
+# them committing into /home/j_kro/ai-content-pipeline. A commit that uses the
+# SHARED index carries whatever a sibling has staged: commit 545faa3 swept four
+# files card t_96dfc521 had staged (t_42bc85ba), and commit 5cb2e3d committed a
+# stale copy of card t_450e7f39's files, reverting its landing 6eb5a23 seven
+# seconds after it landed. music/scripts/git_commit_fence.sh refuses a
+# whole-index commit (or `git commit -a`) in the primary worktree; it is armed as
+# .githooks/pre-commit through `git config core.hooksPath .githooks`.
+#
+# A hook is FILE state plus one LOCAL config key, and neither travels with the
+# tree - a fresh clone, a `git config --unset` or a lost exec bit disarms it
+# silently. check_commit_fence_armed.py is the detector for that: it asserts the
+# fence exists, is executable, the hook names it, the mining-k8s copy is
+# byte-equal, and the fence's own 15-case planted-defect suite passes. It is the
+# "already fixed upstream"/"working on the host" gap check_scheduler_units.py
+# exists for (t_41f354be), applied to the fence.
+unset fence_verdict
+fence_rc=0
+if [ "${COMMIT_FENCE_CHECKS:-1}" != "0" ]; then
+  {
+    echo
+    echo "---- the shared-tree commit fence is armed (card t_6d0b7dd7) ----"
+    "$PY" "$REPO/music/scripts/check_commit_fence_armed.py" --repo "$REPO"
+  } >> "$OUT" 2>&1 || fence_rc=$?
+  say "$TS - commit fence: rc=$fence_rc (armed on both lane repos; section in $OUT)"
+  fence_verdict="$(tail -n 1 "$OUT" 2>/dev/null || echo '(no fence output)')"
+  # rc=1 is the incident this card is about: a commit in the shared tree can
+  # carry a sibling's staged work again, because the fence that refuses it is no
+  # longer armed. rc=3 says the leg could not answer at all (no lane or no
+  # mining-k8s checkout) - reported the same way, because an unanswerable check
+  # is not a pass.
+  if [ "$fence_rc" -ne 0 ] && [ "$rc" -eq 0 ]; then
+    rc=6
+  fi
+fi
 
+DURATION=$(( $(date +%s) - START ))
 passed="$(grep -cE '^PASS ' "$OUT" || true)"
 expected="$(grep -cE '^FAILS ' "$OUT" || true)"
 bad="$(grep -cE '^BAD ' "$OUT" || true)"
@@ -248,6 +301,7 @@ case "$rc" in
   3) state="PANEL: the reviewer panel cannot run ($panel_fails panel check(s) failed) — the gates themselves are not implicated" ;;
   4) state="RENDER LOG: the log is not in step with the delivered renders ($ledger_fails render-log check(s) failed) — the gates and the panel are not implicated" ;;
   5) state="MEDIA: the campaign record names media the repo does not hold ($media_fails media check(s) failed) - the gates, the panel and the render log are not implicated" ;;
+  6) state="FENCE: the shared-tree commit fence is not armed ($(printf '%s' "$fence_verdict" | cut -c1-120)) - the gates, the panel, the render log and the media corpus are not implicated" ;;
   *) state="ERROR: unexpected exit $rc" ;;
 esac
 
@@ -256,7 +310,7 @@ say "$TS — gate matrix: rc=$rc $state pass=$passed expected_failures=$expected
 if [ "$rc" -ne 0 ]; then
   {
     echo "--- failing checks (run $TS, rc=$rc); full output: $OUT"
-    grep -E '^(BAD|FATAL|FAIL (check_panel_membership|probe_judges|check_render_ledger))' -A 2 "$OUT" | head -60
+    grep -E '^(BAD|FATAL|FAIL (check_panel_membership|probe_judges|check_render_ledger|check_commit_fence))' -A 2 "$OUT" | head -60
   } | tee -a "$LOG"
 fi
 
@@ -284,6 +338,8 @@ cat > "$STATUS" <<JSON
   "ledger_rc": ${ledger_rc:-0},
   "ledger_fails": ${ledger_fails:-0},
   "ledger_verdict": "$(j "${ledger_verdict:-(not run)}")",
+  "fence_rc": ${fence_rc:-0},
+  "fence_verdict": "$(j "${fence_verdict:-(not run)}")",
   "duration_s": $DURATION,
   "drill": $([ "$DRILL" = "1" ] && echo true || echo false),
   "output_file": "$OUT",
@@ -310,7 +366,7 @@ wired \`music/gates/check_gate_suite.sh\` into \`music-gate-matrix.timer\`
 Failing checks:
 
 \`\`\`
-$(grep -E '^(BAD|FATAL|FAIL (check_panel_membership|probe_judges|check_render_ledger|check_media_corpus_tracked))' -A 2 "$OUT" | head -60)
+$(grep -E '^(BAD|FATAL|FAIL (check_panel_membership|probe_judges|check_render_ledger|check_media_corpus_tracked|check_commit_fence))' -A 2 "$OUT" | head -60)
 \`\`\`
 
 Reproduce: \`bash music/gates/check_gate_suite.sh\` must exit 0 with
@@ -328,11 +384,21 @@ renders with
 which derives the entry from live state, or --backfill for all of them at once;
 then --check must exit 0. Do NOT hand-write an entry, and do NOT write one for a
 .refused marker — a refusal is a draft waiting on a human.
-For rc=5 (the campaign media, not a gate failure): every file `campaigns/*/MANIFEST.json`
+For rc=5 (the campaign media, not a gate failure): every file \`campaigns/*/MANIFEST.json\`
 names for an exported track must be TRACKED in this repo, a package under
-`music/packages/streaming/` must hold bytes rather than a symlink, and media in the
-working tree must not be untracked - an untracked master is one `git clean` from gone.
-Reproduce: `/usr/bin/python3 music/scripts/check_media_corpus_tracked.py --check`.
+\`music/packages/streaming/\` must hold bytes rather than a symlink, and media in the
+working tree must not be untracked - an untracked master is one \`git clean\` from gone.
+Reproduce: \`/usr/bin/python3 music/scripts/check_media_corpus_tracked.py --check\`.
+For rc=6 (the shared-tree commit fence is not armed, not a gate failure): a
+whole-index commit in this shared working tree can carry a sibling card's staged
+work again (commit 545faa3 swept four files card t_96dfc521 had staged; commit
+5cb2e3d reverted card t_450e7f39's landing 7 s after it landed). Re-arm it:
+\`git config core.hooksPath .githooks\` in this repo and in ~/mining-k8s, run
+\`chmod +x .githooks/pre-commit music/scripts/git_commit_fence.sh\`, and copy the
+source of record over the mining-k8s copy
+(\`cp music/scripts/git_commit_fence.sh ~/mining-k8s/scripts/git_commit_fence.sh\`).
+Reproduce: \`/usr/bin/python3 music/scripts/check_commit_fence_armed.py\` must exit 0;
+\`bash music/scripts/test_git_commit_fence.sh\` must print 15 PASS lines.
 
 Fix the gate (or its fixture) or re-point the judges, do not weaken the check.
 BODY

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# pre-commit — the arming half of the shared-tree commit fence (kanban t_6d0b7dd7).
+#
+# This file is ONLY a dispatcher. The decision lives in
+#     music/scripts/git_commit_fence.sh          (this repo = source of record)
+#     scripts/git_commit_fence.sh                (mining-k8s copy; kept byte-equal
+#                                                  by music/scripts/check_commit_fence_armed.py)
+# Reasoning, evidence and the escape hatches: read git_commit_fence.sh's header.
+#
+# Enabled with:  git config core.hooksPath .githooks
+# (set in both repos on nexus; check_commit_fence_armed.py fails when it is not)
+exec "$(git rev-parse --show-toplevel)/music/scripts/git_commit_fence.sh"
