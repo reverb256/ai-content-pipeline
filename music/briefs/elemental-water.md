@@ -39,6 +39,10 @@
 > 5. `sha256 fb78ecde6d5ae120e4fb7e9e742ee19100f7c6888ddce914310c26a655d5a13b` (971 lines /
 >    64 164 B) — two `check_brief_absences.py` findings cleared (`t_bdb94fb7`, 2026-10-16);
 >    §17 records them.
+> 6. `sha256 e51cd0b293e286d6d98afbfaaaa67806bf97a174903e84685b6a3ed1cf505c71` (1000 lines /
+>    65 873 B) — **superseded by THIS pass** (`t_6aa1e97f`): the §14 Runbook bullet's line count
+>    corrected from 88 to 133 after the runbook gained the `asset-pack` stage section; §18
+>    records it.
 >
 > **Oracle (card title):** 7.2/10. **Oracle (measured now, live):** **7.00/10**, reproduced by
 > `music/oracle.py --dry-run` in this pass. 7.00 ≥ 5.0, so the routing verdict — produce — is
@@ -777,8 +781,9 @@ genre's three lanes — rather than assuming the YouTube gate (`t_d9983bb9`).
 - Registry: `music/genres.yaml`, `music/lanes.yaml` — validated live (14 genres, 10 lanes)
 - Template: `music/prompts/elemental-water.md` (3810 B; style field measured 537/1000 chars)
 - Visual: `music/visuals/element-water.md` (1046 B)
-- Runbook: `brain/runbooks/music-game-assets.md` (**88 lines**, re-measured in this pass — the
-  write-time transcript said 53) — of the executables it names, `butler` and
+- Runbook: `brain/runbooks/music-game-assets.md` (**133 lines**, re-measured again in this pass —
+  the write-time transcript said 53, the 16:1x pass measured 88, and the file gained the
+  `asset-pack` stage section, §18) — of the executables it names, `butler` and
   `~/.hermes/vault/itch_io_key` are still absent (§10); the pack builder it names is here:
   `music/assets/pack.py` exists
 - Gates: `music/gates/` — `gate_quota` PASS live; `gate_sync_ready` exercised live on an empty
@@ -959,8 +964,9 @@ against live state and correct the ones that had aged.
    `renders[]` log with no entry for this genre; the only genre-named asset is a 5.000 s
    1280×720 prototype clip (ffprobe-measured).
 9. **§13 / §14** — the advance channel (`kanban_comment` tool, `t_5a93164a`), the genre-resolved
-   visual gate (`gate_for_stage` → `gate_youtube_authentic`, `t_d9983bb9`), the runbook's real
-   line count (**88**, not 53), the rubric version, the moved `oracle.py` line citations, the
+   visual gate (`gate_for_stage` → `gate_youtube_authentic`, `t_d9983bb9`), the runbook's line
+   count **as it stood in that pass** (**88**, not 53; **133** now that the runbook documents the
+   `asset-pack` stage — §18), the rubric version, the moved `oracle.py` line citations, the
    re-run check list, the engine pod (`sunolocal-source-75d58dbc97-7jfmc`, v0.1.3) and the status
    of every cited card (all `done`).
 10. **Two standing-check findings that named this brief were cleared**: `check_brief_figures`
@@ -997,4 +1003,31 @@ The counts after that headline are elided on purpose: they are live readings, an
 itself adds candidate lines to them.
 
 - **Superseded revision of this file:** `sha256 fb78ecde6d5ae120e4fb7e9e742ee19100f7c6888ddce914310c26a655d5a13b` (971 lines / 64 164 B).
+
+## 18. The runbook stopped describing the pack step as manual-only; its line count moved to 133 (card `t_6aa1e97f`, 2026-10-16)
+
+`brain/runbooks/music-game-assets.md` presented the pack step as a command a human runs
+by hand, so the runbook was the only place a reader learned the step exists — while
+`music/stages.yaml` had already grown the `asset-pack` stage (bot `producer`, after
+`gate`, before `package`; card `t_eb079b91`). The runbook now documents that stage: the
+stage's position, the per-genre resolution
+
+```
+/usr/bin/python3 music/registry.py derived-for-stage --stage asset-pack --genre <g>
+```
+
+(`build: yes` for the six gamer genres, `build: no` for the other eight — resolved live
+in this pass), the output convention `packages/<master-stem>-asset-pack`, the
+generator's rc (`0` ACCEPTED, `1` REJECTED), both gates, and that publish stays behind
+the `human-approval` gate. It points at
+`brain/playbooks/music-lane-architecture.md` §13 instead of being the sole record. The
+manual commands stay as the fallback for one pack built by hand.
+
+The runbook therefore measures **133 lines** (88 before this pass), and the §14 Runbook
+bullet above was corrected to match in the same commit. Checks run in this pass
+(`/usr/bin/python3`, from `/home/j_kro/ai-content-pipeline`):
+`music/scripts/check_brief_figures.py` **rc=0** and `music/scripts/check_doc_refs.py`
+**rc=0**.
+
+- **Superseded revision of this file:** `sha256 e51cd0b293e286d6d98afbfaaaa67806bf97a174903e84685b6a3ed1cf505c71` (1000 lines / 65873 B).
 

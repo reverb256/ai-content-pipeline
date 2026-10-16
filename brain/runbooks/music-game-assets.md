@@ -76,6 +76,51 @@ LICENCE.txt        the lane's licence of record, byte for byte
                    compares it and the manifest binds it by sha256
 ```
 
+## Who builds the pack — the `asset-pack` stage
+
+`music/stages.yaml` declares the `asset-pack` stage (bot `producer`), AFTER `gate`
+and BEFORE `package`: a pack derives from a master the quality gate already
+vetted, and a pack is not the release package
+(`brain/playbooks/music-lane-architecture.md` §13).
+
+The stage hardcodes nothing. It resolves whether THIS genre builds a pack from
+the genre's OWN lanes (`music/lanes.yaml` → `game-assets.derived_product`) and
+prints the exact command:
+
+```
+/usr/bin/python3 music/registry.py derived-for-stage \
+    --stage asset-pack --genre <g> [--master <master.wav>] [--bpm N] [--key K]
+```
+
+Read its answer before you run anything (measured 2026-10-16, card t_eb079b91:
+`build: yes` for the six gamer genres, `build: no` for the other eight):
+
+- `build: no` — no lane of this genre sells a pack. Run no generator and state
+  that on the card.
+- `run: NO` — the generator does not run under its pinned interpreter
+  (`/usr/bin/python3`, which needs `numpy` and `scipy`). Install the module.
+  Do not run the generator.
+- `build: yes` — run the command it printed. Output goes to
+  `packages/<master-stem>-asset-pack` at the repo root, keyed to the master's own
+  stem; `--out` MUST stay under `<repo>/packages/<name>`, because the generator
+  records pack-relative paths against that tree. State the tempo and key the
+  render was made at — the plan JSON at `/var/lib/music-plans/<plan-stem>.json`
+  carries both — because the generator only ESTIMATES them when none are stated.
+
+Check the generator's exit status. rc 0 = ACCEPTED (it prints its own acceptance
+block). rc 1 = REJECTED: a master too short for its loop count cannot make a
+shippable pack — comment the block and do NOT advance. Then run BOTH gates above
+against the pack. A gate FAIL means the pack is reworked.
+
+Publish stays behind the human gate. No stage uploads a pack: the itch.io draft
+goes through publishbot at `stage: human-approval`
+(`brain/playbooks/music-lane-architecture.md` §7). Measured on the lane host
+2026-10-16: `butler` is not installed (card t_8a715681) and
+`~/.hermes/vault/itch_io_key` is not there. The wiring is guarded by
+`music/scripts/check_pack_stage.py`.
+
+### Manual fallback — building one pack by hand
+
 Generate the pack with `python3 music/assets/pack.py <master.wav> --genre <g>`
 then run the two gates above. Loops are cut bar-aligned at the source tempo and
 never shorter than the 2 s musical floor (`MIN_LOOP_SPAN_S`, one definition in
