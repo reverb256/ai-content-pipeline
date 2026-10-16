@@ -59,10 +59,30 @@ def api(path, payload=None, timeout=30):
 def load_plan(path: str) -> dict:
     with open(path, encoding="utf-8") as fh:
         plan = json.load(fh)
-    for field in ("caption", "lyrics", "bpm", "key", "duration", "timesignature"):
+    for field in ("caption", "lyrics", "bpm", "duration", "timesignature"):
         if plan.get(field) in (None, ""):
             sys.exit(f"FATAL: plan is missing '{field}': {path}")
+    # `key` is deliberately NOT in that list (card t_1578cc47). A plan that
+    # states no key is a PLAN, not a malformed one: 11 of the 14 genre templates
+    # state no key (`planner.key_anchor_for()` returns null) and the ACE node
+    # resolves the key from the caption when `keyscale` is empty. Requiring a
+    # non-empty key here is what made the engine invent "C major" upstream -
+    # measured: this function exited FATAL on a plan whose key is null.
     return plan
+
+
+def wire_keyscale(plan: dict) -> str:
+    """The `keyscale` value the ACE node receives. "" means "no key stated".
+
+    NOT None. ComfyUI's own input validation stringifies a STRING input
+    (`val = str(val)`, execution.py in the live ComfyUI), so a JSON null arrives
+    at the GenerationParams node as the four-character key "None" — measured on
+    the live pod 2026-10-16 (card t_1578cc47) with a
+    GenerationParams -> PreviewAny probe: keyscale=None reached the node as
+    `keyscale='None'`, while keyscale="" reached it as `keyscale=''`. "" is the
+    node's own documented "leave empty for auto-detection".
+    """
+    return str(plan.get("key") or "").strip()
 
 
 def check_lyrics(plan: dict, allow_empty: bool) -> None:
@@ -98,7 +118,7 @@ def build(plan: dict, seed: int, filename: str) -> dict:
                          "lyrics": plan["lyrics"],
                          "bpm": int(plan["bpm"]),
                          "duration": float(plan["duration"]),
-                         "keyscale": plan["key"],
+                         "keyscale": wire_keyscale(plan),
                          "timesignature": str(plan["timesignature"])}},
         "3": {"class_type": "RunningHub ACE-Step Creator",
               "inputs": {"dit_handler": ["1", 0],
@@ -133,7 +153,8 @@ def main() -> int:
 
     print(f"plan     : {args.plan}")
     print(f"title    : {plan.get('title')}   authorship: {plan.get('authorship','(unstated)')}")
-    print(f"params   : {plan['bpm']} BPM · {plan['key']} · {plan['timesignature']}/4 · {plan['duration']}s")
+    print(f"params   : {plan['bpm']} BPM · {plan.get('key') or 'key=unknown'} · "
+          f"{plan['timesignature']}/4 · {plan['duration']}s")
     print(f"mode     : MANUAL (the plan is rendered as planned, not re-invented)")
     queued = api("/prompt", {"prompt": wf})
     pid = queued["prompt_id"]

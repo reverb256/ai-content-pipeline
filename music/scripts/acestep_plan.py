@@ -229,8 +229,12 @@ def build_suno_request(plan: dict) -> dict:
         "callback_url": None,
         "seed": None,  # we will pass seed separately if needed
         "engine": os.environ.get("SUNOLOCAL_ENGINE", "ace"),
-        # sunolocal extensions; None means "not specified", which the engine
-        # resolves from its own defaults rather than from the style caption.
+        # sunolocal extensions; None means "not specified". `bpm` then falls back
+        # to the engine's documented default (120). `keyscale` gets NO default:
+        # when the plan states no key the ACE node resolves the key from the
+        # caption, which is where the modality lives (card t_1578cc47). A value
+        # invented here would not sit behind the caption — the node injects a
+        # non-empty keyscale into its constrained decode and thereby overrides it.
         "bpm": int(plan["bpm"]) if plan.get("bpm") is not None else None,
         "keyscale": (str(plan["key"]).strip() or None) if plan.get("key") else None,
     }
