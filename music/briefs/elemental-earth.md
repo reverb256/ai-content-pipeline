@@ -689,11 +689,12 @@ also moved, and read the deployed payload back from the cluster.
   `origin/main`. At `e40c7f9` (15:31) the pair reads 0 behind / 61 ahead: the 15-commit upstream
   deficit was cleared by the reconciliation merge `ab33ad1` (14:23). A divergence count is
   stamped with the revision it was measured at, because it ages in minutes.
-- **Blueprint census, re-measured 2026-10-16 15:31 CDT:** 6 of the 14 genres carry a lyric
-  blueprint (`activist`, `anime-ending`, `anime-opening`, `chill-lounge`,
-  `epic-orchestral-boss`, `trance`); the other 8 do not. Measured through the registry loader
-  plus the `music/lyrics/blueprints/*.yaml` glob. It was 3 when this brief was written and 4 at
-  the 13:53 pass. `elemental-earth` still has none, so §8's "nothing exists for elemental-earth"
+- **Blueprint census:** 7 of the 14 genres carry a lyric blueprint (`activist`, `anime-ending`,
+  `anime-opening`, `chill-lounge`, `epic-orchestral-boss`, `jungle-dnb`, `trance`); the other 7 do
+  not. Measured through the registry loader plus the `music/lyrics/blueprints/*.yaml` glob. The
+  2026-10-16 15:31 pass behind this section measured the census at six, and it was 3 when this
+  brief was written; what landed since is `music/lyrics/blueprints/jungle-dnb.yaml` (card
+  `t_e6d422ec`). `elemental-earth` still has none, so §8's "nothing exists for elemental-earth"
   stands.
 - **Deployed payload, re-read 2026-10-16 15:31 CDT from `music-pipeline-payload`:** 38 keys —
   6 blueprints, 15 prompt entries (the 14 genre templates plus `anisong-genre-blocks.yaml`),
@@ -701,3 +702,4 @@ also moved, and read the deployed payload back from the cluster.
   `music/lyrics/` sheets. §7b and §14 said "three blueprints", which was true when measured.
 - **Corrected in place:** §7b (the payload's blueprint count), §14 (correction 5's divergence and
   the payload sentence).
+- **Superseded by this pass (card `t_e6d422ec`, 2026-10-16):** `sha256 55e049c8ef45d1af0772847a755838d589417292da83aa094b59b03f3026c9c2` (703 lines / 43754 B) — the census bullet above was restated as a live claim when `music/lyrics/blueprints/jungle-dnb.yaml` landed. No genre finding was reopened.

@@ -80,7 +80,7 @@ That is not trivia: it is the root cause of a live dispatch failure (§11.3).
 | Lanes | `streaming`, `youtube-mix`, `direct-license` |
 | Cadence | 2/wk |
 | Video shape | `mix-60min` |
-| Lyric blueprint | **none for this genre** — 6 of the 14 genres have one (activist, anime-ending, anime-opening, chill-lounge, epic-orchestral-boss, trance; 4 at the §14 pass, when `anime-ending.yaml` landed) |
+| Lyric blueprint | `music/lyrics/blueprints/jungle-dnb.yaml` — **added 2026-10-16 by card `t_e6d422ec`** (§16). 7 of the 14 genres have one (activist, anime-ending, anime-opening, chill-lounge, epic-orchestral-boss, jungle-dnb, trance); it was 4 at the §14 pass, when `anime-ending.yaml` landed |
 | Registry note | `"Same Beatport ban applies. Amen-break / ragga vocal direction."` |
 
 Registry `defaults:` that bind every track (`music/genres.yaml` lines 20–25; line 19 is blank,
@@ -306,12 +306,13 @@ be written by j_kro. Plan the card around that, not as a blocker discovered late
 
 Two live counterexamples make the rule concrete rather than theoretical:
 
-1. There is **no blueprint for jungle-dnb**. Blueprints exist for 6 of the 14 genres
-   (`music/lyrics/blueprints/{activist,anime-ending,anime-opening,chill-lounge,epic-orchestral-boss,trance}.yaml` — four of them
-   at the §14 pass, when `anime-ending` landed at 14:03, commit `1356e28`). The planner's
-   `load_blueprint()` returns `{}` for this genre, so `bpm_anchor_for()` falls through to
-   the caption — which works (§6.3), but the `[theme]` and `title_candidates` a blueprint
-   would supply are absent.
+1. This genre **had no blueprint until 2026-10-16**, when card `t_e6d422ec` added
+   `music/lyrics/blueprints/jungle-dnb.yaml` (§16). So this counterexample is now history rather
+   than a live gap: before it, `lyrics.py scaffold --genre jungle-dnb` refused outright (rc=2,
+   "no lyric blueprint"), `planner.py`'s `load_blueprint()` returned `{}`, and `bpm_anchor_for()`
+   fell through to the caption — which works (§6.3), but the `theme` and `title_candidates` a
+   blueprint supplies were absent. `anime-ending.yaml` landed at 14:03 the same afternoon
+   (commit `1356e28`).
 2. `planner.py`'s own docstring records the incident that created the caption-BPM path:
    *"without it the draft path fell back to a flat 100, which is right for almost nothing:
    **jungle-dnb came out at 100 against its own stated 168**, and anime-opening at 100
@@ -679,7 +680,7 @@ The genre's own 5-second stub is not a mix and cannot be stretched into one.
 | Prompt template | `music/prompts/jungle-dnb.md` | complete, 4 032 B, style field 653/1000 |
 | Visual style doc | `music/visuals/urban-grain.md` | complete, 1 157 B |
 | Visual render | `music/visuals/urban_grain.mp4` | 5 s stub — fails the gate (§7) |
-| Lyric blueprint | — | **does not exist for jungle-dnb** (6 of the 14 genres have one; 4 at the §14 re-read) |
+| Lyric blueprint | `music/lyrics/blueprints/jungle-dnb.yaml` | **added 2026-10-16** by card `t_e6d422ec` (§16) — 7 331 B, the 12 schema keys, `title_candidates[0]` `Two Speeds`; 7 of the 14 genres have one (4 at the §14 re-read) |
 | Lyrics/track dir | — | none (`music/lyrics/` has activist, anime-opening, chill-lounge, trance only) |
 | Cluster payload | `music-pipeline-payload` ConfigMap | carries the template + registry, md5-verified (§1) |
 | Plans | `/var/lib/music-plans/` | **no jungle-dnb plan** |
@@ -916,8 +917,10 @@ covers:**
 | `t_e86c2110` | music-producer | `anime-opening` and `chiptune-8bit` still cite `genres.yaml` **lines 19–25** for a block that is **20–25** (line 19 is blank). `music/scripts/check_brief_line_refs.py`, added by the §14 pass, is the regression and currently FAILs on exactly those two sites. |
 
 **Open item for j_kro (creative direction, not this lane's call):** the brief queue entry
-needs a `title`, and this genre has no blueprint supplying `title_candidates`. Nothing in
-this brief invents one.
+needs a `title`. `music/lyrics/blueprints/jungle-dnb.yaml` (card `t_e6d422ec`, §16) now supplies
+three candidates — `Two Speeds`, `Slow Grid Toast`, `Wheel It Forward` — and `[0]` is also the
+track-dir slug `music/lyrics/jungle-dnb/two-speeds` that `lyrics.py scaffold` derives. This brief
+still does not decide: j_kro owns the release title.
 
 ---
 
@@ -1102,12 +1105,64 @@ census as stale — it moved from 4 to 6 during the afternoon — and the same c
 count sat in §1, §4, §6.1, §8 and §14. Re-measured and corrected in place.
 
 - **Superseded revision of this file:** `sha256 52891a79d8dde47744a00dd2ba1e8ca595b205c7fdfe91b9b8ebc129828e1800` (1096 lines / 69660 B).
-- **Blueprint census, re-measured 2026-10-16 15:31 CDT:** 6 of the 14 genres carry a lyric
-  blueprint (`activist`, `anime-ending`, `anime-opening`, `chill-lounge`,
-  `epic-orchestral-boss`, `trance`); the other 8 do not. `jungle-dnb` is still one of the 8, so
-  §4's counterexample is unchanged — only the count and the file list moved.
+- **Blueprint census, re-measured 2026-10-16 15:31 CDT:** the census read six, listing
+  `activist`, `anime-ending`, `anime-opening`, `chill-lounge`, `epic-orchestral-boss` and
+  `trance`; `jungle-dnb` was then among the genres that had none, so §4's counterexample was live
+  and only the count and the file list had moved. This bullet is the pass record and is not
+  restamped: the live census, which moved when `music/lyrics/blueprints/jungle-dnb.yaml` landed,
+  is stated in §16.
 - **Clone divergence:** the pair this brief records holds at `456d525` (30 ahead / 15 behind). At
   `e40c7f9` (15:31) it reads 0 behind / 61 ahead: the reconciliation merge `ab33ad1` (14:23)
   cleared the 15-commit upstream deficit that had "not moved all day".
 - **Corrected in place:** §1's table row, §4 counterexample 1, §6.1's divergence sentence, §8's
   asset table, §14's re-measured row and §14's correction 10.
+
+---
+
+## 16. The lyric blueprint landed (card `t_e6d422ec`, 2026-10-16)
+
+`music/lyrics/blueprints/jungle-dnb.yaml` is in the tree. Card `t_e6d422ec` wrote it because the
+queue entry for this genre could not land without it: the chart's `check-queue-sync.sh` FAILs any
+`draft` entry whose genre has no blueprint in the payload (reproduced rc=1 without the file, rc=0
+with it — card `t_97c92df2` §4), and the lane side failed the same way,
+`lyrics.py scaffold --genre jungle-dnb` → **rc=2**, "FAIL: no lyric blueprint".
+
+**The live blueprint census: 7 of the 14 genres carry a lyric blueprint** — `activist`,
+`anime-ending`, `anime-opening`, `chill-lounge`, `epic-orchestral-boss`, `jungle-dnb`, `trance`;
+the other 7 do not. Read live at this pass through the registry loader plus the
+`music/lyrics/blueprints/*.yaml` glob, not transcribed.
+
+What the file carries, and how each piece was checked:
+
+| Field | Value | Evidence |
+|---|---|---|
+| `bpm_anchor` | **168** | the genre's caption states 168 and the queue entry pins `bpm: 168`; `planner.py show --genre jungle-dnb` prints `"bpm_anchor": 168` where it printed `null` before |
+| `structure` | `Intro`, `Break`, `Hook`, `Break`, `Hook`, `Break`, `Outro` | the template's own tag sheet, verbatim and in order — compared programmatically against `planner.load_template("jungle-dnb")["structure"]`: identical, repeats included |
+| `genre` / `family` | `jungle-dnb` / `edm` | `music/genres.yaml` lines 47–54 |
+| `theme` / `voice_notes` | brief §2 Intent and §4 | transcription of the human-authored artifacts, not invention |
+| `avoid` | the template's Exclude Styles plus the clinical-DnB drift | 3 quoted phrases, which `planner.validate()` enforces against a finished sheet |
+| `title_candidates` | `Two Speeds`, `Slow Grid Toast`, `Wheel It Forward` | the field the queue entry was blocked on; §12 keeps the release title j_kro's call |
+| `rhyme` / `line_length` / `mood_words` | this lane's craft call | brief §2's contract: ragga toast on the slow grid, 2-4 chantable lines, call-and-response |
+
+Before and after, measured with the repo's own readers:
+
+```
+planner.py show --genre jungle-dnb    BEFORE  "structure_source": "template", "blueprint": false, "bpm_anchor": null
+                                      AFTER   "structure_source": "blueprint", "blueprint": true,  "bpm_anchor": 168
+lyrics.py scaffold --genre jungle-dnb BEFORE  rc=2  FAIL: no lyric blueprint for 'jungle-dnb'
+                                      AFTER   rc=0  scaffolded music/lyrics/jungle-dnb/two-speeds
+```
+
+- **Superseded revision of this file:** `sha256 1f866e212992a6dc4485bf78f4b408a32b2d1d79e15a31396460817cba606c37` (1113 lines / 71235 B).
+- **The scaffold is still refused, and no track dir was left behind.** `gate_lyrics_original --track-dir … --strict` FAILs the scaffolded sheet with 7 × "placeholder guidance left in" plus `authorship.status=incomplete`, so the draft guard is intact; the scaffold was written into a scratch copy of `music/`, not this worktree, so `music/lyrics/jungle-dnb/` does not exist here.
+- **Still owed, and not this card's step:** the chart payload copy. `music-pipeline-payload` does not carry `jungle-dnb.yaml` until card `t_97c92df2` runs `sync-payload.sh` under `/home/j_kro/mining-k8s/helm/charts/music-pipeline/` and commits that repo; `check-payload-sync.sh` holds the two copies identical.
+- **Census consequence, corrected in the same commit:** the briefs that cited the census as six were restated as live claims — `activist.md` (§1 and its §13), `chiptune-8bit.md` (§13), `elemental-earth.md` (§15), `elemental-water.md` (§6.3 and §15) and this file (§1, §4, §8, §12, §15). `commentary-beds.md` was **not** touched: card `t_b976f49f` had that file modified and uncommitted while this pass ran, so its census bullet stays with that card.
+- **Same class, not fixed here (no check reads code comments).** `music/planner/planner.py` and `music/tests/test_planner.py` still quote the blueprint census as it stood when they were written:
+
+  ```text
+  planner.py:182  (load_blueprint docstring)   "… when it exists (3 of 15 genres do)."
+  planner.py      (bpm_in_caption docstring)   "the only tempo signal available for the 11 genres that have no blueprint yet"
+  tests/test_planner.py:44  (comment)          "Only 3 of 14 genres have a blueprint, so 11 …"
+  ```
+
+  Each figure was accurate when written; each now reads 7 of 14. Filed as a follow-up card rather than edited inside this one.

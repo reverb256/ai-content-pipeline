@@ -51,9 +51,9 @@ that says `python3 music/…` inherits the trap; the systemd units use `/usr/bin
 | Style caption | 585 chars (template states 585/1000; measured 585) |
 | Registry note | "Ad-suitability risk — audience-funded > ad-funded. Sync for doc/film is the pro outlet." |
 
-**Activist is one of only six genres with a lyric blueprint** — `music/lyrics/blueprints/`
+**Activist is one of only seven genres with a lyric blueprint** — `music/lyrics/blueprints/`
 holds exactly `activist.yaml`, `anime-ending.yaml`, `anime-opening.yaml`, `chill-lounge.yaml`,
-`epic-orchestral-boss.yaml`, `trance.yaml`. So this genre does not inherit the planner's flat `bpm = 100` fallback: the draft path reads the 96 anchor.
+`epic-orchestral-boss.yaml`, `jungle-dnb.yaml`, `trance.yaml`. So this genre does not inherit the planner's flat `bpm = 100` fallback: the draft path reads the 96 anchor.
 
 ## 2. Score audit — the filed 7.25 is stale, and cadence fit is a clock, not a signal
 
@@ -299,8 +299,8 @@ live reads agree, §12: `music/planner/planner.py show --genre activist` prints
 `blueprint["bpm_anchor"] == 96` (a `dict`, not the flat keys `show` prints); and a live
 `plan --lyrics-mode draft` writes `"bpm": 96` because `:470` reads
 `ctx["blueprint"].get("bpm_anchor") or 100`. So this genre never takes the flat 100
-fallback that the **eight blueprint-less genres** take (`load_blueprint()` returns `{}`
-when `music/lyrics/blueprints/<genre>.yaml` is absent, and only 6 of the 14 genres have one — its own
+fallback that the **seven blueprint-less genres** take (`load_blueprint()` returns `{}`
+when `music/lyrics/blueprints/<genre>.yaml` is absent, and only 7 of the 14 genres have one — its own
 docstring still quotes an old genre total). At 96 BPM, 4/4:
 
 ```
@@ -672,11 +672,11 @@ blueprint census and the clone divergence. Re-measured and corrected in place; n
 this brief was touched.
 
 - **Superseded revision of this file:** `sha256 7e9a1cc897a09f4e5fa6126cc765e9fdf10ff9a74fdb68d4e95ee8a15584967c` (665 lines / 41631 B).
-- **Blueprint census, re-measured 2026-10-16 15:31 CDT:** 6 of the 14 genres carry a lyric
-  blueprint — `activist`, `anime-ending`, `anime-opening`, `chill-lounge`,
-  `epic-orchestral-boss`, `trance`. The other 8 take the planner's flat `bpm = 100` fallback.
-  It was 3 when this brief was written (13:35) and 3 at the 13:54 pass; two anisong blueprints
-  and one gamer blueprint landed later the same afternoon.
+- **Blueprint census:** 7 of the 14 genres carry a lyric blueprint — `activist`, `anime-ending`,
+  `anime-opening`, `chill-lounge`, `epic-orchestral-boss`, `jungle-dnb`, `trance`. The other 7 take
+  the planner's flat `bpm = 100` fallback. The 2026-10-16 15:31 pass behind this section measured
+  the census at six, and it was 3 when this brief was written (13:35); what landed since is two
+  anisong blueprints, one gamer blueprint and `jungle-dnb.yaml` (card `t_e6d422ec`).
 - **Clone divergence, re-measured 2026-10-16 15:31 CDT:** the pair reads 0 behind / 61 ahead of
   `origin/main` at `e40c7f9`. The 15-commit upstream deficit this brief recorded at 13:35 to
   13:58 was cleared by the reconciliation merge `ab33ad1` (14:23); the local tip still rises
@@ -686,3 +686,4 @@ this brief was touched.
   census), §8 (the deployed payload's blueprint count, re-read from the live
   `music-pipeline-payload` ConfigMap: 38 keys, 6 of them blueprints), §11 (the "3 blueprints
   only" line) and §12 correction 5.
+- **Superseded by this pass (card `t_e6d422ec`, 2026-10-16):** `sha256 3b8a9d7404380bcf129652902f6892d536ce148b3de224c60b3c3887ba0879fc` (688 lines / 43483 B) — the census statements above and in §1 and §6 were restated as live claims when `music/lyrics/blueprints/jungle-dnb.yaml` landed. Only the counts moved; no genre finding was reopened.
