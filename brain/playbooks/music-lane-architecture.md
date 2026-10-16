@@ -153,7 +153,7 @@ Decisions recorded in the file:
 
 `music/stages.yaml` is the stage → bot map for the music board. The driver reads it when
 `BOARD=music`, so the lane is data-driven: add a stage by adding a block here, never by
-editing the driver. The file holds 14 stages, 12 producing plus 2 human gates.
+editing the driver. The file holds 15 stages, 13 producing plus 2 human gates.
 
 | Stage | Bot | Output | Gate / advance rule |
 |---|---|---|---|
@@ -165,6 +165,7 @@ editing the driver. The file holds 14 stages, 12 producing plus 2 human gates.
 | `stems` | producer | stems from Suno Studio | `gate_stems_present` |
 | `master` | producer | loudness-normalised master | `gate_loudness` |
 | `gate` | reviewer-deepseek | pass/fail + findings | `gate_quality` (different model than the maker) |
+| `asset-pack` | producer | asset pack derived from the master (loops, stems, one-shots, SFX) — only for a genre whose lanes include `game-assets` | `gate_sync_ready` (pack mode) + `gate_loop_points`, both resolved from `lanes.yaml` `game-assets.derived_product` by `registry.py derived-for-stage`; the generator's own rc is checked (`0` accepted, `1` REJECTED); no genre builds it unless its lanes sell it |
 | `package` | producer | manifest + metadata + ISRC + artwork | `gate_release_ready` |
 | `visual` | videobot | platform-native video | resolved from the genre's lanes: `lanes.yaml` `stage_gates` → `gate_youtube_authentic` when a lane of that genre is guarded by it, else `none` (stated on the card) |
 | `publish` | publishbot / distributor | private upload or distribution | human approval before public |
@@ -673,6 +674,32 @@ $1,000–10,000; asset packs $2,500–7,500 for 5–10 tracks; indie game sync $
 The asset lane is the highest-automation, lowest-gatekeeper revenue path. That makes it the
 natural first lane to run at full autonomy.
 
+**Automation — the `asset-pack` stage (2026-10-16, card t_eb079b91).** The lane had a
+generator (`music/assets/pack.py`) and two gates and no stage: `music/stages.yaml` declared
+14 stages and not one ran the generator, so the primary lane of all six gamer genres ended at
+a master plus a manual step a human had to remember. The stage now exists and hardcodes
+nothing:
+
+* the product is declared ON THE LANE — `music/lanes.yaml` → `game-assets.derived_product`
+  (stage, generator, interpreter, output convention, gates, required modules). A declared
+  product whose stage does not exist FAILS `registry.py validate`, so "a generator nothing
+  runs" cannot come back;
+* `music/registry.py derived-for-stage --stage asset-pack --genre <g>` resolves whether THIS
+  genre builds a pack from the genre's own lanes, and prints the exact command. Same selector
+  shape as `gate-for-stage` (t_d9983bb9): a decision hardcoded in a prompt cannot see that the
+  prompt and the registry disagree;
+* position: AFTER `gate`, BEFORE `package` — a pack derives from a master the independent
+  quality gate already vetted, and a pack is not a release package;
+* output convention: `packages/<master-stem>-asset-pack` (repo root), the generator's own
+  default, keyed to the master's stem;
+* dependency answer: the interpreter is PINNED (`/usr/bin/python3`) and a check EXECUTES the
+  generator's entrypoint under it rather than trusting a declaration (t_5ed495eb measured that
+  the generator could not run at all when scipy was missing);
+* publish is untouched: the itch.io draft goes through publishbot behind the
+  `human-approval` gate, and the stage never uploads.
+
+Guarded by `music/scripts/check_pack_stage.py`.
+
 ---
 
 ## 14. Citation map — who reads which section
@@ -683,10 +710,13 @@ Every file below cites this document. Each reference resolves to a heading in th
 |---|---|---|
 | `music/genres.yaml` (header) | §2 | 2. Genre registry |
 | `music/lanes.yaml` (header) | §3 | 3. Lane registry |
+| `music/lanes.yaml` (`game-assets.derived_product`) | §13 | 13. Additional lane: asset packs |
+| `music/registry.py` (`derived-for-stage`) | §3, §13 | 3. Lane registry, 13. Asset packs |
 | `music/gates/gate_loop_points.py` | §3 | 3. Lane registry (`game-assets`) |
 | `music/gates/gate_sync_ready.py` | §3, §5 | 3. Lane registry, 5. Gates |
 | `music/stages.yaml` (header) | §4 | 4. Pipeline stages |
 | `music/stages.yaml` (human-approval prompt) | §7 | 7. Human gates |
+| `music/stages.yaml` (`asset-pack` prompt + header contract) | §13 | 13. Additional lane: asset packs |
 | `music/gates/gate_loudness.py` | §5 | 5. Gates (row `gate_loudness`) |
 | `music/gates/gate_release_ready.py` | §5 | 5. Gates |
 | `music/gates/gate_stems_present.py` | §5 | 5. Gates |

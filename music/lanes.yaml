@@ -83,6 +83,34 @@ lanes:
     bot: distributor
     gate: gate_sync_ready
     requires: [stems, loop_point, seamless_loop, metadata]
+    # ------------------------------------------------------------------
+    # Derived product (added 2026-10-16, card t_eb079b91).
+    #
+    # A lane whose surface sells a DERIVED artifact declares the product here:
+    # the generator, the interpreter that runs it, the output convention and the
+    # gates the artifact must pass. `stage` names the stage in music/stages.yaml
+    # that runs it — registry.py validate FAILS when no stage runs it, which is
+    # the defect this block exists to kill: before this block the game-assets
+    # lane had a generator and two gates but no stage, so a human had to
+    # remember to run `music/assets/pack.py` by hand (§13: "It monetizes work
+    # already done for the sync lane").
+    #
+    # Resolution is from the GENRE's lanes, never from a hardcoded genre list —
+    # the same rule as stage_gates below. Read it with:
+    #   /usr/bin/python3 music/registry.py derived-for-stage \
+    #       --stage asset-pack --genre <genre>
+    # ------------------------------------------------------------------
+    derived_product:
+      stage: asset-pack
+      generator: music/assets/pack.py
+      interpreter: /usr/bin/python3
+      out: packages/<master-stem>-asset-pack
+      gates: [gate_sync_ready, gate_loop_points]
+      requires_modules: [numpy, scipy]
+      why: "A finished master is cut into bar-aligned seamless loops, HPSS stems,
+        one-shots and SFX — the product this lane's surface sells. It is built
+        AFTER the master and BEFORE the release package, so the pack derives
+        from a master the quality gate already vetted."
     notes: "Loopable + seamless loop points mandatory. Indie devs buy asset packs."
 
   stock-ai-native:

@@ -79,6 +79,45 @@
 # the job key, not the plan stem; reachable through the task's `audio_url`) and
 # zephyr's ~/Music/acestep/suno-<...>.flac (ComfyUI's own output directory).
 #
+# DERIVED PRODUCT CONTRACT (added 2026-10-16 t_eb079b91)
+# -----------------------------------------
+# The `asset-pack` stage builds the DERIVED product of a finished master for the
+# `game-assets` lane. Before it existed, the generator (music/assets/pack.py)
+# and its two gates were wired to nothing: `music/stages.yaml` declared 14
+# stages and not one of them ran the generator, so the primary lane of all six
+# gamer genres ended at a master plus a manual step.
+#
+# Position — AFTER `gate`, BEFORE `package`. The pack derives from a master the
+# independent quality gate already vetted; building it earlier would spend CPU
+# on a master the reviewer may reject. It is NOT the `package` stage: a pack is
+# not a release package (different shape, different gate — §13).
+#
+# The stage prompt hardcodes NOTHING about which genres build a pack, which
+# generator runs, or where output goes. It calls:
+#
+#   /usr/bin/python3 music/registry.py derived-for-stage \
+#       --stage asset-pack --genre <genre> [--master <wav>] [--bpm N] [--key K]
+#
+# which resolves the product from the GENRE'S LANES (lanes.yaml
+# `game-assets.derived_product`), prints the exact command, and answers
+# `build: no` for a genre whose lanes do not include game-assets. The same
+# selector shape as `gate-for-stage` (card t_d9983bb9), for the same reason: a
+# decision hardcoded in a prompt cannot see that the prompt and the registry
+# disagree.
+#
+# Output convention: packages/<master-stem>-asset-pack (repo root) — the
+# generator's own default, keyed to the master's stem so two tracks cannot share
+# a pack directory. The generator records pack-relative paths relative to that
+# tree, so `--out` MUST stay under <repo>/packages/<name>.
+#
+# Publish is untouched: the itch.io draft goes through publishbot behind the
+# `human-approval` gate. The stage never uploads (butler is not installed here,
+# card t_8a715681).
+#
+# Guarded by music/scripts/check_pack_stage.py (--selftest carries the failure
+# shapes: a product with no stage, a product whose stage is a human gate, a
+# prompt that names no resolver, and a prompt that uploads).
+#
 version: 1
 
 stages:
@@ -113,6 +152,10 @@ stages:
   - stage: gate
     bot: reviewer-deepseek
     prompt: "Run the quality-gate stage for kanban task {card} (board music). Independent review on a DIFFERENT model than the producer. Judge the artifact against the music rubric (quality, originality, not template-slop). Record the verdict bound to the artifact hash, then run: python3 music/gates/gate_quality.py. If it fails, comment the specific findings and do NOT advance. You review; you do not redo the work. If it PASSES, advance the card to package: post the marker 'stage: package' on {card} with the kanban_comment tool (the hermes kanban CLI is REFUSED for dispatcher-spawned workers — t_5a93164a). Without a kanban tool, run bash scripts/automation/advance-stage.sh {card} package --board music and check the exit status: 1 means the marker was NOT written and the card did NOT advance."
+
+  - stage: asset-pack
+    bot: producer
+    prompt: "Run the asset-pack stage for kanban task {card} (board music). A pack is a DERIVED product of a finished master (music-lane-architecture.md §13). DECIDE FIRST whether this genre builds one — never assume: /usr/bin/python3 music/registry.py derived-for-stage --stage asset-pack --genre <the card's genre> (optionally add --master <master.wav> --bpm <plan bpm> --key <plan key>). It resolves from the GENRE'S LANES whether a lane of this genre sells a pack, names the generator, the interpreter, the output directory and the gates, and PRINTS THE EXACT COMMAND. If it answers 'build   : no', this genre has no lane that sells a pack: comment that on {card}, run no generator, and advance to package (a pack for a lane the genre does not declare is work nobody sells). If it answers 'run     : NO', the generator does not run under its pinned interpreter — comment that line verbatim and do NOT advance; install the missing module for that interpreter first (music/scripts/check_pack_stage.py). Otherwise run the command it printed, with the tempo and key the render was actually made at (the plan JSON at /var/lib/music-plans/<plan-stem>.json carries bpm + key) — the generator only ESTIMATES a tempo/key when none is stated, and an estimated key is a fabricated claim. CHECK THE COMMAND'S EXIT STATUS: rc 0 = the generator accepted the pack; rc 1 = it printed an acceptance block and REJECTED the pack (a master too short for its loop count cannot make a shippable pack) — comment that block and do NOT advance. The output directory is packages/<master-stem>-asset-pack, keyed to the master's own stem; do not invent a name. Then run BOTH gates it printed, against the pack: python3 music/gates/gate_sync_ready.py --package-dir <pack> --lane game-assets (pack mode measures every loop's seam), and python3 music/gates/gate_loop_points.py --pack-dir <pack> (every loop, PASS). A gate FAIL means the pack is reworked — do NOT advance. NEVER upload: the itch.io draft goes through publishbot behind the human-approval gate, and butler is not installed here. Comment the resolved answer, the command, the pack path and both gate results on {card}. Then advance the card to package: post the marker 'stage: package' on {card} with the kanban_comment tool (the hermes kanban CLI is REFUSED for dispatcher-spawned workers — t_5a93164a). Without a kanban tool, run bash scripts/automation/advance-stage.sh {card} package --board music and check the exit status: 1 means the marker was NOT written and the card did NOT advance."
 
   - stage: package
     bot: producer
