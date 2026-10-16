@@ -411,10 +411,18 @@ check("the 600 s plan keeps duration 600",
 # a guard and not a no-op. 15 s is the commentary-beds template's own off-grid
 # cutdown - 7.5 bars at its 2.00 s bar - which §4 of its brief rejects in favour
 # of 16 s ("Do not silently ship a 15 s file and call the kit bar-aligned").
-r15, _ = plan_instrumental("chill-lounge", 15, "15")
+r15, p15 = plan_instrumental("chill-lounge", 15, "15")
 check(f"15 s (the off-grid 7.5-bar cutdown) is still refused (rc={r15.returncode})",
       r15.returncode == 1 and "VALIDATION FAILED" in (r15.stdout + r15.stderr),
       (r15.stdout + r15.stderr).strip()[-200:])
+# ...and NOT written. The plan file IS the render rail's queue and the render
+# stage does not run this check, so a refused plan that is still written is a
+# plan the render stage renders anyway. That is precisely what happened to the
+# 16 s sting before this card: plan on disk, pod red, artifact 16.000 s.
+check("a refused duration writes NO plan for the render rail to pick up",
+      p15 is None and "REFUSED: no plan written" in (r15.stdout + r15.stderr),
+      f"plan={'written' if p15 else 'absent'} "
+      f"{(r15.stdout + r15.stderr).strip()[-160:]}")
 
 # (d) the sting entry's OWN genre, at the rail. A 16 s plan for commentary-beds
 # must carry no duration problem - the exact plan the queue writes today
