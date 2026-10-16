@@ -44,6 +44,15 @@
 #      an entry by hand. music/scripts/check_render_ledger.py is the missing
 #      step, and this is its scheduled home. It exits 4, so a log that is out of
 #      step is never read as a gate defect.
+#   2d. CHECK THE CAMPAIGN MEDIA (card t_8f515be3): `campaigns/virtual-reflections/`
+#      kept its record in git and its media outside it - 11 media files lived only in
+#      the WIP ref `origin/wip/atlas-backup-20261014`, 5 more (both copies of
+#      sincerely.wav, both of this-small-forever.wav and this-small-forever.mp4) in
+#      NO ref at all, while MANIFEST.json named audio_file/master_file paths git did
+#      not hold and a verification run's package carried two symlinks into a pruned
+#      scratch dir. Nothing ran that compared the record to the repo. This is its
+#      scheduled home. It exits 5, so a corpus that disagrees with its own record is
+#      never read as a gate, panel or render-log defect.
 #   3. RECORD one summary line in performance/music-gate-matrix.log and a
 #      machine-readable performance/music-gate-matrix.status.json. Those are the
 #      files music-weekly-digest.service reads, so the result reaches the weekly
@@ -82,6 +91,9 @@
 #   RENDER_LOG_CHECKS           "0" = skip the render-log phase (default 1 = run it).
 #                               For a host that has no render rail at all — never to
 #                               silence a red one.
+#   MEDIA_CORPUS_CHECKS         "0" = skip the campaign-media phase (default 1 = run it).
+#                               For a checkout with no campaign media - never to silence
+#                               a record that names files git does not hold.
 set -uo pipefail
 
 REPO="${GATE_MATRIX_REPO:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
@@ -188,6 +200,35 @@ if [ "${RENDER_LOG_CHECKS:-1}" != "0" ]; then
   fi
 fi
 
+# --- 2d. the campaign media (card t_8f515be3) -------------------------------
+# `campaigns/*/MANIFEST.json` is the campaign's own record, and it names the file
+# for every track: audio_file, master_file, source_mp4_file. Measured 2026-10-16:
+# the Virtual Reflections record named 10 files git did not hold (8 of them carried
+# only by a WIP ref, 2 by NO ref at all - both copies of sincerely.wav), and the
+# repo carried two package "masters" that were symlinks into a pruned scratch dir
+# (79/82 B: git stores the target string). Nothing compared the record to the repo.
+# This is the missing detector - the same shape as the legs above, and distinct
+# from a gate failure for the same reason: a record that names files nobody holds
+# must never be read as a broken gate.
+unset media_verdict
+media_rc=0
+if [ "${MEDIA_CORPUS_CHECKS:-1}" != "0" ]; then
+  {
+    echo
+    echo "---- the campaign media the record names (card t_8f515be3) ----"
+    "$PY" "$REPO/music/scripts/check_media_corpus_tracked.py" --check --repo "$REPO"
+  } >> "$OUT" 2>&1 || media_rc=$?
+  say "$TS - campaign media: rc=$media_rc (the record vs the repo; section in $OUT)"
+  media_verdict="$(tail -n 1 "$OUT" 2>/dev/null || echo '(no media corpus output)')"
+  # rc=1 is the incident: the record names media git does not hold, a package
+  # "master" is a symlink, or media sits in the tree that no commit holds.
+  # rc=3 says the leg could not answer at all (no git checkout) - reported the
+  # same way, because an unanswerable check is not a pass.
+  if [ "$media_rc" -ne 0 ] && [ "$rc" -eq 0 ]; then
+    rc=5
+  fi
+fi
+
 DURATION=$(( $(date +%s) - START ))
 
 passed="$(grep -cE '^PASS ' "$OUT" || true)"
@@ -196,6 +237,7 @@ bad="$(grep -cE '^BAD ' "$OUT" || true)"
 fatal="$(grep -cE '^FATAL' "$OUT" || true)"
 panel_fails="$(grep -cE '^FAIL (check_panel_membership|probe_judges)' "$OUT" || true)"
 ledger_fails="$(grep -cE '^FAIL check_render_ledger' "$OUT" || true)"
+media_fails="$(grep -cE '^FAIL check_media_corpus_tracked' "$OUT" || true)"
 interp="$(grep -m1 '^interpreter: ' "$OUT" 2>/dev/null | sed 's/^interpreter: //' || true)"
 verdict="$suite_verdict"
 
@@ -205,10 +247,11 @@ case "$rc" in
   2) state="REFUSED: the suite would not run" ;;
   3) state="PANEL: the reviewer panel cannot run ($panel_fails panel check(s) failed) — the gates themselves are not implicated" ;;
   4) state="RENDER LOG: the log is not in step with the delivered renders ($ledger_fails render-log check(s) failed) — the gates and the panel are not implicated" ;;
+  5) state="MEDIA: the campaign record names media the repo does not hold ($media_fails media check(s) failed) - the gates, the panel and the render log are not implicated" ;;
   *) state="ERROR: unexpected exit $rc" ;;
 esac
 
-say "$TS — gate matrix: rc=$rc $state pass=$passed expected_failures=$expected misbehaved=$bad fatal=$fatal panel_fails=$panel_fails ledger_rc=$ledger_rc ledger_fails=$ledger_fails interpreter=${interp:-$PY} duration=${DURATION}s${DRILL:+ drill=$DRILL}"
+say "$TS — gate matrix: rc=$rc $state pass=$passed expected_failures=$expected misbehaved=$bad fatal=$fatal panel_fails=$panel_fails ledger_rc=$ledger_rc ledger_fails=$ledger_fails media_rc=$media_rc media_fails=$media_fails interpreter=${interp:-$PY} duration=${DURATION}s${DRILL:+ drill=$DRILL}"
 
 if [ "$rc" -ne 0 ]; then
   {
@@ -267,7 +310,7 @@ wired \`music/gates/check_gate_suite.sh\` into \`music-gate-matrix.timer\`
 Failing checks:
 
 \`\`\`
-$(grep -E '^(BAD|FATAL|FAIL (check_panel_membership|probe_judges|check_render_ledger))' -A 2 "$OUT" | head -60)
+$(grep -E '^(BAD|FATAL|FAIL (check_panel_membership|probe_judges|check_render_ledger|check_media_corpus_tracked))' -A 2 "$OUT" | head -60)
 \`\`\`
 
 Reproduce: \`bash music/gates/check_gate_suite.sh\` must exit 0 with
@@ -285,6 +328,12 @@ renders with
 which derives the entry from live state, or --backfill for all of them at once;
 then --check must exit 0. Do NOT hand-write an entry, and do NOT write one for a
 .refused marker — a refusal is a draft waiting on a human.
+For rc=5 (the campaign media, not a gate failure): every file `campaigns/*/MANIFEST.json`
+names for an exported track must be TRACKED in this repo, a package under
+`music/packages/streaming/` must hold bytes rather than a symlink, and media in the
+working tree must not be untracked - an untracked master is one `git clean` from gone.
+Reproduce: `/usr/bin/python3 music/scripts/check_media_corpus_tracked.py --check`.
+
 Fix the gate (or its fixture) or re-point the judges, do not weaken the check.
 BODY
 
