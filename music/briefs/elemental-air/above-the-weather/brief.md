@@ -490,6 +490,37 @@ fight: drum-kit groove, bass drop, or a 130+ BPM battle claim on an exploration-
 `elemental_atmosphere` guide is the criterion this track must answer: air's signature device is
 sus2 harmony with no percussion kit.
 
+**What was broken — the pre-fix record, kept as evidence (incident card `t_426a82a3`).** Read back
+with `git show 56dc465^:music/rubrics/gamer.json`, version 1 of the family's rubric carried five
+criteria and no `applies_to` field at all:
+
+| v1 criterion | Weight | Scope as that file wrote it |
+|---|---|---|
+| `chip_timbre_authenticity` | 3 | name suffix `(chiptune-8bit only)` |
+| `battle_energy` | 3 | name `Boss/battle energy (elemental-*, epic-orchestral-boss)` |
+| `loop_safety` | 3 | name suffix `(all gamer genres)` |
+| `asset_packaging` | 1 | none |
+| `loudness_target` | 1 | none |
+
+**Σw = 11**, and the panel scored all five on every gamer genre. `panel.py` had no scope code path,
+so the earlier revision of this section was WRONG when it asserted that the panel already honoured
+the name-level scope: the scope sat in the criterion NAME and nothing read it. Both w3 hazards hit
+this genre at once, and a criterion a judge left out scored **1.0 (absent)** and was flagged
+(`music/rubrics/panel.py:508-519`). The reject signal *"boss/battle claim with no fast-tempo
+candidate (under 130 BPM)"* was family-common, so it fired on a correct 82 BPM water theme — the
+fatal path, worse than the lost points.
+
+The measured consequence, kept as the incident record: a correct 92 BPM `elemental-air` track
+scored **41/11 = 3.73** against the 7.0 threshold — asserted by
+`music/rubrics/test_panel_math.py:235-249` (`abs(aggregate - 41 / 11) < 0.01`). Two figures must
+not be misread:
+
+- The claim *"criterion weights sum to 8"* (card `t_426a82a3`'s own body) was never true of the
+  pre-fix file. Its Σw was 11. **8 is the FIXED file's figure, and only per genre** — the result
+  of the new scoping, not a property of the old file.
+- **41/11** is pre-fix arithmetic. Under v2 this genre is scored on Σw = 8, so the threshold
+  maths is **≥56 weighted points (7.0 × 8)**, not 41/11.
+
 ---
 
 ## 11. Open items
@@ -566,8 +597,8 @@ states the live measurement, the card that closed it, and what remains.
   `gate_stems_present.py`, `gate_human_approval.py`, `gate_quota.py`.
 - Templates: `music/prompts/elemental-air.md` (494-char caption measured),
   `music/visuals/element-air.md`.
-- Rubric: `music/rubrics/gamer.json` (`loop_safety`, `battle_energy`, `asset_packaging`,
-  `loudness_target`, `reject_signals`, `notes`).
+- Rubric: `music/rubrics/gamer.json` **v2** (`applies_to` scope is data; 6 criteria, family total
+  weight 14 — this genre's scored set, the pre-fix record and the arithmetic are in §10).
 - Stage contract: `music/stages.yaml` (`brief` → bot `producer`).
 - Live engine: cluster `mining` — `kubectl` reads of `sunolocal-source-75d58dbc97-7jfmc`
   (image `localhost/sunolocal:v0.1.3`, 1/1 Running), `/health`, `/api/v1/models`, and the
@@ -690,4 +721,53 @@ The repo-wide FAILs are all in **other** briefs, and the sibling passes own them
 `t_bdb94fb7` and `t_aac32db8` (the stale absence claims), `t_fa731c5b` (the playbook class),
 `t_6dd13d76` (the stale figure and the line citations), `t_e86c2110` (the `genres.yaml` range),
 `t_c5a98379` (the drift shapes).
+
+### Rubric-history reconciliation — card `t_1a5b018b` (2026-10-16 16:47 CDT)
+
+Card `t_1a5b018b` (filed by `t_426a82a3`) named three brief sections that quoted the pre-fix gamer
+scope. State of each leg, re-measured this pass:
+
+| Leg | State measured 2026-10-16 16:47 CDT | Evidence |
+|---|---|---|
+| `elemental-water.md` §8 | already reconciled | commit `7d3d440` (that genre's surviving-card pass, card `t_354d5d25`) |
+| `elemental-earth.md` §9/§14 | already reconciled | commit `fb612c4` (that genre's surviving-card pass, card `t_8fa97d4e`) |
+| this file §10 | reconciled by the 16:07 pass; the pre-fix RECORD was still missing | commit `2dac605` rewrote §10 against v2; this pass added the history the card asked to keep |
+
+Work this pass did, measured against `music/rubrics/gamer.json` v2 and
+`git show 56dc465^:music/rubrics/gamer.json` v1:
+
+- §10 gained the pre-fix record: v1 carried five criteria, **Σw = 11**, no `applies_to`, the scope
+  only in the criterion NAME, and a criterion a judge left out recorded as 1.0 by the panel
+  (`music/rubrics/panel.py:508-519`); plus the incident
+  arithmetic **41/11 = 3.73** (`music/rubrics/test_panel_math.py:235-249` asserts `41 / 11`).
+- §13's rubric pointer named a v1-shaped criterion set with no `applies_to`; it now names the v2
+  data (6 criteria, family total weight 14) and points at §10.
+- `elemental-water.md` §8 said the pre-fix scope lived in "the criterion's `scope` string". v1
+  carried no `scope` field, so it lived in the criterion `name`. Corrected in place.
+
+Checks after the edits (real runs, 2026-10-16 16:47 CDT):
+
+| Check | rc | This work |
+|---|---|---|
+| `check_brief_drift` | 0 | PASS (14 counts across 14 briefs) |
+| `check_brief_line_refs` | 0 | PASS — the new `test_panel_math.py:235-249` and `panel.py:508-519` citations hold |
+| `check_brief_paths` | 0 | PASS |
+| `check_stage_scripts` | 0 | PASS (16 paths) |
+| `check_prompt_style_counts` | 0 | PASS (15 lengths) |
+| `check_oracle_board` | 0 | PASS (0 open oracle genres) |
+| `music/rubrics/test_panel_math.py` | 0 | ALL CHECKS PASSED |
+| `check_brief_figures` | 1 | no finding in this file from this pass — its remaining one is §13's `34,328 B`, owned by `t_f7889dd6` / `t_fa731c5b` |
+| `check_brief_absences` | 1 | no finding in this file — its two name `elemental-water.md` §14 and the closing pass note, owned by `t_bdb94fb7` |
+
+This pass did NOT edit the rubric (`music/rubrics/*` belongs to the review panel, `editor`) and did
+NOT touch the two pre-existing check failures above, which have owners.
+
+Re-run note (16:48-16:50 CDT): the shared tree kept moving under these runs, and neither movement is
+this file. `check_brief_drift` raised `registry.RegistryError` for the stage `asset-pack` named in
+`music/lanes.yaml`, because that file and `music/registry.py` carried another worker's uncommitted
+edits at that moment (card `t_eb079b91`, the asset-pack stage). And `check_brief_line_refs` moved
+from rc 0 to rc 1, on three ranges in OTHER briefs (`activist.md`, `commentary-beds.md`,
+`elemental-fire.md`) — the class card `t_6dd13d76` owns. Nothing in this file regressed; re-run
+`check_brief_line_refs` and the count of findings in this file is still zero.
+
 
