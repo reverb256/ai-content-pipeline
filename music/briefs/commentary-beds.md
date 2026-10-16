@@ -6,6 +6,13 @@
 > **Duplicate card:** t_4187b092 (`music-oracle: commentary-beds (score 8.3)`) — same genre,
 > same lanes, created by the second oracle run ten minutes later. Both resolve to THIS
 > brief; the brief is keyed by genre, not by card.
+> **Verified (unit-correction pass, `t_e504b516`):** 2026-10-16T15:22-05:00 (CDT) — §1 registry
+> table and §10 provenance. Both cited the prompt template's size with the unit `B`, but the
+> value they gave was that file's CHARACTER count, so the label understated the byte count.
+> Both labels are corrected in place; no other figure in this brief was touched. The 13:20
+> revision of this file is
+> `sha256 d6fbd52f800199fe501a41556835e0b582dfd82f458a4c4c4c9a8bab9139b590` (commit `9ebf6af`);
+> this pass supersedes it.
 > **Written:** 2026-10-16T13:20-05:00 (CDT)
 > **Repo:** `/home/j_kro/ai-content-pipeline` @ `ade6e87` (main; the working tree is shared
 > by 6–7 concurrent brief-stage workers and HEAD moved 4 times while this brief was written).
@@ -37,7 +44,7 @@ unaffected — but any stage prompt that says `python3 music/…` inherits the t
 |---|---|
 | Genre | `commentary-beds` |
 | Family | `utility` |
-| Prompt template | `music/prompts/commentary-beds.md` (4133 B, resolves) |
+| Prompt template | `music/prompts/commentary-beds.md` (4159 B, resolves) |
 | Visual style | `music/visuals/none.md` (resolves; the file exists to say **no visual**) |
 | Lanes | `direct-license`, `sync` — two lanes only |
 | Cadence | 5/wk |
@@ -274,7 +281,7 @@ carry weight 3 each) → `package` (`gate_sync_ready` per lane, `loop_points.jso
 ## 10. Provenance
 
 - Registry: `music/genres.yaml`, `music/lanes.yaml` — validated live (14 genres, 10 lanes)
-- Template: `music/prompts/commentary-beds.md` (4133 B; style fields measured 420 / 422 chars)
+- Template: `music/prompts/commentary-beds.md` (4159 B / 4133 chars; style fields measured 420 / 422 chars)
 - Visual: `music/visuals/none.md` ("THIS FILE EXISTS TO SAY 'NO VISUAL'")
 - Gates: `music/gates/` — `gate_quota` PASS live; `gate_sync_ready` exercised live (FAIL
   output quoted, requirement list above); `gate_loop_points`, `gate_stems_present`,
