@@ -219,7 +219,7 @@ The `Breakdown` is the false ending. The `Outro` is the hard cut.
 
 Duration: **240 s**. Basis: 150 BPM in 4/4 → one bar = 4×60/150 = 1.6000 s;
 240 s = **exactly 150 bars**, and it is the `single-4min` shape. Inside the planner's guard
-rail (`planner.py` `MIN_DURATION_S=30`, `MAX_DURATION_S=420`). For comparison, measured:
+rail (`planner.py` `MIN_DURATION_S=16`, `MAX_DURATION_S=600` — re-read by card `t_ae1d9243`). For comparison, measured:
 300 s = 187.5 bars (fractional), 420 s = 262.5 bars (fractional) — 240 s is the only clean
 choice of the three.
 
@@ -697,7 +697,7 @@ the renderer rather than stated as policy (§7).
   `gate_lyrics_original`, `gate_youtube_authentic`, `gate_sync_ready`, `gate_release_ready`
   exercised live in this pass. `check_gate_suite.sh` runs the suite; `music/gates/README.md` is
   the index.
-- Planner: `music/planner/planner.py` (`MIN_DURATION_S=30`, `MAX_DURATION_S=420`,
+- Planner: `music/planner/planner.py` (`MIN_DURATION_S=16`, `MAX_DURATION_S=600` — re-read by card `t_ae1d9243`,
   `load_blueprint` — which now finds this genre's blueprint, §6)
 - Lyrics mechanics: `music/lyrics/lyrics.py` (`MIN_UNIQUE_WORDS=25`, `MIN_SECTIONS=2`,
   `KNOWN_SECTIONS` incl. `Choir`, `WORD_TOKEN_RE`, `cmd_scaffold`, `unique_word_count`)
