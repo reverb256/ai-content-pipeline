@@ -1,39 +1,61 @@
 # Asset Pack: welcome-asset-pack
 
-**Source track:** /home/j_kro/Projects/ai-content-pipeline/campaigns/virtual-reflections/masters/welcome.wav
+**Title:** Welcome Loop Pack
+**Artist:** Reverb256
+**Genre:** chill-lounge
+**Mood:** reflective
 **BPM:** 184.57
 **Key:** C major
 **Sample rate:** 44100 Hz
 **Bit depth:** 16-bit
-**Genre:** chill-lounge
-**Created:** 2026-10-14T07:44:31.968698+00:00
+**Source track:** /home/j_kro/ai-content-pipeline/packages/welcome-asset-pack/source/welcome-reconstructed.wav
+**Created:** 2026-10-16T19:35:31.299287+00:00
 
 ## Contents
 
 | Type   | Count | Description |
 |--------|-------|-------------|
-| Loops  | 5  | Seamless, bar-aligned, click-free (measured seam discontinuity). |
-| Stems  | 12  | Time-aligned, 12-channel stem pack. |
-| One-shots | 8  | Isolated hits: kick, snare, hat, riser, impact. |
+| Loops  | 5  | Bar-aligned seamless loops (measured seam, see below). |
+| Stems  | 12  | Time-aligned stems of the source track. |
+| One-shots | 7  | Isolated hits: kick, snare, hat, riser, impact. |
 | SFX    | 6  | Elemental: fire, water, earth, air. |
 
 ## File naming
 
 type_index_attribute.bpm.bpm_key.key.wav
 
-## Loop click-free verification (measured)
+## Loops
 
-Every loop's seam discontinuity is measured as the sample delta at the wrap
-point, reported in dBFS. A value below -60 dBFS indicates a click that is
-inaudible under normal monitoring. The manifest JSON records each loop's
-measured `seam_discontinuity_db`.
+Every loop is bar-aligned at 184.57 BPM and is at least 2 s long, so it is
+musical in a game engine. Each loop's seam is built by crossfading the loop's
+tail into the source material that immediately precedes the loop start, so the
+wrap is continuous (no click, no fade to silence). `loop_points.json` carries
+one entry per loop; `seam_method` in `manifest.json` records how each seam was
+built.
+
+Measure it — do not trust this file:
+
+```
+python3 music/gates/gate_loop_points.py --pack-dir <this pack>
+```
 
 ## Stems
 
 Stems are derived via Harmonic/Percussive Source Separation (HPSS) using a
-scipy STFT + median-filter pipeline. When the campaign provides 12 Studio
-stems, those take priority over derived stems.
+scipy STFT + median-filter pipeline. When the campaign provides Studio stems,
+those take priority over derived stems.
 
-## Licence
+## Gate the pack before publishing
 
-see music/licences/perpetual_game_asset_v1.txt — multi-tier (personal / commercial / exclusive).
+```
+python3 music/gates/gate_sync_ready.py --package-dir <this pack> --lane game-assets
+python3 music/gates/gate_loop_points.py --pack-dir <this pack>
+```
+
+## Documents in this pack
+
+- `clearance_doc.pdf` — who cleared this audio for resale.
+- `ai_disclosure.txt` — the AI role, for the marketplace AI tag
+  (`brain/runbooks/music-game-assets.md`: itch.io requires `AI-Generated`).
+- `LICENCE.txt` — see music/licences/perpetual_game_asset_v1.txt — multi-tier (personal / commercial /
+  exclusive), with explicit permitted use, distribution and derivative rules.

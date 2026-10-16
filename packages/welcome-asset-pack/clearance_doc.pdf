@@ -1,0 +1,87 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 1514 >>
+stream
+BT
+/F1 10 Tf
+13 TL
+54 780 Td
+(CLEARANCE STATEMENT - Welcome Loop Pack) Tj
+T*
+() Tj
+T*
+(Pack: welcome-asset-pack) Tj
+T*
+(Genre: chill-lounge) Tj
+T*
+(Artist: Reverb256) Tj
+T*
+(Source track: /home/j_kro/ai-content-pipeline/packages/welcome-asset-pack/source/welcome-reconstructed.wav) Tj
+T*
+(BPM 184.57 / Key C major / 44100 Hz) Tj
+T*
+() Tj
+T*
+(RIGHTS) Tj
+T*
+(The source audio was generated with an AI music model under this) Tj
+T*
+(account's commercial-rights grant. The pipeline holds the rights) Tj
+T*
+(needed to license this audio and its derived assets.) Tj
+T*
+(No third-party recording, sample library, or voice is included.) Tj
+T*
+() Tj
+T*
+(AI ROLE) Tj
+T*
+(AI-generated source audio; human-directed. Derived assets are local) Tj
+T*
+(DSP output. See ai_disclosure.txt.) Tj
+T*
+() Tj
+T*
+(LICENCE) Tj
+T*
+(Distributed under PERPETUAL-GAME-ASSET-V1 \(multi-tier: personal /) Tj
+T*
+(commercial / exclusive\). See LICENCE.txt.) Tj
+T*
+() Tj
+T*
+(Issuer: AI Content Pipeline / Music Lane) Tj
+T*
+() Tj
+T*
+(SOURCE NOTE) Tj
+T*
+(Reconstructed from this pack's committed pre-fix stem set \(HPSS-additive: stems/02_drums.wav + stems/04_lead_melody.wav, 0.5 gain; source/welcome-reconstructed.wav is that file\). The original campaign master campaigns/virtual-reflections/masters/welcome.wav is absent from this host ? measured 2026-10-16, card t_5ed495eb. The track is 'Welcome' from the Virtual Reflections album \(Suno song af1e57f0-6595-460b-a0e7-7bb0bdd41f37, 0:51 in campaigns/virtual-reflections/ALBUM-RECORD.md\).) Tj
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000311 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1877
+%%EOF

@@ -1,140 +1,207 @@
 {
+  "schema": "music/asset-pack/v1",
   "pack_name": "welcome-asset-pack",
-  "source_track": "/home/j_kro/Projects/ai-content-pipeline/campaigns/virtual-reflections/masters/welcome.wav",
+  "source_track": "/home/j_kro/ai-content-pipeline/packages/welcome-asset-pack/source/welcome-reconstructed.wav",
+  "source_note": "Reconstructed from this pack's committed pre-fix stem set (HPSS-additive: stems/02_drums.wav + stems/04_lead_melody.wav, 0.5 gain; source/welcome-reconstructed.wav is that file). The original campaign master campaigns/virtual-reflections/masters/welcome.wav is absent from this host \u2014 measured 2026-10-16, card t_5ed495eb. The track is 'Welcome' from the Virtual Reflections album (Suno song af1e57f0-6595-460b-a0e7-7bb0bdd41f37, 0:51 in campaigns/virtual-reflections/ALBUM-RECORD.md).",
   "bpm": 184.57,
   "key": "C major",
   "sample_rate": 44100,
   "channels": 1,
   "bit_depth": 16,
   "genre": "chill-lounge",
-  "created": "2026-10-14T07:44:31.968698+00:00",
+  "created": "2026-10-16T19:35:31.299287+00:00",
+  "metadata": {
+    "title": "Welcome Loop Pack",
+    "artist": "Reverb256",
+    "bpm": 184.57,
+    "key": "C major",
+    "mood": "reflective",
+    "genre": "chill-lounge",
+    "sample_rate": 44100
+  },
+  "pack_manifest": {
+    "loops": 5,
+    "stems": 12,
+    "one_shots": 7,
+    "sfx": 6
+  },
+  "counts": {
+    "loops": 5,
+    "stems": 12,
+    "one_shots": 7,
+    "sfx": 6
+  },
+  "loop_points": "loop_points.json",
+  "clearance_doc": "clearance_doc.pdf",
+  "ai_disclosure": "ai_disclosure.txt",
   "file_naming": "type_index_attribute.bpm.bpm_key.key.wav",
   "licence": "multi-tier (PERPETUAL-GAME-ASSET-V1)",
   "licence_url": "music/licences/perpetual_game_asset_v1.txt",
   "loops": [
     {
+      "path": "loops/loop_01_bpm184_key-Cmajor.wav",
       "file": "packages/welcome-asset-pack/loops/loop_01_bpm184_key-Cmajor.wav",
       "bpm": 184.57,
       "key": "C major",
-      "seam_discontinuity_db": -100.0,
+      "bars": 4,
+      "seam_method": "pre-roll-crossfade-20ms",
+      "seam_discontinuity_db": -35.07,
       "click_free": true,
-      "start_sample": 0,
-      "end_sample": 57344,
-      "duration_sec": 1.3
+      "start_sample": 1490944,
+      "end_sample": 1720320,
+      "duration_sec": 5.201,
+      "loop_start_s": 0.0,
+      "loop_end_s": 5.201,
+      "seamless": true
     },
     {
+      "path": "loops/loop_02_bpm184_key-Cmajor.wav",
       "file": "packages/welcome-asset-pack/loops/loop_02_bpm184_key-Cmajor.wav",
       "bpm": 184.57,
       "key": "C major",
-      "seam_discontinuity_db": -100.0,
+      "bars": 4,
+      "seam_method": "pre-roll-crossfade-20ms",
+      "seam_discontinuity_db": -35.52,
       "click_free": true,
-      "start_sample": 28672,
-      "end_sample": 86016,
-      "duration_sec": 1.3
+      "start_sample": 573440,
+      "end_sample": 802816,
+      "duration_sec": 5.201,
+      "loop_start_s": 0.0,
+      "loop_end_s": 5.201,
+      "seamless": true
     },
     {
+      "path": "loops/loop_03_bpm184_key-Cmajor.wav",
       "file": "packages/welcome-asset-pack/loops/loop_03_bpm184_key-Cmajor.wav",
       "bpm": 184.57,
       "key": "C major",
-      "seam_discontinuity_db": -100.0,
+      "bars": 4,
+      "seam_method": "pre-roll-crossfade-20ms",
+      "seam_discontinuity_db": -40.05,
       "click_free": true,
-      "start_sample": 57344,
-      "end_sample": 114688,
-      "duration_sec": 1.3
+      "start_sample": 1032192,
+      "end_sample": 1261568,
+      "duration_sec": 5.201,
+      "loop_start_s": 0.0,
+      "loop_end_s": 5.201,
+      "seamless": true
     },
     {
+      "path": "loops/loop_04_bpm184_key-Cmajor.wav",
       "file": "packages/welcome-asset-pack/loops/loop_04_bpm184_key-Cmajor.wav",
       "bpm": 184.57,
       "key": "C major",
-      "seam_discontinuity_db": -100.0,
+      "bars": 4,
+      "seam_method": "pre-roll-crossfade-20ms",
+      "seam_discontinuity_db": -41.66,
       "click_free": true,
-      "start_sample": 86016,
-      "end_sample": 143360,
-      "duration_sec": 1.3
+      "start_sample": 1720320,
+      "end_sample": 1949696,
+      "duration_sec": 5.201,
+      "loop_start_s": 0.0,
+      "loop_end_s": 5.201,
+      "seamless": true
     },
     {
+      "path": "loops/loop_05_bpm184_key-Cmajor.wav",
       "file": "packages/welcome-asset-pack/loops/loop_05_bpm184_key-Cmajor.wav",
       "bpm": 184.57,
       "key": "C major",
-      "seam_discontinuity_db": -100.0,
+      "bars": 4,
+      "seam_method": "pre-roll-crossfade-20ms",
+      "seam_discontinuity_db": -42.69,
       "click_free": true,
-      "start_sample": 114688,
-      "end_sample": 172032,
-      "duration_sec": 1.3
+      "start_sample": 802816,
+      "end_sample": 1032192,
+      "duration_sec": 5.201,
+      "loop_start_s": 0.0,
+      "loop_end_s": 5.201,
+      "seamless": true
     }
   ],
   "stems": [
     {
+      "path": "stems/01_bass.wav",
       "file": "packages/welcome-asset-pack/stems/01_bass.wav",
       "name": "01_bass",
       "duration_sec": 51.605,
-      "rms_db": -31.44,
+      "rms_db": -33.84,
       "time_aligned": true
     },
     {
+      "path": "stems/02_drums.wav",
       "file": "packages/welcome-asset-pack/stems/02_drums.wav",
       "name": "02_drums",
       "duration_sec": 51.605,
-      "rms_db": -19.43,
+      "rms_db": -22.9,
       "time_aligned": true
     },
     {
+      "path": "stems/03_harmony.wav",
       "file": "packages/welcome-asset-pack/stems/03_harmony.wav",
       "name": "03_harmony",
       "duration_sec": 51.605,
-      "rms_db": -34.36,
+      "rms_db": -36.76,
       "time_aligned": true
     },
     {
+      "path": "stems/04_lead_melody.wav",
       "file": "packages/welcome-asset-pack/stems/04_lead_melody.wav",
       "name": "04_lead_melody",
       "duration_sec": 51.605,
-      "rms_db": -28.34,
+      "rms_db": -30.74,
       "time_aligned": true
     },
     {
+      "path": "stems/05_atmosphere.wav",
       "file": "packages/welcome-asset-pack/stems/05_atmosphere.wav",
       "name": "05_atmosphere",
       "duration_sec": 51.605,
-      "rms_db": -45.92,
+      "rms_db": -54.62,
       "time_aligned": true
     },
     {
+      "path": "stems/06_vocals_implicit.wav",
       "file": "packages/welcome-asset-pack/stems/06_vocals_implicit.wav",
       "name": "06_vocals_implicit",
       "duration_sec": 51.605,
-      "rms_db": -20.06,
+      "rms_db": -26.35,
       "time_aligned": true
     },
     {
+      "path": "stems/07_click.wav",
       "file": "packages/welcome-asset-pack/stems/07_click.wav",
       "name": "07_click",
       "duration_sec": 51.605,
-      "rms_db": -54.41,
+      "rms_db": -55.31,
       "time_aligned": true
     },
     {
+      "path": "stems/08_sub_bass.wav",
       "file": "packages/welcome-asset-pack/stems/08_sub_bass.wav",
       "name": "08_sub_bass",
       "duration_sec": 51.605,
-      "rms_db": -24.65,
+      "rms_db": -23.89,
       "time_aligned": true
     },
     {
+      "path": "stems/09_fill_1.wav",
       "file": "packages/welcome-asset-pack/stems/09_fill_1.wav",
       "name": "09_fill_1",
       "duration_sec": 51.605,
-      "rms_db": -36.3,
+      "rms_db": -38.7,
       "time_aligned": true
     },
     {
+      "path": "stems/10_fill_2.wav",
       "file": "packages/welcome-asset-pack/stems/10_fill_2.wav",
       "name": "10_fill_2",
       "duration_sec": 51.605,
-      "rms_db": -27.39,
+      "rms_db": -30.86,
       "time_aligned": true
     },
     {
+      "path": "stems/11_riser.wav",
       "file": "packages/welcome-asset-pack/stems/11_riser.wav",
       "name": "11_riser",
       "duration_sec": 51.605,
@@ -142,6 +209,7 @@
       "time_aligned": true
     },
     {
+      "path": "stems/12_impact.wav",
       "file": "packages/welcome-asset-pack/stems/12_impact.wav",
       "name": "12_impact",
       "duration_sec": 51.605,
@@ -151,96 +219,97 @@
   ],
   "one_shots": [
     {
+      "path": "one_shots/oneshot_kick_01.wav",
       "file": "packages/welcome-asset-pack/one_shots/oneshot_kick_01.wav",
       "label": "kick",
       "duration_sec": 0.5,
-      "rms_db": -11.46
+      "rms_db": -9.66
     },
     {
+      "path": "one_shots/oneshot_kick_02.wav",
       "file": "packages/welcome-asset-pack/one_shots/oneshot_kick_02.wav",
       "label": "kick",
       "duration_sec": 0.5,
-      "rms_db": -10.34
+      "rms_db": -10.33
     },
     {
+      "path": "one_shots/oneshot_kick_03.wav",
       "file": "packages/welcome-asset-pack/one_shots/oneshot_kick_03.wav",
       "label": "kick",
       "duration_sec": 0.5,
-      "rms_db": -11.46
+      "rms_db": -9.27
     },
     {
+      "path": "one_shots/oneshot_kick_04.wav",
       "file": "packages/welcome-asset-pack/one_shots/oneshot_kick_04.wav",
       "label": "kick",
       "duration_sec": 0.5,
-      "rms_db": -9.44
+      "rms_db": -9.55
     },
     {
+      "path": "one_shots/oneshot_kick_05.wav",
       "file": "packages/welcome-asset-pack/one_shots/oneshot_kick_05.wav",
       "label": "kick",
       "duration_sec": 0.5,
-      "rms_db": -10.24
+      "rms_db": -12.06
     },
     {
+      "path": "one_shots/oneshot_kick_06.wav",
       "file": "packages/welcome-asset-pack/one_shots/oneshot_kick_06.wav",
       "label": "kick",
       "duration_sec": 0.5,
-      "rms_db": -9.54
+      "rms_db": -8.59
     },
     {
+      "path": "one_shots/oneshot_kick_07.wav",
       "file": "packages/welcome-asset-pack/one_shots/oneshot_kick_07.wav",
       "label": "kick",
       "duration_sec": 0.5,
-      "rms_db": -9.57
-    },
-    {
-      "file": "packages/welcome-asset-pack/one_shots/oneshot_kick_08.wav",
-      "label": "kick",
-      "duration_sec": 0.5,
-      "rms_db": -11.54
+      "rms_db": -9.01
     }
   ],
   "sfx": [
     {
+      "path": "sfx/fire_whoosh_01.wav",
       "file": "packages/welcome-asset-pack/sfx/fire_whoosh_01.wav",
       "name": "fire_whoosh_01",
       "duration_sec": 1.2,
       "rms_db": -21.17
     },
     {
+      "path": "sfx/water_drip_01.wav",
       "file": "packages/welcome-asset-pack/sfx/water_drip_01.wav",
       "name": "water_drip_01",
       "duration_sec": 0.8,
       "rms_db": -21.17
     },
     {
+      "path": "sfx/earth_rumble_01.wav",
       "file": "packages/welcome-asset-pack/sfx/earth_rumble_01.wav",
       "name": "earth_rumble_01",
       "duration_sec": 2.0,
       "rms_db": -18.03
     },
     {
+      "path": "sfx/air_gust_01.wav",
       "file": "packages/welcome-asset-pack/sfx/air_gust_01.wav",
       "name": "air_gust_01",
       "duration_sec": 1.0,
       "rms_db": -18.58
     },
     {
+      "path": "sfx/fire_whoosh_02.wav",
       "file": "packages/welcome-asset-pack/sfx/fire_whoosh_02.wav",
       "name": "fire_whoosh_02",
       "duration_sec": 0.8,
       "rms_db": -21.2
     },
     {
+      "path": "sfx/water_drip_02.wav",
       "file": "packages/welcome-asset-pack/sfx/water_drip_02.wav",
       "name": "water_drip_02",
       "duration_sec": 0.6,
       "rms_db": -21.12
     }
-  ],
-  "counts": {
-    "loops": 5,
-    "stems": 12,
-    "one_shots": 8,
-    "sfx": 6
-  }
+  ]
 }

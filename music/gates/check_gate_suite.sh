@@ -41,6 +41,23 @@ if [ -z "$PY" ]; then
 fi
 echo "interpreter: $PY"
 
+# ------------------------------------------------------------------
+# generator dependency guard (incident 2026-10-16, card t_5ed495eb)
+# ------------------------------------------------------------------
+# The pack fixtures are built by the REAL generator (music/assets/pack.py) on
+# purpose: the defect this suite now covers was generator-vs-gate drift, so a
+# hand-written fixture would hide it. pack.py imports numpy + scipy. On the
+# lane host /usr/bin/python3 has numpy (distro) but scipy had to be installed
+# for the user site. Refuse to run rather than report a false BAD or skip the
+# pack checks in silence.
+if ! "$PY" -c 'import numpy, scipy' >/dev/null 2>&1; then
+  echo "FATAL: $PY cannot import numpy+scipy, so music/assets/pack.py cannot run" >&2
+  echo "       install for that interpreter, e.g.:" >&2
+  echo "       uv pip install --python $PY \\" >&2
+  echo "         --target ~/.local/lib/python3.14/site-packages --no-deps scipy" >&2
+  exit 2
+fi
+
 mkdir -p "$SCRATCH"
 
 # ------------------------------------------------------------------
@@ -71,6 +88,23 @@ fail_expected() { # label, expected-exit, then command
 }
 
 say() { echo; echo "## $1"; }
+
+# A fixture builder that dies must stop the suite. Otherwise every case that
+# reads its output fails for the wrong reason ("no such package directory")
+# and `fail_expected` records it as a pass — a check that passes vacuously.
+# Measured: the pack fixtures failed to build and 6 pack cases still reported
+# "as expected" (card t_5ed495eb).
+build_fixtures() { # label, then command
+  local label="$1"; shift
+  if ! "$@" >/tmp/gate_fix.$$ 2>&1; then
+    echo "FATAL: $label fixtures could not be built — refusing to run the"
+    echo "       suite against missing fixtures (that is how a check passes"
+    echo "       vacuously)."
+    sed 's/^/        /' /tmp/gate_fix.$$
+    rm -f /tmp/gate_fix.$$
+    exit 2
+  fi
+}
 
 # ------------------------------------------------------------------
 # 0. build fixtures (audio is synthesized with ffmpeg; nothing is
@@ -216,7 +250,7 @@ EOF
 # --- loop packages (seamless 220 Hz vs phase-slip 220.5 Hz) --------
 GOOD_LOOP="$F/good_loop"; BAD_LOOP="$F/bad_loop"
 mkdir -p "$GOOD_LOOP" "$BAD_LOOP"
-"$PY" "$GATES/_loop_fixtures.py" "$F"
+build_fixtures "loop" "$PY" "$GATES/_loop_fixtures.py" "$F"
 cp "$F/loop_seamless.wav" "$GOOD_LOOP/master.wav"
 cp "$F/loop_broken.wav" "$BAD_LOOP/master.wav"
 for d in "$GOOD_LOOP" "$BAD_LOOP"; do
@@ -225,10 +259,14 @@ for d in "$GOOD_LOOP" "$BAD_LOOP"; do
 EOF
 done
 
+# --- asset packs (generator-built + conforming + broken) -----------
+# Built by music/assets/pack.py for the generator pack: see card t_5ed495eb.
+build_fixtures "asset pack" "$PY" "$GATES/_pack_fixtures.py" "$F"
+
 # --- youtube visual packages ------------------------------------------
 GOOD_YT="$F/good_yt"; BAD_YT="$F/bad_yt"
 mkdir -p "$GOOD_YT" "$BAD_YT"
-"$PY" "$GATES/_visual_fixtures.py" "$F"
+build_fixtures "visual" "$PY" "$GATES/_visual_fixtures.py" "$F"
 cp "$F/good_visual.mp4" "$GOOD_YT/visual.mp4"
 cp "$F/disclosure.txt" "$GOOD_YT/disclosure.txt"
 cp "$F/raw_dump.mp4" "$BAD_YT/visual.mp4"
@@ -341,6 +379,60 @@ fail_expected "phase-slip loop (6.0x curvature) fails" 1 \
   --master "$BAD_LOOP/master.wav" \
   --loop-points "$BAD_LOOP/loop_points.json" \
   --scratch "$SCRATCH/loop_scratch"
+
+# ------------------------------------------------------------------
+# 8b. asset packs — gate_sync_ready pack mode + gate_loop_points sweep
+#     (card t_5ed495eb: the generator's own output must pass the gate it is
+#      built for, every loop must be seam-checked, and the pack shape must
+#      NOT weaken the per-track shape the sync lane still requires)
+# ------------------------------------------------------------------
+say "gate_sync_ready (pack mode, lane game-assets)"
+pass "generator-built pack passes (pack mode)" \
+  "$PY" "$GATES/gate_sync_ready.py" \
+  --package-dir "$F/pack" --lane game-assets
+pass "explicit --mode pack on the same pack" \
+  "$PY" "$GATES/gate_sync_ready.py" \
+  --package-dir "$F/pack" --lane game-assets --mode pack
+pass "hand-built conforming pack passes (pack mode)" \
+  "$PY" "$GATES/gate_sync_ready.py" \
+  --package-dir "$F/pack_synth" --lane game-assets
+fail_expected "a pack is NOT a sync package (per-track shape enforced)" 1 \
+  "$PY" "$GATES/gate_sync_ready.py" --package-dir "$F/pack" --lane sync
+fail_expected "pack: a 1.0s loop point breaks the 2s floor" 1 \
+  "$PY" "$GATES/gate_sync_ready.py" \
+  --package-dir "$F/pack_bad_span" --lane game-assets
+fail_expected "pack: a clicky loop is not seamless (seam measured)" 1 \
+  "$PY" "$GATES/gate_sync_ready.py" \
+  --package-dir "$F/pack_bad_seam" --lane game-assets
+fail_expected "pack: manifest counts must match the files on disk" 1 \
+  "$PY" "$GATES/gate_sync_ready.py" \
+  --package-dir "$F/pack_bad_count" --lane game-assets
+fail_expected "pack: metadata without sample_rate fails" 1 \
+  "$PY" "$GATES/gate_sync_ready.py" \
+  --package-dir "$F/pack_bad_meta" --lane game-assets
+fail_expected "pack: no loop_points.json fails" 1 \
+  "$PY" "$GATES/gate_sync_ready.py" \
+  --package-dir "$F/pack_bad_noloops" --lane game-assets
+fail_expected "pack: no clearance_doc fails" 1 \
+  "$PY" "$GATES/gate_sync_ready.py" \
+  --package-dir "$F/pack_bad_noclear" --lane game-assets
+
+say "gate_loop_points --pack-dir (checks EVERY loop)"
+pass "generator-built pack: every loop seamless" \
+  "$PY" "$GATES/gate_loop_points.py" \
+  --pack-dir "$F/pack" --scratch "$SCRATCH/loop_scratch"
+pass "hand-built conforming pack: every loop seamless" \
+  "$PY" "$GATES/gate_loop_points.py" \
+  --pack-dir "$F/pack_synth" --scratch "$SCRATCH/loop_scratch"
+fail_expected "sweep fails when one loop is a phase-slip loop" 1 \
+  "$PY" "$GATES/gate_loop_points.py" \
+  --pack-dir "$F/pack_bad_seam" --scratch "$SCRATCH/loop_scratch"
+fail_expected "sweep fails on a 1.0s loop point" 1 \
+  "$PY" "$GATES/gate_loop_points.py" \
+  --pack-dir "$F/pack_bad_span" --scratch "$SCRATCH/loop_scratch"
+fail_expected "sweep fails with no loop_points.json" 1 \
+  "$PY" "$GATES/gate_loop_points.py" \
+  --pack-dir "$F/pack_bad_noloops" --scratch "$SCRATCH/loop_scratch"
 
 # ------------------------------------------------------------------
 # 9. gate_youtube_authentic

@@ -244,10 +244,10 @@ name is a defect: it passes while the artifact is broken. Exit codes: 0 = PASS, 
 | `gate_stems_present` | ffprobes every stem: ≥4 stems, non-zero bytes, duration within ±0.5 s of the master |
 | `gate_loudness` | measured via `ffmpeg ebur128` (integrated loudness, LUFS; the `volumedetect` RMS ruler was retired 2026-10-16, card t_9546841b); −14 LUFS streaming / −16 sync, within ±1 |
 | `gate_quality` | reviewer verdict present, reviewer model DIFFERENT from the maker, sha256-bound to the master |
-| `gate_sync_ready` | stems + master + instrumental (must differ from the master) + manifest metadata + real PDF clearance doc + AI disclosure |
+| `gate_sync_ready` | two shapes (card t_5ed495eb). track (`sync`/`direct-license`): stems + master + instrumental (must differ from the master) + manifest metadata + real PDF clearance doc + AI disclosure. pack (`game-assets`, the lane's default): every audio file ffprobed, `pack_manifest` counts vs the files on disk, `metadata` incl. a stated sample rate verified against each file, stems mutually time-aligned, per-loop loop points with a span ≥ 2 s, every loop's seam measured, clearance + disclosure + licence |
 | `gate_release_ready` | ffprobes the master, PIL-verifies the artwork, ISO 3901 ISRC syntax, manifest metadata + ai_disclosure |
 | `gate_youtube_authentic` | samples and hashes frames: shot diversity, Jaccard similarity vs prior uploads, disclosure |
-| `gate_loop_points` | renders the loop windows and measures junction curvature; seamless ≤ 3.0x |
+| `gate_loop_points` | renders the loop windows and measures junction curvature; seamless ≤ 3.0x. Single mode: `--master` + `--loop-points`. Pack mode: `--pack-dir <pack>` sweeps EVERY loop in the pack's `loop_points.json` |
 | `gate_human_approval` | j_kro's gate — never auto-passes; requires a dated, sha256-bound approval record naming a human approver |
 
 Run the acceptance matrix:
