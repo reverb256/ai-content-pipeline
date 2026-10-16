@@ -9,7 +9,9 @@ The gate EXECUTES the artifact. It does not trust
 loop_points.json — it renders the loop region with ffmpeg
 and measures the SEAM itself.
 
-Method — junction curvature (click detection):
+Two rulers. A loop must pass BOTH.
+
+Ruler 1 — junction curvature (click detection):
   1. Render the tail window [loop_end - W, loop_end]
      and the head window [loop_start, loop_start + W].
   2. Concatenate them: tail + head. This is the signal
@@ -27,6 +29,42 @@ Method — junction curvature (click detection):
 Verified separation on synthetic loops: a clean 5 s-period
 loop measures 1.6x; a half-period phase-slip loop measures
 6.0x. The 3.0x ceiling sits between them.
+
+Ruler 2 — level continuity (fade detection). Card t_bab8aa19:
+curvature measures a derivative kink and says nothing about
+LEVEL, so a smooth fade-out passes ruler 1. Measured on the
+frozen 25.6 s probe artifacts (16 bars @ 150 BPM, card
+t_6f0d261e / music/scripts/loop_seam_check.py --selftest):
+a 1.6 s fade-out tail measures 2.21x curvature — UNDER the
+3.0x ceiling while its tail-1s sits 8.9 dB below its head-1s
+— where a real click measures 5.99x. No single click
+threshold separates those two, so the gate needs a second
+measurement, not a different number.
+  1. Render [loop_start, loop_start + L] (head) and
+     [loop_end - L, loop_end] (tail), L = level window
+     (default 1.0 s).
+  2. Measure each with `ffmpeg -af volumedetect` mean_volume
+     — the ruler `music/rubrics/gamer.json` `loop_safety`
+     names: "last-1s RMS within ~6 dB of first-1s RMS, no
+     fade-to-silence on a loop claim".
+  3. PASS when |tail_db - head_db| <= LEVEL_DELTA_MAX_DB
+     (6.0 dB). The measured head level, tail level and delta
+     are printed on PASS and on FAIL. A loop must pass ruler 1
+     AND ruler 2; each ruler has one hole and they are
+     different holes. This one is blind to a click: a
+     half-period phase slip measures 0.0 dB (the level never
+     changes), which is why the curvature ruler stays.
+  4. What ruler 2 does NOT see (measured 2026-10-16, card
+     t_8297d2c6): the window is 1.0 s and the ceiling is the
+     rubric's own ~6 dB, so a fade SHORTER than ~1.15 s stays
+     inside it. On the same 25.6 s tone a 1.0 s
+     fade-to-silence measures a 4.7 dB delta and PASSES, a
+     1.2 s fade measures 6.3 dB and fails, a 1.6 s fade 8.8 dB.
+     Do not close that by lowering the ceiling: the rubric
+     names the 6 dB tolerance, and the delta is a property of
+     the fade length (a linear fade of length d >= L measures
+     (L/d)/sqrt(3)). It needs a second property — an
+     end-of-loop silence guard — which is card t_8297d2c6.
 
 Also verifies the loop points are inside the file
 (0 <= loop_start < loop_end <= duration), the loop span
@@ -52,7 +90,8 @@ Two modes:
 Usage:
   python3 music/gates/gate_loop_points.py --master <wav> \
       --loop-points loop_points.json [--window 3.0] \
-      [--click-ratio-max 3.0]
+      [--click-ratio-max 3.0] [--level-window 1.0] \
+      [--level-delta-max 6.0]
   python3 music/gates/gate_loop_points.py --pack-dir <pack>
 
 Exit codes: 0 = PASS, 1 = FAIL (reasons on stderr),
@@ -72,6 +111,11 @@ from pathlib import Path
 
 DEFAULT_WINDOW = 3.0
 DEFAULT_CLICK_RATIO_MAX = 3.0
+# Ruler 2 (card t_bab8aa19). The 1.0 s window and the ~6 dB ceiling are the
+# rubric's own numbers — music/rubrics/gamer.json `loop_safety`: "last-1s RMS
+# within ~6 dB of first-1s RMS, no fade-to-silence on a loop claim".
+DEFAULT_LEVEL_WINDOW_S = 1.0
+DEFAULT_LEVEL_DELTA_MAX_DB = 6.0
 # The musical floor for a loop span. ONE definition, imported by
 # gate_sync_ready (pack mode) and by music/assets/pack.py, so the
 # generator and the gates cannot drift apart (card t_5ed495eb).
@@ -113,8 +157,8 @@ def curvature(samples: list[float]) -> list[float]:
             for i in range(1, len(samples) - 1)]
 
 
-def rms_from_wav(path: Path) -> float | None:
-    """RMS (linear) of a WAV via volumedetect mean_volume."""
+def mean_volume_db(path: Path) -> float | None:
+    """ffmpeg volumedetect mean_volume of a rendered file, in dB."""
     proc = subprocess.run(
         ["ffmpeg", "-i", str(path), "-af", "volumedetect",
          "-f", "null", "-"],
@@ -123,7 +167,14 @@ def rms_from_wav(path: Path) -> float | None:
     m = VOL_RE.search(proc.stderr or "")
     if not m:
         return None
-    mean_db = float(m.group(1))
+    return float(m.group(1))
+
+
+def rms_from_wav(path: Path) -> float | None:
+    """RMS (linear) of a WAV via volumedetect mean_volume."""
+    mean_db = mean_volume_db(path)
+    if mean_db is None:
+        return None
     if mean_db <= -100.0:
         return 0.0
     return 10.0 ** (mean_db / 20.0)
@@ -151,16 +202,23 @@ def fail(msgs: list[str]) -> int:
 
 def check_loop(master: Path, loop_start: float, loop_end: float,
                seamless: bool, window: float, ratio_max: float,
-               scratch: Path) -> tuple[list[str], dict]:
+               scratch: Path,
+               level_window: float = DEFAULT_LEVEL_WINDOW_S,
+               level_delta_max_db: float = DEFAULT_LEVEL_DELTA_MAX_DB,
+               ) -> tuple[list[str], dict]:
     """Verify ONE loop by measurement. Returns (problems, info).
 
     info carries what the measurement found: duration, span, the
-    junction/body curvature ratio, and the region RMS. info["ratio"]
-    is None when the seam could not be measured.
+    junction/body curvature ratio, the head/tail level delta, and the
+    region RMS. info["ratio"] is None when the seam could not be
+    measured; info["level_delta_db"] is None when the level ruler could
+    not run.
     """
     problems: list[str] = []
     info: dict = {"master": str(master), "duration": None, "span": None,
-                  "ratio": None, "region_rms": None}
+                  "ratio": None, "region_rms": None, "head_db": None,
+                  "tail_db": None, "level_delta_db": None,
+                  "level_window_s": None, "level_max_db": level_delta_max_db}
 
     duration = probe_duration(master)
     if duration is None:
@@ -250,6 +308,46 @@ def check_loop(master: Path, loop_start: float, loop_end: float,
             f"seam curvature ratio {ratio:.2f}x exceeds max "
             f"{ratio_max}x — a click (discontinuity) at the wrap "
             "point; the loop is NOT seamless")
+
+    # --- ruler 2: level continuity across the wrap (card t_bab8aa19) ---
+    # Curvature measures a kink and nothing about LEVEL. A linear fade-out is
+    # perfectly smooth, so ruler 1 passes it (measured 2.21x on the frozen
+    # 25.6 s probe artifact) while the wrap drops 8.9 dB. Compare the rubric's
+    # own windows: the last L seconds against the first L seconds.
+    lw = min(level_window, span / 2.0)
+    info["level_window_s"] = lw
+    level_head = scratch / "level_head.wav"
+    level_tail = scratch / "level_tail.wav"
+    if lw <= 0.0:
+        problems.append("the loop span is too short to measure a level "
+                        "window at each end of the loop")
+    elif not render_slice(master, loop_start, lw, level_head):
+        problems.append(f"ffmpeg could not render the head level "
+                        f"window [{loop_start:.2f}s, "
+                        f"{loop_start + lw:.2f}s]")
+    elif not render_slice(master, loop_end - lw, lw, level_tail):
+        problems.append(f"ffmpeg could not render the tail level "
+                        f"window [{loop_end - lw:.2f}s, "
+                        f"{loop_end:.2f}s]")
+    else:
+        head_db = mean_volume_db(level_head)
+        tail_db = mean_volume_db(level_tail)
+        if head_db is None or tail_db is None:
+            problems.append("could not measure the loop's head/tail level "
+                            "with ffmpeg volumedetect")
+        else:
+            info["head_db"] = head_db
+            info["tail_db"] = tail_db
+            delta = abs(tail_db - head_db)
+            info["level_delta_db"] = delta
+            if delta > level_delta_max_db:
+                direction = "drops" if tail_db < head_db else "rises"
+                problems.append(
+                    f"loop level {direction} {delta:.1f} dB across the "
+                    f"wrap: tail-{lw:.1f}s {tail_db:.1f} dB vs "
+                    f"head-{lw:.1f}s {head_db:.1f} dB (max "
+                    f"{level_delta_max_db:.1f} dB) — a fade or level ramp "
+                    "at the loop end; the loop is NOT seamless")
     return problems, info
 
 
@@ -275,7 +373,9 @@ def pack_index_loops(pack: Path) -> tuple[dict, list[str]]:
 
 
 def run_pack(pack: Path, window: float, ratio_max: float,
-             scratch_root: Path) -> int:
+             scratch_root: Path,
+             level_window: float = DEFAULT_LEVEL_WINDOW_S,
+             level_delta_max_db: float = DEFAULT_LEVEL_DELTA_MAX_DB) -> int:
     """Verify every loop in one asset pack with the single-loop method."""
     loops, problems = pack_index_loops(pack)
     if problems:
@@ -305,7 +405,8 @@ def run_pack(pack: Path, window: float, ratio_max: float,
             continue
         sub, info = check_loop(master, float(start), float(end),
                                bool(entry.get("seamless")), window,
-                               ratio_max, scratch_root / rel.stem)
+                               ratio_max, scratch_root / rel.stem,
+                               level_window, level_delta_max_db)
         problems += [f"{key}: {p}" for p in sub]
         info["key"] = key
         info["start"] = float(start)
@@ -321,10 +422,14 @@ def run_pack(pack: Path, window: float, ratio_max: float,
         print(f"  loop {i}/{len(rows)}: {key}")
         print(f"            [{info['start']:.3f}s -> {info['end']:.3f}s] "
               f"span {info['span']:.3f}s  "
-              f"seam {info['ratio']:.2f}x (max {ratio_max}x) — seamless  "
+              f"seam {info['ratio']:.2f}x (max {ratio_max}x)  "
+              f"level {info['level_delta_db']:.1f} dB "
+              f"(tail {info['tail_db']:.1f} vs head {info['head_db']:.1f} dB, "
+              f"max {level_delta_max_db:.1f})  "
               f"RMS {info['region_rms']:.5f}")
     print(f"  verdict  : all {len(rows)} loops seamless "
-          f"(junction/body curvature <= {ratio_max}x)")
+          f"(curvature <= {ratio_max}x AND tail/head level delta "
+          f"<= {level_delta_max_db:.1f} dB)")
     return 0
 
 
@@ -351,6 +456,18 @@ def main(argv: list[str] | None = None) -> int:
                         help=f"max junction/body curvature "
                              f"ratio "
                              f"(default {DEFAULT_CLICK_RATIO_MAX})")
+    parser.add_argument("--level-window", type=float,
+                        default=DEFAULT_LEVEL_WINDOW_S,
+                        help=f"level ruler: seconds rendered at each end of "
+                             f"the loop "
+                             f"(default {DEFAULT_LEVEL_WINDOW_S}; clamped "
+                             f"to half the loop span)")
+    parser.add_argument("--level-delta-max", type=float,
+                        default=DEFAULT_LEVEL_DELTA_MAX_DB,
+                        help=f"level ruler: max |tail - head| level delta in "
+                             f"dB "
+                             f"(default {DEFAULT_LEVEL_DELTA_MAX_DB}, the "
+                             f"rubric's ~6 dB)")
     parser.add_argument("--scratch", default=None,
                         help="scratch dir for rendered slices")
     args = parser.parse_args(argv)
@@ -365,7 +482,8 @@ def main(argv: list[str] | None = None) -> int:
         pack = Path(args.pack_dir)
         if not pack.is_dir():
             return fail([f"no such pack directory: {pack}"])
-        return run_pack(pack, args.window, args.click_ratio_max, scratch)
+        return run_pack(pack, args.window, args.click_ratio_max, scratch,
+                        args.level_window, args.level_delta_max)
 
     if not args.master or not args.loop_points:
         parser.error("provide --master and --loop-points, or --pack-dir")
@@ -398,7 +516,8 @@ def main(argv: list[str] | None = None) -> int:
 
     problems, info = check_loop(master, float(loop_start),
                                 float(loop_end), bool(lp.get("seamless")),
-                                args.window, args.click_ratio_max, scratch)
+                                args.window, args.click_ratio_max, scratch,
+                                args.level_window, args.level_delta_max)
     if problems:
         print("FAIL gate_loop_points", file=sys.stderr)
         if info["duration"] is not None:
@@ -406,12 +525,27 @@ def main(argv: list[str] | None = None) -> int:
                   file=sys.stderr)
             print(f"  loop     : [{loop_start:.3f}s -> "
                   f"{loop_end:.3f}s]", file=sys.stderr)
+        if info["ratio"] is not None:
+            print(f"  seam     : curvature ratio {info['ratio']:.2f}x "
+                  f"(max {args.click_ratio_max}x)", file=sys.stderr)
+        if info["level_delta_db"] is not None:
+            print(f"  level    : tail-{info['level_window_s']:.1f}s "
+                  f"{info['tail_db']:.1f} dB vs head-"
+                  f"{info['level_window_s']:.1f}s {info['head_db']:.1f} dB "
+                  f"(delta {info['level_delta_db']:.1f} dB, max "
+                  f"{args.level_delta_max:.1f})", file=sys.stderr)
         for m in problems:
             print(f"  - {m}", file=sys.stderr)
         if info["ratio"] is not None and info["ratio"] > args.click_ratio_max:
             print("  fix: render the loop with a crossfade at the "
                   "seam, or pick loop points on a zero crossing, "
                   "then re-run the gate", file=sys.stderr)
+        if (info["level_delta_db"] is not None
+                and info["level_delta_db"] > args.level_delta_max):
+            print("  fix: remove the fade-out / level ramp at the loop "
+                  "end — a loop must end at the level it starts at, or "
+                  "the wrap is audible; re-render and re-run the gate",
+                  file=sys.stderr)
         return 1
 
     print("PASS gate_loop_points")
@@ -420,6 +554,11 @@ def main(argv: list[str] | None = None) -> int:
           f"{loop_end:.3f}s] (span {info['span']:.3f}s)")
     print(f"  seam     : curvature ratio {info['ratio']:.2f}x "
           f"(max {args.click_ratio_max}x) — seamless")
+    print(f"  level    : tail-{info['level_window_s']:.1f}s "
+          f"{info['tail_db']:.1f} dB vs head-"
+          f"{info['level_window_s']:.1f}s {info['head_db']:.1f} dB "
+          f"(delta {info['level_delta_db']:.1f} dB, max "
+          f"{args.level_delta_max:.1f}) — no fade")
     print(f"  region   : RMS {info['region_rms']:.5f} "
           "(not silent)")
     return 0

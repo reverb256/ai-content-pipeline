@@ -10,6 +10,8 @@ Card t_5ed495eb. The suite needs:
                         conforming pack that the generator did not write.
   pack_bad_span/        one loop declares a 1.0 s span (below the 2 s floor)
   pack_bad_seam/        one loop is the phase-slip fixture (6x curvature)
+  pack_bad_fade/        one loop is the fade-out fixture (level ruler, card
+                        t_bab8aa19: smooth, so the curvature ruler cannot see it)
   pack_bad_count/       loops/ holds one more file than the manifest declares
   pack_bad_meta/        metadata object has no sample_rate
   pack_bad_noloops/     no loop_points.json
@@ -165,6 +167,14 @@ def main() -> int:
             src=seamless)
     rebuild("pack_bad_seam", dict(meta), bad_seam_loops,
             {"loops": 1, "stems": counts["stems"]}, src=broken)
+    # The level ruler (card t_bab8aa19). The loop source is the fade-out
+    # fixture: with the default 0 -> 10 s window its last 1 s sits 8.8 dB below
+    # its first 1 s (measured), while its curvature stays under the 3.0x
+    # ceiling — so ONLY the level ruler can refuse this pack.
+    rebuild("pack_bad_fade", dict(meta),
+            [{"path": "loops/loop_01.wav", "duration_sec": LOOP_SECONDS}],
+            {"loops": 1, "stems": counts["stems"]},
+            src=out_root / "loop_faded.wav")
     rebuild("pack_bad_meta", no_rate_meta, [dict(l) for l in loops],
             dict(counts), src=seamless)
     rebuild("pack_bad_noloops", dict(meta), [dict(l) for l in loops],

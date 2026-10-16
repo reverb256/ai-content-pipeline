@@ -89,6 +89,27 @@ fail_expected() { # label, expected-exit, then command
 
 say() { echo; echo "## $1"; }
 
+fail_reason() { # label, expected-exit, output pattern, then command
+  local label="$1"; local want="$2"; local pat="$3"; shift 3
+  local got=0
+  "$@" >/tmp/gate_out.$$ 2>&1 || got=$?
+  if [ "$got" -ne "$want" ]; then
+    echo "BAD   $label (expected exit $want, got $got)"
+    sed 's/^/        /' /tmp/gate_out.$$
+    fails=$((fails+1))
+  elif ! grep -qF -- "$pat" /tmp/gate_out.$$; then
+    # An exit code alone does not say WHY a gate refused. Card t_bab8aa19 was a
+    # gate that PASSED a broken artifact, so its check must read the refusal:
+    # "a faded tail fails" is only true if the gate said it failed for the
+    # LEVEL, not because the fixture was accidentally clicky.
+    echo "BAD   $label (exit $want, as expected, but the output never said: $pat)"
+    sed 's/^/        /' /tmp/gate_out.$$
+    fails=$((fails+1))
+  else
+    echo "FAILS $label (exit $want, refused for \"$pat\", as expected)"
+  fi
+}
+
 # A fixture builder that dies must stop the suite. Otherwise every case that
 # reads its output fails for the wrong reason ("no such package directory")
 # and `fail_expected` records it as a pass — a check that passes vacuously.
@@ -259,6 +280,20 @@ for d in "$GOOD_LOOP" "$BAD_LOOP"; do
 EOF
 done
 
+# --- the fade-out tail (card t_bab8aa19) ---------------------------
+# A third broken loop, and a different KIND of break: the tail fades out
+# smoothly over 1.6 s, so the junction curvature stays under its ceiling
+# (measured 2.21x) and the old gate PASSED it as "seamless" while its last
+# 1 s measured 8.8 dB below its first 1 s. This is the artifact class the
+# `game-assets` lane must never ship (music/rubrics/gamer.json reject_signals:
+# "fade-out or truncated ending on a game-loop claim").
+FADED_LOOP="$F/faded_loop"
+mkdir -p "$FADED_LOOP"
+cp "$F/loop_faded.wav" "$FADED_LOOP/master.wav"
+cat > "$FADED_LOOP/loop_points.json" <<'EOF'
+{"loop_start_s": 5.0, "loop_end_s": 10.0, "seamless": true}
+EOF
+
 # --- asset packs (generator-built + conforming + broken) -----------
 # Built by music/assets/pack.py for the generator pack: see card t_5ed495eb.
 build_fixtures "asset pack" "$PY" "$GATES/_pack_fixtures.py" "$F"
@@ -379,6 +414,14 @@ fail_expected "phase-slip loop (6.0x curvature) fails" 1 \
   --master "$BAD_LOOP/master.wav" \
   --loop-points "$BAD_LOOP/loop_points.json" \
   --scratch "$SCRATCH/loop_scratch"
+# The fade-out tail must be refused FOR THE LEVEL, not for a click: the same
+# fixture measures 2.21x curvature (under the 3.0x ceiling). Card t_bab8aa19.
+fail_reason "faded loop tail fails on the LEVEL ruler, not the curvature one" 1 \
+  "loop level drops" \
+  "$PY" "$GATES/gate_loop_points.py" \
+  --master "$FADED_LOOP/master.wav" \
+  --loop-points "$FADED_LOOP/loop_points.json" \
+  --scratch "$SCRATCH/loop_scratch"
 
 # ------------------------------------------------------------------
 # 8b. asset packs — gate_sync_ready pack mode + gate_loop_points sweep
@@ -404,6 +447,10 @@ fail_expected "pack: a 1.0s loop point breaks the 2s floor" 1 \
 fail_expected "pack: a clicky loop is not seamless (seam measured)" 1 \
   "$PY" "$GATES/gate_sync_ready.py" \
   --package-dir "$F/pack_bad_seam" --lane game-assets
+fail_reason "pack: a faded loop is not seamless (LEVEL ruler, not curvature)" 1 \
+  "loop level drops" \
+  "$PY" "$GATES/gate_sync_ready.py" \
+  --package-dir "$F/pack_bad_fade" --lane game-assets
 fail_expected "pack: manifest counts must match the files on disk" 1 \
   "$PY" "$GATES/gate_sync_ready.py" \
   --package-dir "$F/pack_bad_count" --lane game-assets
@@ -430,6 +477,10 @@ pass "hand-built conforming pack: every loop seamless" \
 fail_expected "sweep fails when one loop is a phase-slip loop" 1 \
   "$PY" "$GATES/gate_loop_points.py" \
   --pack-dir "$F/pack_bad_seam" --scratch "$SCRATCH/loop_scratch"
+fail_reason "sweep fails when one loop is a faded loop (LEVEL ruler)" 1 \
+  "loop level drops" \
+  "$PY" "$GATES/gate_loop_points.py" \
+  --pack-dir "$F/pack_bad_fade" --scratch "$SCRATCH/loop_scratch"
 fail_expected "sweep fails on a 1.0s loop point" 1 \
   "$PY" "$GATES/gate_loop_points.py" \
   --pack-dir "$F/pack_bad_span" --scratch "$SCRATCH/loop_scratch"
