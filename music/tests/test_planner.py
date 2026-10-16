@@ -8,6 +8,7 @@ the same requirement the planner itself has.
 
 import importlib.util
 import json
+import os
 import pathlib
 import re
 import subprocess
@@ -130,12 +131,18 @@ for g in INST:
         check(f"{g}: instrumental plans", False, tail[-1] if tail else "no output")
         continue
     plan = json.loads(out.read_text())
-    want = pl.bpm_anchor_for(pl.context_for(g))
+    ctxg = pl.context_for(g)
+    want = pl.bpm_anchor_for(ctxg)
+    want_key = pl.key_anchor_for(ctxg)
+    # `key` is NOT part of the instrumental contract: it is whatever an artifact
+    # states, and null for the 11 genres whose caption states none. What must
+    # hold is that the plan claims no key that no artifact states (t_f65b0f4c).
     check(f"{g}: plan is instrumental, bpm {plan['bpm']} == anchor {want}, "
-          f"key is a signature",
+          f"key is stated-or-null",
           plan.get("instrumental") is True and plan["bpm"] == want
-          and bool(plan.get("key")) and len(plan["key"]) < 32,
-          f"instrumental={plan.get('instrumental')} bpm={plan['bpm']} key={plan['key']!r}")
+          and plan.get("key") == want_key,
+          f"instrumental={plan.get('instrumental')} bpm={plan['bpm']} "
+          f"key={plan['key']!r} want_key={want_key!r}")
 
 # A vocal genre must NOT be forced down the instrumental path: that would strip
 # the element that defines it. epic-orchestral-boss is the measured case.
@@ -186,6 +193,128 @@ check(f"the instrumental census is 8 of {len(genres())} genres", len(inst) == 8,
       f"got {len(inst)}: {inst}")
 check("epic-orchestral-boss is NOT in the instrumental census",
       "epic-orchestral-boss" not in inst)
+
+# ---------------------------------------------------------------------------
+print()
+print("5. the plan's key is what an artifact states, never a default (t_f65b0f4c)")
+
+# REGRESSION (2026-10-16, cards t_f65b0f4c and t_791b48f7). The draft and
+# instrumental paths resolved the key as `args.key or "C minor"`, and the
+# scheduled CronJob passes no --key, so EVERY plan the pipeline produced claimed
+# "C minor" whatever the genre: the four live plans in /var/lib/music-plans
+# (chill-lounge 72 BPM, anime-ending 92, epic-orchestral-boss 150, trance 138)
+# all said C minor on 2026-10-16. For trance that contradicted the plan's own
+# caption ("hall reverb, A minor, extended club arrangement") and the queued
+# brief ("Uplifting trance at 138 BPM in A minor"). `bpm` had the same defect
+# and was fixed against the caption; `key` was left behind - and since card
+# t_25a6499c D2 the plan's key is ALSO carried to the engine as `keyscale`, so a
+# fabricated value is no longer only a reading-surface problem.
+#
+# The invariant, over every genre in genres.yaml: the plan's key is the key its
+# own caption states, and is null when the caption states none. The caption is
+# the only key claim backed by an artifact (the genre template) and the only
+# text the engine receives.
+for g in genres():
+    out = pathlib.Path(f"/tmp/_tp-key-{g}.json")
+    r = subprocess.run(
+        [sys.executable, str(PLANNER), "plan", "--brief", BRIEF,
+         "--genre", g, "--lyrics-mode", "draft", "--out", str(out)],
+        capture_output=True, text=True)
+    if r.returncode != 0:
+        tail = (r.stdout + r.stderr).strip().splitlines()
+        check(f"{g}: draft plans", False, tail[-1] if tail else "no output")
+        continue
+    plan = json.loads(out.read_text())
+    stated = pl.key_in_caption(pl.context_for(g)["template"]["caption"] or "")
+    check(f"{g}: key {plan['key']!r} is the key its caption states ({stated!r})",
+          plan.get("key") == stated, f"planned {plan['key']!r}, caption {stated!r}")
+
+# The census is measured here, not assumed. 3 of 14 captions state a key, and
+# naming them is what makes a template that GAINS or LOSES a key visible.
+stated_genres = sorted(
+    g for g in genres()
+    if pl.key_in_caption(pl.context_for(g)["template"]["caption"] or ""))
+check(f"3 of {len(genres())} genre captions state a key",
+      len(stated_genres) == 3, str(stated_genres))
+check("the three are elemental-water, epic-orchestral-boss, trance",
+      stated_genres == ["elemental-water", "epic-orchestral-boss", "trance"],
+      str(stated_genres))
+
+# The exact case the incident was found on (card t_791b48f7), and the case that
+# proves no default replaced the fabrication.
+trance = json.loads(pathlib.Path("/tmp/_tp-key-trance.json").read_text())
+check("trance states 'A minor', not the old 'C minor'",
+      trance["key"] == "A minor", repr(trance["key"]))
+cl = json.loads(pathlib.Path("/tmp/_tp-key-chill-lounge.json").read_text())
+check("chill-lounge (no key in its caption) emits null, not an invention",
+      cl["key"] is None, repr(cl["key"]))
+
+# The resolution order mirrors bpm's: explicit request, blueprint decision,
+# caption, and then NOTHING.
+check("an explicit key wins over a blueprint decision",
+      pl.key_anchor_for({"blueprint": {"key_anchor": "D Phrygian"},
+                         "template_key": "A minor"}) == "D Phrygian")
+check("a blueprint key_anchor wins over the caption",
+      pl.key_anchor_for({"blueprint": {"key_anchor": "F# minor"},
+                         "template_key": "A minor"}) == "F# minor")
+check("a blueprint plain `key` is accepted too (card t_f65b0f4c step 3)",
+      pl.key_anchor_for({"blueprint": {"key": "Bb major"},
+                         "template_key": "A minor"}) == "Bb major")
+check("no artifact states a key -> None, never a default",
+      pl.key_anchor_for({"blueprint": {}, "template_key": None}) is None)
+# No live blueprint pins a key yet, so the caption is what the live plans use.
+# Pin that fact: if a blueprint gains a key_anchor, this tells the reader why a
+# plan's key stops matching its caption.
+anchored = sorted(g for g in genres()
+                  if pl.context_for(g)["blueprint"].get("key_anchor")
+                  or pl.context_for(g)["blueprint"].get("key"))
+check("no live blueprint pins a key yet (the caption is the only live source)",
+      anchored == [], str(anchored))
+
+# NEGATIVE CONTROL for the caption reader. elemental-water's caption says BOTH
+# "a minor key with add9 color" (lowercase - a description of modality) and
+# ", C minor" (the signature). A case-INsensitive note name reads the first and
+# returns the wrong key, so the pattern is case-sensitive on the note name and
+# this is the case that caught it.
+check("'a minor key' is not a signature (case-sensitive note name)",
+      pl.key_in_caption("slow melancholic melody in a minor key with add9 color") is None,
+      repr(pl.key_in_caption("slow melancholic melody in a minor key with add9 color")))
+check("elemental-water's caption reads 'C minor', not 'a minor'",
+      pl.key_in_caption(pl.context_for("elemental-water")["template"]["caption"]) == "C minor",
+      repr(pl.key_in_caption(pl.context_for("elemental-water")["template"]["caption"])))
+check("epic-orchestral-boss's caption reads 'C minor' from '150 BPM in C minor'",
+      pl.key_in_caption(pl.context_for("epic-orchestral-boss")["template"]["caption"])
+      == "C minor")
+# Every non-key phrase is lifted from a live template. None may read as a key.
+for phrase in ("FINAL CHORUS JUMPS UP ONE KEY - the defining anison gesture",
+               "gentle key lift in the last chorus",
+               "audible pedal and key mechanism noise",
+               "simple key-triggered echo instead of reverb",
+               "minor key with flat-2 Phrygian color",
+               "pop vocals, EDM drop, trap, happy major key",
+               "the key-change moment as metatags"):
+    check(f"not a key: {phrase[:36]!r}", pl.key_in_caption(phrase) is None,
+          repr(pl.key_in_caption(phrase)))
+
+# End to end, through the render wrapper. SUNOLOCAL_HOST points at a closed
+# port, so the submit fails fast - but `build_suno_request()` and the params
+# print both run BEFORE it, so reaching the failure proves the wrapper carried
+# `keyscale: null` without raising, and the print must not present that null as
+# a key.
+if pathlib.Path("/tmp/_tp-inst-chill-lounge.json").is_file():
+    env = dict(os.environ, SUNOLOCAL_HOST="http://127.0.0.1:9")
+    rr = subprocess.run(
+        [sys.executable, str(REPO / "music" / "scripts" / "acestep_plan.py"),
+         "/tmp/_tp-inst-chill-lounge.json", "--name", "tf-key-cl"],
+        capture_output=True, text=True, env=env, timeout=120)
+    check("acestep_plan.py renders a null-key plan without raising (no 'missing key')",
+          "missing 'key'" not in (rr.stdout + rr.stderr), repr((rr.stdout + rr.stderr)[-200:]))
+    check("acestep_plan.py prints key=unknown for a plan that states no key",
+          "key=unknown" in rr.stdout, repr(rr.stdout[-200:]))
+    check("acestep_plan.py never prints a bare None where a key belongs",
+          "· None ·" not in rr.stdout, repr(rr.stdout[-200:]))
+else:
+    print("  SKIP  the instrumental chill-lounge plan was not produced above")
 
 # ---------------------------------------------------------------------------
 print()

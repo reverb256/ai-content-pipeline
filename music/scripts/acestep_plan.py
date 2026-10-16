@@ -238,7 +238,11 @@ def main() -> int:
 
     print(f"plan     : {args.plan}")
     print(f"title    : {plan.get('title')}   authorship: {plan.get('authorship','(unstated)')}")
-    print(f"params   : {plan.get('bpm')} BPM · {plan.get('key')} · {plan.get('timesignature')}/4 · {plan.get('duration')}s")
+    # `keyscale` on the wire is None when no artifact states a key, and this
+    # line says so instead of printing a bare "None" that a reader takes for a
+    # key signature (card t_f65b0f4c).
+    print(f"params   : {plan.get('bpm')} BPM · {plan.get('key') or 'key=unknown'} · "
+          f"{plan.get('timesignature')}/4 · {plan.get('duration')}s")
     print(f"mode     : {'INSTRUMENTAL (no lyrics box)' if plan.get('instrumental') else 'VOCAL'}"
           f"  (instrumental={bool(plan.get('instrumental'))}, carried to the engine)")
     print(f"sunolocal: {SUNOLOCAL_HOST}")
