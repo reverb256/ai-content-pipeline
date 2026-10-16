@@ -7,10 +7,19 @@
 > created 599 s later by the second oracle wave. It differs in ONE component: trend signal
 > 5.0 vs 3.0. Both resolve to THIS brief; the brief is keyed by **genre**, not by card.
 > **Written:** 2026-10-16T13:16-05:00 (CDT)
-> **Repo:** `/home/j_kro/ai-content-pipeline` @ `d491663` (main). The working tree is shared
-> by 6–7 concurrent brief-stage workers; HEAD moved 5 times while this brief was written
-> (the last commits were the sibling elemental briefs `elemental-air`, `sentimental-piano`,
-> `commentary-beds`, `anime-opening`).
+> **Verified (duplicate-card pass, `t_42a01e18`):** 2026-10-16T13:50-05:00 (CDT) — see §13.
+> One attribution was corrected (§9: the tail/head dB column belongs to the `loop/` render,
+> not to `loop2/`); the loop-gate finding itself reproduced on BOTH renders, and the second
+> ruler §9 asks for now exists as `music/scripts/loop_seam_check.py`.
+> **Superseded revision of this file (before that pass):**
+> `sha256 86436b4b2c2c757756a7644b79907fbebc1872b3f6686d340e771a8e0516ace1` (508 lines).
+> `brief.json` superseded: `sha256 ebb875bd2472d0fab0a41766519db7b948bcd03334372fb53245acfe6bcc6013`.
+> **Repo:** `/home/j_kro/ai-content-pipeline` @ `d491663` (main) at write time. The working tree
+> is shared by 6–7 concurrent brief-stage workers; HEAD moved 5 times while this brief was
+> written (the last commits were the sibling elemental briefs `elemental-air`, `sentimental-piano`,
+> `commentary-beds`, `anime-opening`). Re-measured by the duplicate-card pass (2026-10-16T13:50
+> CDT): `main` @ `fa3163f`, **29 ahead / 15 behind** `origin/main` — the 15-commit upstream
+> deficit has not moved all day; the local tip moves every few minutes.
 > **Oracle:** 7.5/10 — quota headroom 10.0, **lane coverage 6.0**, revenue 8.0, cadence fit
 > 6.7, policy risk 9.0, **trend signal 3.0**. Threshold 5.0 → produce.
 
@@ -363,24 +372,42 @@ PASS gate_quota
 
 This is the most important finding in this brief. The `game-assets` lane's defining gate does
 not catch the break its own rubric names. Measured on real synthesized artifacts at this
-genre's 16-bar loop length (25.6 s), built in
-`…/workspaces/t_6f0d261e/loop2/`:
+genre's 16-bar loop length (25.6 s), in `…/workspaces/t_6f0d261e/`.
 
-| Artifact | `gate_loop_points` | Rubric `loop_safety` tail/head RMS |
-|---|---|---|
-| A seamless tone | **PASS** 1.56× | −21.1 / −21.1 dB (Δ 0.0) ✓ |
-| B 1.6 s fade-out tail | **PASS 2.21×** ← false pass | **−21.1 / −29.9 dB (Δ 8.8 dB)** ✗ |
-| C half-period phase slip | FAIL 5.99× ✓ | — |
-| D truncated 1/4 cycle | FAIL 34.01× ✓ | — |
+**The artifacts exist as two renders of the same four signals** — `loop/` (`seamless.wav`,
+`faded.wav`; the first probe, rendered at 1/8 amplitude) and `loop2/` (`A_seamless.wav`,
+`B_faded.wav`, `C_phaseslip.wav`, `D_truncated.wav`; full scale). The curvature ratio is
+level-invariant, so the verdicts are identical in both; the absolute dB is not, so every
+level figure below is attributed to the render it was measured on. **Corrected 2026-10-16 by
+the duplicate-card pass `t_42a01e18` (§13):** this table previously attributed the whole
+`loop_safety` column to `loop2/`. Those numbers are the `loop/` render's; `loop2/` gives the
+same Δ, 18 dB louder.
+
+| Artifact | `gate_loop_points` | Rubric `loop_safety` tail/head RMS, `loop/` render | Same ruler, `loop2/` render |
+|---|---|---|---|
+| A seamless tone | **PASS** 1.56× (`loop2/` measures 1.57×) | −21.1 / −21.1 dB (Δ 0.0) ✓ | −3.0 / −3.0 dB (Δ 0.0) ✓ |
+| B 1.6 s fade-out tail | **PASS 2.21×** ← false pass | **−21.1 / −29.9 dB (Δ 8.8 dB)** ✗ | **−3.0 / −11.9 dB (Δ 8.9 dB)** ✗ |
+| C half-period phase slip | FAIL 5.99× ✓ | Δ 0.0 — the level ruler is blind to a pure click | Δ 0.0 |
+| D truncated 1/4 cycle | FAIL 34.01× ✓ | Δ 0.0 — same | Δ 0.0 |
+
+Each ruler has one hole and the holes are different: curvature cannot see level, the tail/head
+comparison cannot see a click. Neither number alone verifies a loop.
 
 ```
-$ python3 music/gates/gate_loop_points.py --master B_faded.wav --loop-points lp.json
+$ python3 music/gates/gate_loop_points.py \
+    --master …/t_6f0d261e/loop/faded.wav --loop-points …/t_6f0d261e/loop/lp.json
 PASS gate_loop_points
+  master   : …/t_6f0d261e/loop/faded.wav (25.600s)
   loop     : [0.000s -> 25.600s] (span 25.600s)
   seam     : curvature ratio 2.21x (max 3.0x) — seamless
   region   : RMS 0.08610 (not silent)
 rc=0
 ```
+
+The `master` line and the artifact path are shown because the failure this table documents is a
+**false pass** — a reader must be able to tell which render produced the number. The same run on
+`…/t_6f0d261e/loop2/B_faded.wav` prints `seam : curvature ratio 2.21x` and
+`region : RMS 0.69183` (both re-measured 2026-10-16, §13).
 
 **Root cause.** The gate measures *junction curvature* — the discrete second difference of
 the PCM across the wrap — so it detects **derivative kinks** (a click). A linear fade-out is
@@ -401,6 +428,35 @@ land with the fix (a faded-tail fixture that must FAIL). Do not "fix" this by lo
 `--click-ratio-max` for this genre: B measures 2.21× and C measures 5.99×, so no single
 threshold separates them. The gate needs a second measurement, not a different number.
 
+**The second measurement now exists (added 2026-10-16 by `t_42a01e18`, §13):**
+`music/scripts/loop_seam_check.py` runs BOTH rulers — it delegates the curvature check to the
+real gate and adds the rubric's tail/head level comparison — and PASSes only when both agree.
+Until nexus-core folds the ruler into `gate_loop_points`, the package stage runs this in
+addition to the gate:
+
+```
+$ python3 music/scripts/loop_seam_check.py \
+    --master …/t_6f0d261e/loop/faded.wav --loop-points …/t_6f0d261e/loop/lp.json
+FAIL loop_seam_check
+  master   : …/t_6f0d261e/loop/faded.wav
+  curvature: PASS 2.21x — no click at the wrap
+  level    : FAIL tail-1s -29.9 dB vs head-1s -21.1 dB (delta 8.8 dB, max 6.0)
+    the rubric's `loop_safety` reject (fade-out on a game-loop claim) — this is the break gate_loop_points cannot see
+rc=1
+
+$ python3 music/scripts/loop_seam_check.py --selftest
+artifact                curvature         level (tail vs head)  verdict
+A_seamless             PASS 1.57x   PASS 0.0 dB (-3.0 vs -3.0)     PASS
+B_faded                PASS 2.21x  FAIL 8.9 dB (-11.9 vs -3.0)     FAIL
+C_phaseslip            FAIL 5.99x   PASS 0.0 dB (-3.0 vs -3.0)     FAIL
+D_truncated           FAIL 34.01x   PASS 0.0 dB (-3.0 vs -3.0)     FAIL
+SELFTEST PASS loop_seam_check: A both rulers PASS; B curvature PASS / level FAIL (the fade is caught); C and D curvature FAIL
+rc=0
+```
+
+The selftest builds its own four fixtures at a given `--bpm`/`--bars`, so the finding is
+reproducible from the repo alone, without the probe directories under any card's workspace.
+
 ## 10. Stage plan for this genre (skips locked)
 
 `brief` ✓ → `genre-select` → **`lyrics` SKIPPED** (instrumental: the template's empty-box
@@ -414,7 +470,8 @@ card t_9546841b) → `gate` (independent review, different model than the produc
 `music/rubrics/gamer.json`: 5 criteria, pass threshold 7.0 on the geometric-median panel
 aggregate; `battle_energy` and `loop_safety` carry weight 3 each) → `package`
 (`gate_sync_ready --lane game-assets` + `gate_release_ready` + `gate_stems_present` +
-`gate_loop_points` **and** the tail/head RMS check from §9; `loop_points.json`; ISRC with no
+`gate_loop_points` **and** the tail/head RMS check from §9 — implemented as
+`music/scripts/loop_seam_check.py`, one call, both rulers; `loop_points.json`; ISRC with no
 check digit) → `visual` (**applies** — `video_shape: loop-10min`: a 600.0 s visual, exactly
 5 × the 120.0 s master, that passes `gate_youtube_authentic`, ≥ 10 distinct frames, with
 `ai_disclosure.txt`) → `human-approval` (j_kro) → `publish` (private/draft only).
@@ -506,3 +563,86 @@ function of the lane set, which is identical for all four. Consequences:
   working tree (`ade6e87`, `1553da2`, `4bb1ea6`, `9ebf6af`, `d491663` landed inside ~20
   minutes, one of them a sibling elemental brief). `music/gates/check_gate_suite.sh` is being
   edited in the same tree right now while this brief runs.
+- **Lane checks re-run by the duplicate-card pass `t_42a01e18` (2026-10-16T13:50 CDT):**
+  `music/scripts/check_brief_figures.py` — 56 of 58 recomputed figures lane-wide OK; the 2
+  mismatches are `commentary-beds.md`'s "4,133 B" (card `t_47491ec0`), and no figure in THIS
+  file was flagged. `music/scripts/check_brief_paths.py` — PASS (2 WARNs, other briefs).
+  `music/scripts/check_prompt_style_counts.py` — PASS, 15 claims across 14 templates.
+  `music/gates/check_gate_suite.sh` — `OK: every gate passed its good artifact and failed its
+  broken one`, rc=0. New tool from that pass: `music/scripts/loop_seam_check.py` (§9, §13).
+
+## 13. Duplicate-card verification pass — `t_42a01e18`, 2026-10-16T13:50 CDT
+
+This card is the second-wave twin of `t_6f0d261e`: same genre, same lanes, same cadence, one
+score component apart (trend signal 5.0 vs 3.0, which `music/oracle.py:284–289` returns on a
+fetch failure). The brief is keyed by **genre**, so both cards resolve to this file. The twin
+therefore owes a verification pass, not a second brief: nothing here is new work product, and
+no stage chain was started (this genre already sits at `stage: genre-select`).
+
+### Every checkable figure re-measured, live
+
+| Section | Claim | Re-measured 2026-10-16 | Verdict |
+|---|---|---|---|
+| §1 | registry 14 genres / 10 lanes; `gate_quota` PASS 0/60 | `/usr/bin/python3 music/registry.py validate` → rc=0, identical line; `gate_quota` → `PASS`, 0/60, 0 studio exports | ✓ |
+| §1 | composite 7.505 → 7.5; components 10 / 6 / 8 / 6.7 / 9 / 3 | recomputed with `oracle.py`'s weights (line 54): 7.505000 and 7.705000 for the twin | ✓ |
+| §1 | re-run today: `cadence_fit` 3.333, total 7.0 | live `score_genre("elemental-fire")` → `cadence_fit 3.3333`, `trend_signal 3.0`, `total 7.0` | ✓ |
+| §4 | bar 1.600 s; 16/32/75/375 bars = 25.6 / 51.2 / 120.0 / 600.0 s | all exact; 600÷51.2 = 11.71875, ÷89.6 = 6.6964, ÷102.4 = 5.8594, ÷120 = 5.000, ÷200 = 3.000 | ✓ |
+| §4 | 75-bar sheet 9+12+12+12+9+12+9, 120.0 s; `MAX_DURATION_S` 420 | sums exact; `planner.py:83 MAX_DURATION_S = 420` | ✓ |
+| §5 | style field 583/1000 chars; template 4008 B | block measures 583 chars / 583 bytes; template 4008 B | ✓ |
+| §5 | `translate.py:42` bpm=120, `:45` `int(60 + style_weight*120)`; 120 / 156 / 150; `key` at `:49` | read from `origin/main`; all four derived BPMs and the line numbers exact | ✓ |
+| §5 | no `elemental-fire.yaml`; planner falls back to 100 BPM at `planner.py ~470` | `music/lyrics/blueprints/` = activist, chill-lounge, trance; line 470 is exactly the fallback | ✓ |
+| §7 | `music/suno-gen.py` absent here, on `origin/main` from `295fc49` / `ba28f55` | absent from the worktree; both commits present on `origin/main` | ✓ |
+| §8 | fixture 5.000 s, 1280×720, 14 133 B; fails the real gate | ffprobe exact (h264+aac); gate FAIL, 2 distinct signatures, disclosure line — verbatim | ✓ |
+| §8 | `gate_sync_ready` / `gate_release_ready` / `gate_stems_present` FAIL on an empty package | all three FAIL; every quoted reason line reproduced word for word | ✓ |
+| §9 | the four verdicts and ratios | reproduced: 1.56× / **2.21× false pass** / 5.99× / 34.01× | ✓ (see correction) |
+| §10 | 300 samples → 22 / 21 / 170 distinct; 640×360 floor at `gate_youtube_authentic.py:146` | re-ran the real gate on the three stored probes: 22, 21, 170 distinct, all PASS; floor line 146 exact | ✓ |
+| §10 | rubric panel: 5 criteria, threshold 7.0, geometric median | `gamer.json` pass_threshold 7.0, 5 criteria, weights 3/3/3/1/1; geometric median implemented in `music/rubrics/panel.py` | ✓ |
+| §10 | `gate_loudness` measures volumedetect mean_volume, not gated LUFS | gate docstring + `MEAN_RE`: confirmed; card `t_9546841b` still open | ✓ |
+| §11 | 8 elemental cards, 28 oracle cards for 14 genres; `t_bf0e5edd` | board read (sqlite, read-only): 28 `music-oracle:%`, 8 elemental oracle cards, `t_bf0e5edd` `ready`/`oracle` | ✓ |
+| §12 | `gate_release_ready.py:92` `isrc_syntax`; docstring 13–15 claim a check digit; `gate_youtube_authentic.py:146` | line numbers exact; validator is shape-only | ✓ |
+| §12 | this genre's queue entry is `t_28146d70` | present, `todo`, `nexus-core`, "gated on instrumental mode t_25a6499c; bpm must read 150" | ✓ |
+
+### The one correction applied
+
+| # | Section | Claimed at the brief stage | Measured at this pass |
+|---|---|---|---|
+| 1 | §9 (table + prose), `brief.json: _loop_verification_warning` | the whole §9 table was "built in `…/t_6f0d261e/loop2/`" | the four signals exist as **two renders**: `loop/` (1/8 amplitude) and `loop2/` (full scale). `2.21×` and `1.56×` are the `loop/` set's numbers; `loop2/` measures `2.21×` and `1.57×`. The `loop_safety` column (−21.1 / −29.9, Δ 8.8) and the quoted `region : RMS 0.08610` are `loop/faded.wav`'s; `loop2/B_faded.wav` gives −3.0 / −11.9 (Δ 8.9) and `region : RMS 0.69183`. The finding is unchanged and the Δ reproduces on both renders — only the absolute level, which depends on the render gain, was attached to the wrong directory |
+
+Nothing else needed correcting: every other figure in the file reproduced, including the ones
+this pass expected to be stale (the repo divergence is still **15** commits behind
+`origin/main`; only the "ahead" count moves, 26 → 29).
+
+### Regression check added (FAILURE → TEST)
+
+The failure above is not a wrong number, it is a **measurement attached to the wrong artifact
+set** — the class where a table's absolute figures come from a different render than the one
+its prose names. Two guards now exist:
+
+- `music/scripts/loop_seam_check.py` (new): implements the second ruler §9 demands — it
+  delegates curvature to the real `gate_loop_points.py` and adds the rubric's tail/head level
+  comparison (`--tolerance-db`, default 6.0 from `gamer.json` `loop_safety`), and prints the
+  measured artifact's **absolute path** next to its numbers, so a level figure can never again
+  float free of the file it came from. `--selftest` builds the four fixtures from scratch and
+  asserts the documented behaviour, so the finding is reproducible from the repo alone. This
+  also closes the practical hole: the package stage now has a callable that FAILs a faded loop
+  even while `gate_loop_points` passes it (nexus-core still owns folding it into the gate,
+  `t_bab8aa19`).
+- `music/scripts/check_brief_figures.py` (sibling card, commit `cab0415`): recomputes every
+  brief figure and checks its unit. It covers `B` / `chars` / `lines`; it does **not** cover
+  dB or RMS figures, which is why the ruler above carries that job.
+
+### Not changed, not re-filed
+
+No registry value, gate, plan, blueprint, chart file, cluster object or campaign artifact was
+modified. No child card was created: every item §9–§12 raise already has an owner — `t_bab8aa19`
+(the gate fix + its faded-tail fixture), `t_25a6499c` (BPM/key/instrumental render gaps),
+`t_8a715681` (the 15-commit divergence), `t_bf0e5edd` (the oracle duplicate sweep),
+`t_b0a4db92` (the dangling `brain/` citations), `t_9546841b` (the loudness ruler),
+`t_28146d70` (this brief's queue entry), `t_41f354be` (scheduler units on the wrong checkout),
+`t_426a82a3` (`battle_energy` scoping), and `t_75aacf8b` / `t_a14e5d52` (profile workdir, kanban
+env, payload drift).
+
+hotspot: `music/briefs/` — 14 briefs written and re-verified by ~8 concurrent `music-producer`
+workers on 2026-10-16; every write needs a path-scoped commit and a lock retry. This file now
+has two commits, both on this genre. `music/gates/check_gate_suite.sh` was being edited in the
+same tree during this pass (it ran green at 13:48).
