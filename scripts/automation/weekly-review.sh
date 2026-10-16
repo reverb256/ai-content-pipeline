@@ -76,6 +76,24 @@ else
   FAILS+=("tempo measurement test: music/rubrics/test_measure_bpm.py FAILED with $RUBRIC_PY — the tempo candidate set or the anchor block is broken (incident card t_ed609eb0); last lines: $(printf '%s' "$BPM_TEST_OUT" | tail -3 | tr '\n' ' ')")
 fi
 
+# --- pack manifest paths (incident: card t_5f814f2f) --------------------------
+# `music/assets/pack.py` wrote the manifest's `file` field relative to the pack
+# tree root and read it back relative to `music/` — a lookup that never
+# resolved, under a silent `.exists()` guard, so the one-shots came from a
+# recomputed bus while the manifest's declaration was decoration. Measured on the
+# committed pack 2026-10-16: `music/packages/welcome-asset-pack/stems/02_drums.wav`
+# exists=False, `<repo>/packages/welcome-asset-pack/stems/02_drums.wav`
+# exists=True. The check resolves EVERY declared `file`/`path` with the
+# generator's OWN reader, fails the pre-fix reader's shape, and builds a pack
+# OUTSIDE the repository to prove `file` is tree-root-relative, not
+# repo-root-relative.
+if PACK_PATHS_OUT=$("$RUBRIC_PY" music/scripts/check_pack_manifest_paths.py 2>&1); then
+  PACK_PATHS="PASS"
+else
+  PACK_PATHS="FAILED"
+  FAILS+=("pack manifest paths: music/scripts/check_pack_manifest_paths.py FAILED with $RUBRIC_PY — a declared pack path does not resolve, or the one-shot source is not the declared stem (incident card t_5f814f2f); last lines: $(printf '%s' "$PACK_PATHS_OUT" | tail -3 | tr '\n' ' ')")
+fi
+
 # --- previous week's actions --------------------------------------------------
 PREV=$(ls -1 performance/weekly/*.md 2>/dev/null | grep -v "/$DATE" | sort | tail -1 || true)
 PREV_ACTIONS="(no previous digest found)"
@@ -162,6 +180,7 @@ PY
   echo "- Review artifacts (brain/, performance/, campaigns/): $ARTIFACTS"
   echo "- Rubric scope test (music/rubrics/test_panel_math.py): $RUBRIC_TEST"
   echo "- Tempo measurement test (music/rubrics/test_measure_bpm.py): $BPM_TEST"
+  echo "- Pack manifest paths (music/scripts/check_pack_manifest_paths.py): $PACK_PATHS"
   echo "- Kanban boards:"
   echo "$KANBAN_STATS_MD"
   echo

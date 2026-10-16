@@ -158,7 +158,7 @@ lane's shape are both `loop-10min`. One render satisfies both.
 
 ### A fourth surface also exists in this checkout now
 
-`music/assets/pack.py` (54971 B, re-measured 2026-10-16 17:57 CDT, card `t_4906bc6e`) and its executable gate `scripts/gates/gate_asset_pack.py`
+`music/assets/pack.py` (card `t_4906bc6e`; its size is not restated here — the file is live, so a live figure ages, §14) and its executable gate `scripts/gates/gate_asset_pack.py`
 (2981 B) are both present in this checkout at 2026-10-16 16:07 CDT — the "upstream-only" reading the first two
 revisions of this brief carried is stale (card `t_5ed495eb`, `done`). The sample pack is here
 too: `packages/welcome-asset-pack/` (manifest.json, loops/, one_shots/, LICENCE.txt,
@@ -433,7 +433,7 @@ and will send a human looking for a check digit that the standard does not defin
 | `lyrics` | **Not applicable.** The stage prompt already anticipates this: "an instrumental genre … skips this stage — advance it with a comment saying the genre is instrumental." No sheet, no `gate_lyrics_original` run, no authorship claim to register with SOCAN for this track. |
 | `generate` | Requires a **track dir with `title.txt`** and, because `--instrumental` is passed, a marker: `"instrumental": true` in the track dir's `manifest.json`, or an empty file named `instrumental`. Code-enforced, with a FATAL message that says exactly this. The lyrics box is sent **empty**; the caption gets `, instrumental, no vocals` appended by the translator. |
 | `curate` | Critical for this genre, because D1 (120 BPM default) and out-of-genre drift into percussion are both audible. Reject on: any drum kit, any bass weight, a resolved cadence, a hard/faded ending. |
-| `stems` | Export through **Suno Studio** (unlimited) — never the standard download button (60/month cap). The local service's `/api/v1/stems` is a deferred stub. `music/assets/pack.py` (54971 B, now in this checkout) derives 12 time-aligned stems by HPSS (scipy) as the asset-pack path (card `t_5ed495eb`, `done`). |
+| `stems` | Export through **Suno Studio** (unlimited) — never the standard download button (60/month cap). The local service's `/api/v1/stems` is a deferred stub. `music/assets/pack.py` (now in this checkout) derives 12 time-aligned stems by HPSS (scipy) as the asset-pack path (card `t_5ed495eb`, `done`). |
 | `master` | −14 LUFS ±1 for streaming. **Careful:** the `gate_loudness` in THIS checkout still measures `ffmpeg volumedetect` mean_volume (plain RMS), not LUFS. Card `t_9546841b` is `done` and its decision was to move the ruler to EBU R128 integrated loudness, but that commit (`e783a96`) sits on `origin/publish/audio-lane-2026-10-16` and is not on `main`; `music/mix/master.py` (card `t_568c67d2`) is on that branch only and is not in this checkout at all. So a gate FAIL here is not by itself evidence of a bad master. Measure both. |
 | `gate` | `gate_quality` requires a `review.json` whose `reviewer_model` differs from the producer model and which is sha256-bound to this master. The panel rubric for this family is `music/rubrics/gamer.json` (pass threshold 7.0). |
 | `package` | `loop_points.json` + `clearance_doc.pdf` + `ai_disclosure.txt` are required for game-assets; `gate_release_ready` adds an ISRC, artwork (PIL-openable), and manifest `{title, artist, isrc, genre, ai_disclosure}` for streaming. Artwork is j_kro's creative gate — do not fabricate a cover. |
@@ -795,6 +795,19 @@ line at :404) points at a line number, and the correction above was made without
 
 Superseded revision of this file: `sha256
 97ad6977c8ff4637536a4a653934c0357fc071933f098ef5e82a6c12c2174581` (777 lines / 50366 B).
+
+Superseded by the pack manifest-path pass (card `t_5f814f2f`, 2026-10-16 18:25 CDT): `sha256
+4fc255fad1cddc2e31fdc66c6a2b85475795bbded9ef8489ef2f4142825ed618` (843 lines / 53268 B) — the
+content this pass started from. The commit that lands these hunks replaces the blob carried by
+`ad6cfbe` (the rubric-scope pass, card `t_00ac4f10`), whose §17 is untouched: the diff is the two
+dropped size figures and this record.
+
+That pass changed `music/assets/pack.py`: the manifest's `file` field has ONE definition
+(`manifest_file()` writes it against the pack tree root, `resolve_manifest_file()` inverts it and
+RAISES on a miss), and the one-shots are cut from the declared stem instead of a second `hpss()`
+computed in `main()`. The two LIVE size figures this brief carried for that file were DROPPED,
+not corrected — the file is live, so any size ages (§14). No cited line number moved. Regression
+check: `music/scripts/check_pack_manifest_paths.py` (card `t_5f814f2f`).
 
 ## 17. Declared scoring scope — machine-checked against the live rubric (card `t_00ac4f10`, 2026-10-16)
 

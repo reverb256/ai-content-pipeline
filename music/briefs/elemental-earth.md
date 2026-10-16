@@ -816,7 +816,7 @@ card**: the two live follow-ups that touch the genre already exist (§11).
 - **Repo state at this pass:** HEAD `c296db6` (2026-10-16 15:56:54 CDT), divergence
   **72 ahead / 0 behind** `origin/main` (`ba28f55`). The 72-commit publish gap is the lane's
   standing pattern (local `main` only). Every path the brief stage recorded as missing —
-  `music/suno-gen.py` (42652 B), `music/sunolocal/`, `music/assets/pack.py` (54971 B),
+  `music/suno-gen.py` (42652 B), `music/sunolocal/`, `music/assets/pack.py`,
   `packages/welcome-asset-pack` — is now in the worktree.
 - **The dangling-reference bullet is closed.** `brain/playbooks/music-lane-architecture.md`
   and `brain/research/music-monetization-2026.md` (11067 B) both exist in this worktree
@@ -1034,11 +1034,11 @@ Hotspot note for the orchestrator: `music/briefs/*.md` is being edited by many c
 ## 17. Supersession record — the pack-key pass (card `t_4906bc6e`, 2026-10-16 17:57 CDT)
 
 §13's "Repo state at this pass" bullet stated the generator's size as a LIVE figure (52690 B).
-Card `t_4906bc6e` — the pack's key is measured or explicitly unknown, never fabricated — grew
-`music/assets/pack.py` to **54971 B** (measured 2026-10-16 17:57 CDT), and `check_brief_figures`
-recomputes that figure, so the bullet is corrected above. The 14:50 `ls -l` transcript in the same
-section is left alone: it records what the file measured at that instant, and history is not a
-live claim.
+Card `t_4906bc6e` — the pack's key is measured or explicitly unknown, never fabricated — grew the
+generator, and `check_brief_figures` recomputes a size claim, so the bullet now carries none: a
+live file's size ages (§14). §19 records the next pass on that same file (card `t_5f814f2f`). The
+14:50 `ls -l` transcript in the same section is left alone: it records what the file measured at
+that instant, and history is not a live claim.
 
 Superseded revision of this file: `sha256
 e26c416b407862d63c52d94e743c462df3647862d2ad615dfeb6945ae74f3776` (1031 lines / 67737 B).
@@ -1088,3 +1088,32 @@ Regenerate the block after any rubric edit — one command, no hand-edit:
   }
 }
 ```
+
+---
+
+## 19. Supersession record — the pack manifest-path pass (card `t_5f814f2f`, 2026-10-16 18:25 CDT)
+
+`music/assets/pack.py` changed again. The generator resolved a pack asset's manifest `file` field
+against `music/` while the field itself is relative to the PACK TREE ROOT (`out_dir.parent.parent`
+— the repository root for every pack the lane writes), so the lookup never resolved and a silent
+`.exists()` guard hid the miss. Measured on the committed pack, 2026-10-16 (nexus):
+
+    music/packages/welcome-asset-pack/stems/02_drums.wav   -> exists=False   # the base the reader used
+    packages/welcome-asset-pack/stems/02_drums.wav         -> exists=True    # the base the writer used
+
+`file` now has ONE definition: `manifest_file()` writes it, `resolve_manifest_file()` inverts it
+and RAISES on a miss, and the one-shots are cut from the declared stem (`declared_drum_bus()`)
+instead of a second `hpss()` computed in `main()`. Measured effect on one 30 s master, before and
+after: the only bus-derived one-shot (a kick) moved by at most 4 int16 LSB, 0.012% of full scale;
+the four synthesised one-shots are byte-identical.
+
+The `music/assets/pack.py` size figures §13 and §17 carried are DROPPED, not restated: the file is
+live, so any size ages (§14). Regression check: `music/scripts/check_pack_manifest_paths.py`
+(1 control + 10 failure shapes, and an out-of-tree build of the real generator), wired into
+`scripts/automation/weekly-review.sh`.
+
+Superseded revision of this file: `sha256
+8ec7a9ac79c2ae615925e1674116772d84a0e8aae15b01bb901f2af27d607e12` (1090 lines / 69994 B) — the
+content this pass started from. The commit that lands these hunks replaces the blob carried by
+`ad6cfbe` (the rubric-scope pass, card `t_00ac4f10`), whose §18 is untouched: the diff is this
+§19, one dropped figure in §13, and the §17 restatement above.

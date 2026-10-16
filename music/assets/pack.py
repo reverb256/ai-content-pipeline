@@ -97,6 +97,13 @@ KEY_NPERSEG = 4096          # chromagram window; also the analyser's usable leng
 KEY_HOP = 512               # hop between windows
 KEY_UNKNOWN = "unknown"     # what the manifest says when nothing was measured
 
+# The drum bus, named ONCE. `extract_stems()` writes it under this name and
+# `declared_drum_bus()` reads the one-shots' source back from it, so the writer
+# and the reader cannot drift. The reader used to match 'drum'/`02_` by hand
+# and resolve the manifest's path against `music/` — a lookup that never
+# resolved, under a silent `.exists()` guard (card t_5f814f2f).
+DRUM_STEM = "02_drums"
+
 # ──────────────────────────────────────────────────────────
 # Helpers
 # ──────────────────────────────────────────────────────────
@@ -127,6 +134,75 @@ def write_wav(path: str, data: np.ndarray, sr: int) -> None:
 
 def rms(x: np.ndarray) -> float:
     return float(np.sqrt(np.mean(x ** 2))) if len(x) else 0.0
+
+
+# ──────────────────────────────────────────────────────────
+# Manifest asset paths — ONE meaning for `file` (card t_5f814f2f)
+# ──────────────────────────────────────────────────────────
+
+class ManifestPathError(RuntimeError):
+    """A manifest asset path does not resolve. Never swallowed."""
+
+
+def manifest_tree_root(out_dir: Path) -> Path:
+    """The directory the manifest's `file` field is relative to.
+
+    Every asset entry carries two locations for ONE artifact:
+      * `path` — pack-relative; the key `loop_points.json` uses. `out_dir / path`.
+      * `file` — relative to the PACK TREE ROOT, the directory that holds the
+        pack's own parent. One meaning, stated here and inverted by
+        `resolve_manifest_file()`.
+
+    Every pack the lane writes goes to `<repo>/packages/<pack-name>`, so for
+    every pack that ships the tree root IS the repository root — which is why
+    the committed manifest reads `packages/welcome-asset-pack/stems/02_drums.wav`.
+    A pack written outside the repository (`--out /tmp/x/pack`, which the gate
+    fixtures do) records `x/pack/stems/...` for the same field, so neither side
+    may assume the repository root: the writer states the path against the tree
+    it writes into, and the reader inverts it against that same tree.
+    """
+    return out_dir.parent.parent
+
+
+def manifest_file(path: Path, out_dir: Path) -> str:
+    """The manifest `file` value for an asset written at `path` (see above)."""
+    return str(path.relative_to(manifest_tree_root(out_dir)))
+
+
+def resolve_manifest_file(entry: dict, out_dir: Path) -> Path:
+    """Resolve a manifest entry's asset through `file` and `path`, or FAIL LOUD.
+
+    Both fields must be present, both must resolve, and both must name the SAME
+    file. The defect this closes: the reader resolved `file` against `music/`,
+    the path never resolved, and an `.exists()` guard swallowed the miss — so
+    the manifest's declaration was decoration, and nothing said so
+    (card t_5f814f2f).
+    """
+    label = (entry.get("name") or entry.get("label") or entry.get("path")
+             or "entry")
+    raw = entry.get("file")
+    rel = entry.get("path")
+    if not raw:
+        raise ManifestPathError(
+            f"{label!r} declares no `file`, so nothing can find it from outside "
+            f"the pack directory")
+    if not rel:
+        raise ManifestPathError(f"{label!r} declares no pack-relative `path`")
+    by_file = manifest_tree_root(out_dir) / raw
+    by_path = out_dir / rel
+    if not by_file.is_file():
+        raise ManifestPathError(
+            f"{label!r}: `file` {raw!r} does not resolve under the pack tree "
+            f"{manifest_tree_root(out_dir)!s} (looked at {by_file})")
+    if not by_path.is_file():
+        raise ManifestPathError(
+            f"{label!r}: `path` {rel!r} does not resolve under the pack "
+            f"directory (looked at {by_path})")
+    if not os.path.samefile(by_file, by_path):
+        raise ManifestPathError(
+            f"{label!r}: `file` {raw!r} and `path` {rel!r} name different files "
+            f"({by_file} != {by_path})")
+    return by_path
 
 
 def db_to_linear(db: float) -> float:
@@ -432,7 +508,7 @@ def extract_loops(x: np.ndarray, sr: int, bpm: float, key: str, out_dir: Path) -
         duration = round(len(loop.samples) / sr, 3)
         results.append({
             "path": f"loops/{fname}",          # pack-relative (loop_points key)
-            "file": str(path.relative_to(out_dir.parent.parent)),  # legacy field
+            "file": manifest_file(path, out_dir),   # pack tree root-relative
             "bpm": loop.bpm,
             "key": loop.key,
             "bars": loop.bars,
@@ -464,7 +540,7 @@ def extract_stems(x: np.ndarray, sr: int, out_dir: Path) -> List[dict]:
 
     stems_spec = [
         ("01_bass", x_h * 0.7),          # bass + body from harmonic
-        ("02_drums", x_p),                # full drum bus
+        (DRUM_STEM, x_p),                 # full drum bus, named once
         ("03_harmony", x_h * 0.5),        # harmonic pad layer
         ("04_lead_melody", x_h),          # lead line from harmonic
         ("05_atmosphere", sps.savgol_filter(x, 2048, 3) * 0.4),
@@ -490,13 +566,38 @@ def extract_stems(x: np.ndarray, sr: int, out_dir: Path) -> List[dict]:
         write_wav(str(path), stem, sr)
         results.append({
             "path": f"stems/{name}.wav",           # pack-relative
-            "file": str(path.relative_to(out_dir.parent.parent)),
+            "file": manifest_file(path, out_dir),
             "name": name,
             "duration_sec": round(len(stem) / sr, 3),
             "rms_db": round(20 * math.log10(rms(stem) + 1e-9), 2),
             "time_aligned": len(stem) == n,
         })
     return results
+
+
+def declared_drum_bus(stems: List[dict], out_dir: Path, sr: int) -> np.ndarray:
+    """Load the drum bus the manifest declares — the stem this run SAVED.
+
+    The one-shots are cut from THIS and nothing else. `main()` used to compute a
+    second `hpss(x, sr)[1]` and use it whenever the lookup missed silently, so
+    the manifest did not actually say where the one-shots came from; the day
+    `DRUM_STEM` stops being the raw percussive bus they would not have followed
+    it (card t_5f814f2f). A stem that does not resolve, or resolves at another
+    sample rate, is an ERROR here, not a fallback.
+    """
+    entry = next((s for s in stems if s.get("name") == DRUM_STEM), None)
+    if entry is None:
+        raise ManifestPathError(
+            f"the stems declare no {DRUM_STEM!r} drum bus, so the one-shots "
+            f"have no declared source (declared: "
+            f"{', '.join(str(s.get('name')) for s in stems) or 'none'})")
+    path = resolve_manifest_file(entry, out_dir)
+    bus, bus_sr = load_wav(str(path))
+    if bus_sr != sr:
+        raise ManifestPathError(
+            f"the declared drum stem {DRUM_STEM!r} is {bus_sr} Hz but the pack "
+            f"is {sr} Hz — one-shots cut from it would be at the wrong rate")
+    return bus
 
 
 def _generate_riser(sr: int, dur: float) -> np.ndarray:
@@ -612,7 +713,7 @@ def extract_one_shots(x_drum: np.ndarray, sr: int, out_dir: Path) -> List[dict]:
         write_wav(str(path), hit, sr)
         results.append({
             "path": f"one_shots/{fname}",      # pack-relative
-            "file": str(path.relative_to(out_dir.parent.parent)),
+            "file": manifest_file(path, out_dir),
             "label": label,
             "duration_sec": round(len(hit) / sr, 3),
             "rms_db": round(20 * math.log10(rms(hit) + 1e-9), 2),
@@ -641,7 +742,7 @@ def generate_sfx_pack(out_dir: Path) -> List[dict]:
         write_wav(str(path), samples, sr)
         results.append({
             "path": f"sfx/{name}.wav",          # pack-relative
-            "file": str(path.relative_to(out_dir.parent.parent)),
+            "file": manifest_file(path, out_dir),
             "name": name,
             "duration_sec": round(len(samples) / sr, 3),
             "rms_db": round(20 * math.log10(rms(samples) + 1e-9), 2),
@@ -1141,15 +1242,16 @@ def main():
     stems = extract_stems(x, sr, out_dir)
     print(f"[pack] extracted {len(stems)} stems")
 
-    # isolate drum stem for one-shots
-    _, drum_stem = hpss(x, sr)  # percussive bus
-    for s in stems:
-        if "drum" in s["name"].lower() or s["name"].startswith("02_"):
-            drum_stem_path = Path(__file__).resolve().parents[1] / s["file"]
-            if drum_stem_path.exists():
-                d, _ = load_wav(str(drum_stem_path))
-                drum_stem = d
-                break
+    # The one-shots are cut from the drum stem this run SAVED and the manifest
+    # declares — the same two fields a reader outside the pack directory
+    # resolves. A second `hpss(x, sr)` here made the declaration decoration.
+    try:
+        drum_stem = declared_drum_bus(stems, out_dir, sr)
+    except ManifestPathError as exc:
+        print(f"[pack] ERROR: {exc}", file=sys.stderr)
+        sys.exit(2)
+    print(f"[pack] one-shot source: declared stem {DRUM_STEM} "
+          f"({len(drum_stem)} samples)")
 
     print("[pack] extracting one-shots from drum stem ...")
     one_shots = extract_one_shots(drum_stem, sr, out_dir)
