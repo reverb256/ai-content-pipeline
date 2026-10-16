@@ -14,7 +14,14 @@ card t_9546841b.
 Features:
 - Loudness normalization to -14 LUFS (streaming) or -16 LUFS (sync) with true-peak limiting.
   Uses two-pass loudnorm; falls back to one-pass only when the first pass cannot
-  be read, and says so loudly.
+  be READ (no loudnorm JSON block), and says so loudly.
+- Unmeasurable input: an input the EBU R128 ruler cannot measure — shorter than
+  the 400 ms gating block, silent, or with no gating block above the -70 LUFS
+  absolute gate — is REFUSED with a named cause, and no master is written
+  (card t_df793408). A non-finite first-pass measurement (`input_i=-inf`,
+  `target_offset=inf`) is never copied into the second pass. Why refusing beats
+  the one-pass fallback, measured on ffmpeg 9.0.2: see
+  `diagnose_unmeasurable_input`.
 - Loudness verification: the normalized master is measured with the gate's
   ebur128 ruler. The integrated LUFS, the true peak and the deviation from the
   target are logged. A deviation outside the gate window (+/-1.0 LUFS) FAILS the
@@ -39,8 +46,8 @@ The script logs the integrated LUFS of the normalized master, its true peak,
 the deviation from the target, and the volumedetect numbers as RMS context.
 
 Exit codes: 0 = normalized and inside the gate's loudness window (or drift
-allowed), 1 = failure (normalization failed, loudness not measurable, or drift
-outside the window), 2 = usage error.
+allowed), 1 = failure (normalization failed, the input is one the ruler cannot
+measure, loudness not measurable, or drift outside the window), 2 = usage error.
 
 Dependencies: ffmpeg, ffprobe (must be on PATH).
 """
@@ -48,6 +55,7 @@ Dependencies: ffmpeg, ffprobe (must be on PATH).
 import argparse
 import importlib.util
 import json
+import math
 import os
 import re
 import subprocess
@@ -64,6 +72,11 @@ GATE_LOUDNESS_PATH = MUSIC_ROOT / "gates" / "gate_loudness.py"
 DEFAULT_LOUDNESS_STREAMING = -14.0  # LUFS
 DEFAULT_LOUDNESS_SYNC = -16.0       # LUFS
 TRUE_PEAK_LIMIT = -1.5              # dBTP
+# EBU R128 / ffmpeg ebur128 gating block, in milliseconds. The ruler is defined
+# only for inputs at least this long: a block is 400 ms with 75% overlap, and
+# ffmpeg's ebur128 filter has no option to shorten it (`ffmpeg -h filter=ebur128`
+# on 9.0.2 lists no block-size control — measured 2026-10-16, card t_df793408).
+GATING_BLOCK_MS = 400.0
 STEMS_COUNT = 12
 STEMS_TOLERANCE_SECONDS = 0.5       # duration match tolerance
 ZERO_CROSSING_THRESHOLD = 0.01      # absolute sample value threshold for zero-crossing (float PCM)
@@ -291,6 +304,137 @@ def parse_loudnorm_first_pass(stderr: str) -> dict:
     raise ValueError("no loudnorm JSON block found in ffmpeg stderr")
 
 
+class UnmeasurableInputError(RuntimeError):
+    """The input carries no loudness the lane's EBU R128 ruler can measure.
+
+    Raised instead of copying a non-finite loudnorm measurement into the second
+    pass, which ffmpeg rejects with a raw dump (card t_df793408). `causes` holds
+    one `(cause, advice)` pair per reason the ruler cannot measure the input;
+    `fields` holds the raw first-pass values as evidence.
+    """
+
+    def __init__(self, input_path: Path, causes, fields: dict):
+        self.input_path = Path(input_path)
+        self.causes: List[Tuple[str, str]] = list(causes)
+        self.fields = dict(fields)
+        self.fields_text = " ".join(
+            f"{name}={value}" for name, value in self.fields.items())
+        super().__init__(
+            f"{self.input_path}: "
+            + "; ".join(cause for cause, _ in self.causes))
+
+
+def finite_or_none(value) -> Optional[float]:
+    """Parse one loudnorm field; return None when it is not a finite number.
+
+    loudnorm reports a field it could not measure as the literal string `-inf`
+    (or `inf`, or `nan`). `float("-inf")` is a real float, so a plain `float()`
+    call hides the defect: the value travels straight into the second pass and
+    ffmpeg dies with "Value -inf for parameter 'measured_I' out of range
+    [-99 - 0]" (measured on ffmpeg 9.0.2, card t_df793408). None means "not a
+    number this tool may hand to ffmpeg".
+    """
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def audio_duration_seconds(audio_path: Path) -> Optional[float]:
+    """Duration in seconds, or None when ffprobe cannot read it."""
+    cmd = [
+        "ffprobe", "-v", "error", "-show_entries", "format=duration",
+        "-of", "json", str(audio_path),
+    ]
+    try:
+        result = run_ffprobe(cmd)
+        return float(json.loads(result.stdout)["format"]["duration"])
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError,
+            RuntimeError) as e:
+        log(f"WARNING: could not read the duration of {audio_path}: {e}")
+        return None
+
+
+def diagnose_unmeasurable_input(
+    data: dict,
+    duration_s: Optional[float],
+) -> List[Tuple[str, str]]:
+    """Name WHY the EBU R128 ruler cannot measure `input_path`.
+
+    Returns [(cause, advice), ...] — one pair per applicable cause, because an
+    input can be both silent and shorter than a gating block.
+
+    The ruler needs a 400 ms gating block whose loudness passes the -70 LUFS
+    absolute gate. A block is 400 ms and ffmpeg's ebur128 filter cannot shorten
+    it (`ffmpeg -h filter=ebur128`, 9.0.2), so an input shorter than 400 ms has
+    no measurable loudness by the standard — not by this tool's choice.
+    Measured on zephyr 2026-10-16 (ffmpeg 9.0.2, card t_df793408) while writing
+    this diagnosis; ebur128 prints -70.0 LUFS (its floor) where loudnorm prints
+    -inf, which is why the cause is read from the pass-1 values and the
+    duration, never from the floor:
+
+      input                      dur     pass1 input_i  pass1 input_tp  ebur128 I
+      440 Hz tone                0.30 s  -inf           -24.06         -70.0 LUFS
+      440 Hz tone                0.39 s  -inf           -24.06         -70.0 LUFS
+      440 Hz tone                0.40 s  -27.75         -24.06         -27.8 LUFS
+      440 Hz tone                2.00 s  -27.75         -24.06         -27.8 LUFS
+      440 Hz tone at -75 dBFS    2.00 s  -inf           -77.95         -70.0 LUFS
+      digital silence            3.00 s  -inf           -inf           -70.0 LUFS
+      0.2 s burst + 3 s silence  3.20 s  -32.10         -24.06         -32.0 LUFS
+
+    The 0.40 s row is deliberately included: master.py must keep mastering it.
+    """
+    causes: List[Tuple[str, str]] = []
+    peak = finite_or_none(data.get("input_tp"))
+    duration_ms = None if duration_s is None else duration_s * 1000.0
+
+    if peak is None:
+        causes.append((
+            "input is silent: loudnorm pass 1 measured no true peak at all "
+            f"(input_tp={data.get('input_tp')} dBFS), so there is no signal to "
+            "normalize",
+            "check the bounce before re-running — a muted vocal stem or an "
+            "empty render produces exactly this. Silence has no level to set.",
+        ))
+    if duration_ms is not None and duration_ms < GATING_BLOCK_MS:
+        causes.append((
+            "input is shorter than the 400 ms EBU R128 gating block "
+            f"({duration_ms:.0f} ms; pass 1 input_i={data.get('input_i')}): the "
+            "ruler is defined only for inputs 400 ms and longer",
+            "give the item at least 400 ms of audible content — extend the "
+            "one-shot, or master it inside the longer item it ships in — and "
+            "re-run. A 400 ms gating block is not configurable in ffmpeg's "
+            "ebur128/loudnorm, so a shorter item cannot be measured at all.",
+        ))
+    if not causes and peak is not None:
+        length = (f"{duration_ms:.0f} ms long" if duration_ms is not None
+                  else "of unreadable duration")
+        causes.append((
+            "input has no gating block above the EBU R128 absolute gate: "
+            f"loudnorm pass 1 returned no finite integrated loudness "
+            f"(input_i={data.get('input_i')}) although the input is {length} and "
+            f"carries a real true peak ({peak:.2f} dBFS), so every 400 ms "
+            "gating block sits below -70 LUFS",
+            "raise the bounce or re-render it. loudnorm cannot measure a file "
+            "whose every gating block the ruler's -70 LUFS absolute gate "
+            "rejects whole.",
+        ))
+    if not causes:
+        causes.append((
+            "input has no finite loudness measurement: loudnorm pass 1 returned "
+            f"input_i={data.get('input_i')} "
+            f"target_offset={data.get('target_offset')}, and the duration could "
+            "not be read",
+            "inspect the file. master.py refuses rather than pass a non-finite "
+            "measurement to ffmpeg, where a second pass with measured_I=-inf "
+            "dies with 'Numerical result out of range'.",
+        ))
+    return causes
+
+
 def normalize_loudness_two_pass(
     input_path: Path,
     output_path: Path,
@@ -300,6 +444,24 @@ def normalize_loudness_two_pass(
     """
     Normalize loudness using ffmpeg loudnorm filter (two-pass).
     Returns the path to the normalized audio.
+
+    An input the lane's EBU R128 ruler cannot measure is REFUSED, not papered
+    over (card t_df793408). When pass 1 returns a non-finite measurement —
+    `input_i=-inf` and `target_offset=inf` for a sub-400 ms or silent input —
+    this raises `UnmeasurableInputError` with the named cause(s) and writes
+    nothing. The non-finite values are never copied into the second pass: ffmpeg
+    rejects `measured_I=-inf` with "Value -inf for parameter 'measured_I' out of
+    range [-99 - 0]" and the run dies with a raw stderr dump instead of a
+    diagnosis.
+
+    Why refuse rather than fall back to one-pass loudnorm, measured on zephyr
+    with ffmpeg 9.0.2: one-pass on a 0.30 s tone does write a file (rc 0), but
+    that file's ebur128 integrated loudness is -70.0 LUFS — the ruler's floor,
+    since no 400 ms gating block exists — and gate_loudness FAILS it
+    ("measured : integrated -70.00 LUFS (true peak -1.50 dBFS), deviation
+    -56.00 LUFS"), with its peak pushed to -1.5 dBFS on the way. A master no
+    stage can measure and the package gate must reject is not a deliverable, so
+    the tool writes nothing and names the cause instead.
     """
     # First pass: measure the source
     cmd1 = [
@@ -318,16 +480,32 @@ def normalize_loudness_two_pass(
         # stdout is binary, stderr carries the loudnorm JSON block
         stderr_str = result1.stderr.decode('utf-8', errors='replace') if result1.stderr else ''
         data = parse_loudnorm_first_pass(stderr_str)
-        measured_I = data.get("input_i", -999.0)
-        measured_LRA = data.get("input_lra", 999.0)
-        measured_TP = data.get("input_tp", -999.0)
-        measured_thresh = data.get("input_thresh", -999.0)
-        offset = data.get("target_offset", 0.0)
     except (json.JSONDecodeError, IndexError, ValueError) as e:
         log(f"WARNING: could not read the loudnorm first-pass measurement: {e}")
         log("WARNING: falling back to one-pass loudnorm — accuracy drops. The "
             "integrated-LUFS verification after normalization is the safety net.")
         return normalize_loudness_one_pass(input_path, output_path, target_lufs, true_peak)
+
+    # Card t_df793408: a field loudnorm could not measure comes back as -inf/inf.
+    # Detect it here, before it reaches the second-pass filter string.
+    measured = {
+        "input_i": finite_or_none(data.get("input_i")),
+        "input_lra": finite_or_none(data.get("input_lra")),
+        "input_tp": finite_or_none(data.get("input_tp")),
+        "input_thresh": finite_or_none(data.get("input_thresh")),
+        "target_offset": finite_or_none(data.get("target_offset")),
+    }
+    if any(value is None for value in measured.values()):
+        raise UnmeasurableInputError(
+            input_path,
+            diagnose_unmeasurable_input(data, audio_duration_seconds(input_path)),
+            {name: data.get(name) for name in measured},
+        )
+    measured_I = measured["input_i"]
+    measured_LRA = measured["input_lra"]
+    measured_TP = measured["input_tp"]
+    measured_thresh = measured["input_thresh"]
+    offset = measured["target_offset"]
 
     # Second pass: apply the normalization with the measured values
     cmd2 = [
@@ -759,8 +937,27 @@ def main(argv: Optional[List[str]] = None) -> int:
             args.input_master, output_master, target_lufs
         )
         log(f"Normalized master written to {normalized_master}")
+    except UnmeasurableInputError as e:
+        # Card t_df793408: name the cause, write no master, keep exit 1. The old
+        # path handed `measured_I=-inf` to ffmpeg and died with a raw dump.
+        try:
+            ruler = getattr(loudness_gate(), "RULER",
+                            "ebur128 integrated loudness (LUFS)")
+        except Exception:
+            ruler = "ebur128 integrated loudness (LUFS)"
+        log_err(f"FAILED: cannot loudness-normalize {e.input_path} — the lane's "
+                f"ruler cannot measure this input, so no master was written")
+        for cause, advice in e.causes:
+            log_err(f"  cause   : {cause}")
+            log_err(f"  fix     : {advice}")
+        log_err(f"  pass 1  : {e.fields_text}")
+        log_err(f"  ruler   : {ruler} — needs a 400 ms gating block above the "
+                f"-70 LUFS absolute gate")
+        log_err(f"  refused : writing a master whose loudness cannot be "
+                f"measured would hand gate_loudness an artifact it must fail")
+        return 1
     except Exception as e:
-        log(f"Loudness normalization failed: {e}")
+        log_err(f"Loudness normalization failed: {e}")
         return 1
 
     # Step 2: verify the loudness the normalizer targeted, with the lane's ruler
