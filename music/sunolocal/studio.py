@@ -71,6 +71,11 @@ class GenerateBody(BaseModel):
     callBackUrl: Optional[str] = None
     seed: Optional[int] = None
     engine: Optional[str] = None
+    # sunolocal extensions (t_25a6499c D1/D2): Suno's public body has no tempo
+    # and no key field, so the engine hardcoded 120 BPM and used the style
+    # caption as the key. Both are explicit here instead.
+    bpm: Optional[int] = None
+    keyscale: Optional[str] = None
 
 
 def _to_internal(body: GenerateBody) -> SunoGenerateRequest:
@@ -92,6 +97,8 @@ def _to_internal(body: GenerateBody) -> SunoGenerateRequest:
         callback_url=body.callBackUrl,
         seed=body.seed,
         engine=body.engine,
+        bpm=body.bpm,
+        keyscale=body.keyscale,
     )
 
 

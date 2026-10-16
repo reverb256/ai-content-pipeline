@@ -31,6 +31,12 @@ class SunoGenerateRequest:
     callback_url: Optional[str] = None
     seed: Optional[int] = None
     engine: Optional[str] = None            # sunolocal extension: ace | yue2 | fixture
+    # sunolocal extensions. Suno's own API carries neither, and without them the
+    # engine had to guess: `bpm` was hardcoded 120 and `key` was filled from the
+    # style caption (674 chars for sentimental-piano) which is what the ACE node
+    # receives as `keyscale`. Both defects are t_25a6499c D1/D2.
+    bpm: Optional[int] = None               # explicit tempo; beats the style_weight fallback
+    keyscale: Optional[str] = None          # explicit key signature, e.g. "C major"
 
 
 @dataclass

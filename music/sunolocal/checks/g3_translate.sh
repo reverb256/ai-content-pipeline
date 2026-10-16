@@ -1,4 +1,15 @@
 #!/usr/bin/env bash
+# G3: Suno -> engine mappings and defaults.
+#
+# UPDATED for t_25a6499c. Two pinned assertions had to change with the fix, and
+# each now pins the FIXED contract instead of the defect:
+#   * `key` was pinned to `req.style` ("synthwave"). That is D2: the style field
+#     is the genre's whole caption (674 chars measured for sentimental-piano) and
+#     acestep_plan.py hands this value to the ACE node as `keyscale`. A request
+#     with no explicit key now defaults to the KEY SIGNATURE "C major".
+#   * `bpm` had no explicit-field assertion at all, which is how D1 (hardcoded
+#     120) went unnoticed. The explicit field and the precedence order are
+#     pinned here and exercised end-to-end by g8.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$ROOT"
@@ -13,13 +24,27 @@ assert plan["lyrics"] == "[Chorus]\nshine", plan
 assert plan["duration"] == 42.0, plan
 assert isinstance(plan["bpm"], int) and 60 <= plan["bpm"] <= 240, plan
 assert plan["timesignature"] == "4", plan
-assert plan["key"] == "synthwave", plan
+# style_weight is only a FALLBACK now (0.5 -> 120); the key is NEVER the style.
+assert plan["key"] == "C major", plan
 
 d = translate.suno_to_aceplan(SunoGenerateRequest())
 assert d["caption"] == "music", d
 assert d["duration"] == 30.0, d
 assert d["bpm"] == 120, d
 assert d["lyrics"] == "", d
+assert d["key"] == "C major", d
+
+# t_25a6499c D1: an explicit tempo wins over the style_weight fallback.
+assert translate.suno_to_aceplan(
+    SunoGenerateRequest(bpm=72, style_weight=0.8))["bpm"] == 72
+# t_25a6499c D2: an explicit key signature wins, and never becomes the caption.
+assert translate.suno_to_aceplan(
+    SunoGenerateRequest(keyscale="D Phrygian", style="a 600 char caption"))["key"] == "D Phrygian"
+# ...including when style IS set and no key is given (the old defect).
+assert translate.suno_to_aceplan(
+    SunoGenerateRequest(style="a 600 char caption"))["key"] == "C major"
+# The clamp still applies to an explicit value.
+assert translate.suno_to_aceplan(SunoGenerateRequest(bpm=999))["bpm"] == 240
 
 y = translate.suno_to_yue2(SunoGenerateRequest(style="ambient", lyrics="la", seed=7, style_weight=0.25))
 assert y["style"] == "ambient" and y["lyrics"] == "la" and y["seed"] == 7, y
