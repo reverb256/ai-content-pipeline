@@ -13,8 +13,12 @@
 - Ember flicker at 12–24 Hz organic jitter; heat-haze shimmer above the brightest
   zones (2–4 px displacement, 0.5–1 Hz).
 - On the smoldering breakdown: coals dim to 30%, smoke drift replaces flame.
-- Loop-10min: the 8-bar loop's visual cycle must tile seamlessly — ember positions
-  reset exactly.
+- Loop-10min: one period for the whole video — the delivered loop's own length
+  (`music/genres.yaml` `loop_bars`: 25 bars = 40.000 s at 150 BPM, tiling exactly 15x into
+  the 600.000 s shape; card t_b75ccb4a). The visual cycle must equal that period, not an
+  8-bar cycle: 600 / 12.8 = 46.875 is fractional, and a visual period that differs from the
+  audio's re-phases the arc (the reprise flash would land elsewhere every cycle). Within the
+  period the ember positions reset exactly, so the cycle tiles seamlessly.
 
 ## Texture
 

@@ -8,6 +8,14 @@
 #   lanes:          every entry MUST exist as a lane in lanes.yaml
 #   cadence:        <int>/wk
 #   video_shape:    platform-native video shape for the videobot
+#   loop_bars:      OPTIONAL — the DELIVERED loop's length in whole bars, for a
+#                   genre whose shape is built by repeating a loop (loop-10min).
+#                   It must TILE the shape exactly: the shape's bar count
+#                   (shape seconds x bpm / 240) must divide by loop_bars, or the
+#                   video's last seam is a jump cut. The rule, the arithmetic and
+#                   the per-genre values are stated under the gamer family below;
+#                   music/scripts/check_loop_tiling.py recomputes them and fails
+#                   on a violation. Absent = the genre makes no loop-tile claim.
 #   notes:          lane rationale, platform bans, target market
 #
 # Source: brain/playbooks/music-lane-architecture.md §2.
@@ -82,6 +90,41 @@ genres:
 
   # ---- elemental / gamer family -------------------------------------------
   # One block per element. Copy the block, change prompt + visual. Infinite variety.
+  #
+  # loop_bars — THE LOOP-TILE CONTRACT (decided 2026-10-16, card t_b75ccb4a).
+  #
+  # `video_shape: loop-10min` is a 600.000 s video built by REPEATING the
+  # delivered loop, so the loop's length must divide the shape exactly or the
+  # video's last seam is a jump cut. Both quantities are whole bars, and the
+  # shape's own bar count is a function of the GENRE'S OWN TEMPO:
+  #
+  #     bar_s      = 240 / bpm                 (4/4)
+  #     shape_bars = 600.0 / bar_s = 2.5 x bpm       375 bars at 150 BPM
+  #                                                  205 at 82, 220 at 88,
+  #                                                  230 at 92
+  #     loop_bars  must DIVIDE shape_bars, and
+  #     span       = loop_bars x bar_s  must be <= 120.000 s  (the CEILING: the
+  #                  master-loop length the genre briefs locked, i.e. the full
+  #                  arc) and >= 24.000 s (the FLOOR: shorter than that is a
+  #                  fragment, not a phrase).
+  #
+  # The value is the LARGEST divisor at or below the ceiling — and it must also
+  # be one the render can deliver WHOLE. The ACE engine emits 1.5-6.2 s of
+  # digital silence inside every requested window, so a loop as long as the
+  # render itself can never be closed: measured on a 120.000 s render, a 75-bar
+  # (120.000 s) loop is REFUSED ("the musical region (115.197s) is shorter than
+  # one 120.000s loop — nothing to close"), while 25 bars (40.000 s) closes with
+  # a 0.0 dB level delta and passes all three rulers. That is why the 150 BPM
+  # genres differ: elemental-fire's render is 120 s, so its 75 bars is
+  # unreachable and it takes the next divisor down, 25 bars; chiptune-8bit is
+  # also 150 BPM but plans a 600 s render, so it takes the ceiling itself.
+  # A render that is to carry a loop must therefore be longer than that loop.
+  #
+  # 4 bars is NOT a legal default here: at 150 BPM it is 6.400 s, and
+  # 600 / 6.4 = 93.75 tiles — FRACTIONAL. BARS_PREFERRED = 4 in
+  # music/assets/pack.py stays as the PACK lane's own cutdown default (an
+  # in-engine cutdown loop is repeated by the game engine and carries no tiling
+  # requirement) — the video tile is chosen here, per genre.
 
   elemental-fire:
     family: gamer
@@ -90,6 +133,7 @@ genres:
     lanes: [game-assets, youtube-gaming, streaming]
     cadence: 2/wk
     video_shape: loop-10min
+    loop_bars: 25              # 40.000 s at 150 BPM -> 375/25 = 15 exact tiles
     notes: "Boss/battle theme. Target indie devs + gaming music channels."
 
   elemental-water:
@@ -99,6 +143,7 @@ genres:
     lanes: [game-assets, youtube-gaming, streaming]
     cadence: 2/wk
     video_shape: loop-10min
+    loop_bars: 41              # 120.000 s at 82 BPM -> 205/41 = 5 exact tiles
 
   elemental-earth:
     family: gamer
@@ -107,6 +152,7 @@ genres:
     lanes: [game-assets, youtube-gaming, streaming]
     cadence: 2/wk
     video_shape: loop-10min
+    loop_bars: 44              # 120.000 s at 88 BPM -> 220/44 = 5 exact tiles
 
   elemental-air:
     family: gamer
@@ -115,6 +161,7 @@ genres:
     lanes: [game-assets, youtube-gaming, streaming]
     cadence: 2/wk
     video_shape: loop-10min
+    loop_bars: 46              # 120.000 s at 92 BPM -> 230/46 = 5 exact tiles
 
   chiptune-8bit:
     family: gamer
@@ -123,6 +170,7 @@ genres:
     lanes: [game-assets, youtube-gaming, streaming]
     cadence: 2/wk
     video_shape: loop-10min
+    loop_bars: 75              # 120.000 s at 150 BPM -> 375/75 = 5 exact tiles
 
   epic-orchestral-boss:
     family: gamer

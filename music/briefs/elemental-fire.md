@@ -7,6 +7,13 @@
 > **Superseded cards (closed, audit trail):** t_6f0d261e (7.5, `done`) and t_42a01e18
 > (7.7, `done`), the 2026-10-09 double emission. All three resolve to THIS brief; the brief
 > is keyed by **genre**, not by card.
+> **Superseded by the loop-tile decision (`t_b75ccb4a`, 2026-10-16T17:39-05:00 CDT):**
+> `sha256 f9d153e613a4c44933ad72e1959db2921c5937b3b3178fb42ce72cb1af1c8e09` (70626 B, 962 lines)
+> — the revision whose §2 and §4 locked a **120.0 s (75 bars)** delivered loop. That length is
+> unreachable on this render (its own trailing 4.803 s is digital silence) and does not
+> survive the rail's refusal, so §2 and §4 now carry the **DECIDED** length, **25 bars =
+> 40.000 s, 15 exact tiles** (§16), with the delivered-loop / master distinction stated in
+> both places.
 > **Written:** 2026-10-16T13:16-05:00 (CDT)
 > **Verified (duplicate-card pass, `t_42a01e18`):** 2026-10-16T13:50-05:00 (CDT) — see §13.
 > One attribution was corrected (§9: the tail/head dB column belongs to the `loop/` render,
@@ -71,7 +78,7 @@ Entry from `music/genres.yaml` (lines 86–93):
 | Genre | `elemental-fire` |
 | Family | `gamer` |
 | Prompt template | `music/prompts/elemental-fire.md` (4008 B) |
-| Visual style | `music/visuals/element-fire.md` (1103 B) |
+| Visual style | `music/visuals/element-fire.md` (1522 B) |
 | Lanes | `game-assets`, `youtube-gaming`, `streaming` |
 | Cadence | 2/wk |
 | Video shape | `loop-10min` |
@@ -127,13 +134,14 @@ What the pack must contain:
 
 | Pack element | Spec |
 |---|---|
-| Master loop | **120.0 s = 75 bars** at 150 BPM — the full fight arc, seamless (**rendered: the master is 120.000 s; the loop the rail closed out of it is 4 bars / 6.400 s — see the note below and §14**) |
+| Master (the render) | 120.000 s = 75 bars at 150 BPM — the full fight arc (measured; unchanged by this card) |
+| Delivered loop (the video tile) | **25 bars = 40.000 s** — the `loop_bars` the registry now declares, tiling **exactly 15×** into the 600.000 s `loop-10min` video (**decided by card `t_b75ccb4a`, §16**; the rail previously closed 4 bars / 6.400 s, which tiles 93.75× — FRACTIONAL) |
 | Stems | ≥ 4, each within ±0.5 s of the master (ffprobe-measured) |
-| `loop_points.json` | `{"loop_start_s": 0.0, "loop_end_s": 120.0, "seamless": true}` |
-| Short loops | 32 bars = **51.2 s** and 16 bars = **25.6 s** cutdowns for in-engine use |
+| `loop_points.json` | `{"loop_start_s": 0.0, "loop_end_s": 40.0, "seamless": true}` — the delivered loop IS the master, so the span is 0 → its own duration (§16; the 120.0 s span this row first carried is impossible — the master ends in 4.803 s of digital silence) |
+| Short loops (cutdowns) | 32 bars = **51.2 s** and 16 bars = **25.6 s** for in-engine use. These are the PACK lane's cutdowns: a game engine repeats whatever it is handed, so they carry **no tiling requirement** and 16/32 bars is not a defect. Only the video tile must divide 600 s (§16) |
 | BPM / key | **150 BPM**, **D Phrygian** — stated in the manifest (`asset_packaging`, weight 1) |
 | Cover | 3000×3000 (this brief's own spec — no gate enforces a cover dimension; `gate_release_ready` only PIL-opens the artwork), palette from `music/visuals/element-fire.md` |
-| Video | 600.0 s (loop-10min) = exactly **5 × the 120.0 s master** |
+| Video | 600.0 s (loop-10min) = exactly **15 × the 40.000 s delivered loop** (§16; the 5 × 120.0 s master this row first carried cannot be built — the master's trailing 4.803 s is digital silence, so a 120.0 s loop is refused and 5 × 120.0 s would put five silent gaps in the video) |
 
 **Measured status of that spec (2026-10-16, live — §14 rows 10–12).** The master now exists:
 `/var/lib/music-plans/elemental-fire-emberfall.flac`, **120.000 s**, FLAC 48 kHz stereo,
@@ -251,20 +259,35 @@ bar   = 4 × 60 / 150 = 1.600 s
 ```
 
 **Finding — the 10-minute video only tiles cleanly at a specific loop length.**
-`video_shape: loop-10min` is a 600.0 s video built by repeating the master loop. The loop
-must tile into 600 s an integer number of times, or the video's last seam is a jump cut.
+`video_shape: loop-10min` is a 600.0 s video built by repeating the delivered loop. The loop
+must tile into 600 s an integer number of times, or the video's last seam is a jump cut. The
+legal lengths are the bar counts that divide the shape's bar count — and that count is a
+function of the genre's OWN tempo (375 bars at 150 BPM, but 205 at 82, 220 at 88, 230 at 92).
 Measured candidates at 150 BPM:
 
 | Loop length | Bars | Tiles into 600 s | Verdict |
 |---|---|---|---|
-| 51.2 s | 32 | 11.719 | ✗ fractional — seam breaks at the end |
-| 89.6 s | 56 | 6.696 | ✗ |
-| 102.4 s | 64 | 5.859 | ✗ |
-| **120.0 s** | **75** | **5.000** | ✓ **locked** |
-| 200.0 s | 125 | 3.000 | ✓ (a longer alternative) |
+| 6.400 s | 4 | 93.75 | ✗ fractional — what the rail had delivered |
+| 24.000 s | 15 | 25.000 | ✓ legal, but the shortest thing that is still a phrase |
+| **40.000 s** | **25** | **15.000** | ✓ **DECIDED — the delivered loop (§16)** |
+| 120.000 s | 75 | 5.000 | ✓ legal, but UNREACHABLE on this render: it is 120.000 s long and ends in 4.803 s of digital silence, so a 120.000 s window is refused (measured) |
+| 200.000 s | 125 | 3.000 | ✗ longer than the render |
 
-**Decision: the master loop is 120.0 s (75 bars).** It tiles exactly 5× into the 600 s
-video, and 75 bars divides into a seven-section fight arc:
+**Decision (superseded in place by card `t_b75ccb4a`, 2026-10-16 — this section first locked
+120.0 s / 75 bars): the DELIVERED loop is 25 bars = 40.000 s**, tiling exactly **15×** into
+the 600.000 s video. The 75-bar answer is unreachable and the reason is measured, not
+estimated: the ACE node emits **4.803 s of digital silence inside its own requested window**
+(`silencedetect noise=-50dB:d=0.5` → `115.107 .. 119.983` on the delivered master), so a loop
+window must fit inside the 115.197 s musical region, and `music/scripts/loop_close.py`
+refuses a 75-bar window with *"the musical region (115.197s) is shorter than one 120.000s
+loop — nothing to close"*. 25 bars is the largest divisor of 375 that survives that limit.
+Measured on the real master, it closes with a **0.0 dB** tail/head level delta — the best of
+the four lengths measured (4 bars 0.3 dB, 5 bars 1.0 dB, 15 bars 2.0 dB, 25 bars 0.0 dB) —
+and passes all three rulers in `music/gates/gate_loop_points.py` (rc=0) plus
+`music/scripts/loop_seam_check.py` (rc=0).
+
+The 75-bar figure keeps its meaning as the **MASTER's** arrangement: the render IS 120.000 s
+= 75 bars, and its seven-section fight arc still divides that way:
 
 ```
 [tension intro]      9 bars   14.4 s
@@ -707,7 +730,8 @@ function of the lane set, which is identical for all four. Consequences:
 - Registry: `music/genres.yaml` (lines 86–93), `music/lanes.yaml` — validated live
   (`/usr/bin/python3 music/registry.py validate` → 14 genres, 10 lanes)
 - Template: `music/prompts/elemental-fire.md` (4008 B; style field 583/1000 chars measured)
-- Visual: `music/visuals/element-fire.md` (1103 B); fixture `music/visuals/element_fire.mp4`
+- Visual: `music/visuals/element-fire.md` (1522 B — grown by the loop-tile
+  decision's visual-period correction, §16); fixture `music/visuals/element_fire.mp4`
   (5.000 s, 1280×720, 14133 B) — FAILs the real gate, measured
 - Gates exercised live (re-run 2026-10-16 by this pass): `gate_quota` PASS (0/60, studio
   exports 0); `gate_sync_ready --lane game-assets` FAIL on an empty package (full requirement
@@ -741,7 +765,9 @@ function of the lane set, which is identical for all four. Consequences:
   for a request with no explicit bpm)
 - **Dangling reference — RESOLVED (`t_b0a4db92`, `done`):** `brain/playbooks/music-lane-architecture.md`
   is cited as "READ FIRST" by this lane's profile, `stages.yaml`, `genres.yaml`, `lanes.yaml`,
-  `autonomy.yaml` and the gates, and the copy **now exists on this machine** (34 328 B), as
+  `autonomy.yaml` and the gates, and the copy **now exists on this machine** (45 674 B,
+  re-measured 2026-10-16T17:47 CDT — the doc grew with card `t_d6b0cb36`, superseding the
+  16:07 figure), as
   does `brain/research/music-monetization-2026.md` (11 067 B). The quoted section numbers
   (§3, §5, §13) are now referenceable — the gates' §13 licence citation above is one of them.
 - Visual probe: three synthetic 600.0 s visuals built and run through the real gate —
@@ -896,7 +922,7 @@ the reproducible one.
 | 18 | Visual probes: 22 / 21 / 170 distinct | Re-ran the real gate on the stored probes: **22 / 21 / 170**, 300/300/290 samples, all PASS; floor line `gate_youtube_authentic.py:146` still holds | REPRODUCED (§10) |
 | 19 | Fixture `element_fire.mp4` = 5.000 s, 1280×720, 14 133 B, FAILs the gate | `ffprobe` 5.000 s / 1280×720 / 14 133 B; gate FAIL with the same 2-signature reason | REPRODUCED (§8, §12) |
 | 20 | Board: 8 elemental cards, 28 oracle cards | **12** elemental (4 genres × 3 waves), **42** oracle for 14 genres — 40 `done` + 2 `running`, one open card per genre (`check_oracle_board.py` PASS). `t_bf0e5edd` done | CORRECTED (§11) |
-| 21 | `brain/playbooks/music-lane-architecture.md` + `brain/research/music-monetization-2026.md` "no copy exists on this machine" | Both exist — `brain/playbooks/music-lane-architecture.md` is 34 328 B and `brain/research/music-monetization-2026.md` is 11 067 B; `t_b0a4db92` done, so §13's licence citation is referenceable. Also re-read: `isrc_syntax` `:92`, its docstring's check-digit claim now `:15–17` | CORRECTED (§12) |
+| 21 | `brain/playbooks/music-lane-architecture.md` + `brain/research/music-monetization-2026.md` "no copy exists on this machine" | Both exist — `brain/playbooks/music-lane-architecture.md` is 45 674 B (re-measured 2026-10-16T17:47 CDT; it grew with card `t_d6b0cb36`, superseding the 16:07 figure) and `brain/research/music-monetization-2026.md` is 11 067 B; `t_b0a4db92` done, so §13's licence citation is referenceable. Also re-read: `isrc_syntax` `:92`, its docstring's check-digit claim now `:15–17` | CORRECTED (§12; the size re-measured by `t_b75ccb4a`) |
 | 22 | §13's own dated numbers (15 behind; "two commits"; 56-of-58 figures) | History of that pass, kept as such. The live values are §14's: 0 behind, four commits, and `check_brief_figures.py` now recomputes **119 of 120** lane-wide (the one miss is `elemental-water.md`, carded `t_34f496d7`) | HISTORY (superseded) |
 
 ### Checks run after the edit (all quoted from real runs)
@@ -959,4 +985,195 @@ that accepts the same language (brute-forced over every string up to length 6: 0
 the repo-wide run takes **0.8 s**, and `--selftest` asserts the incident gap stays under 50 ms.
 
 - **Superseded revision of this file:** `sha256 eac7238cab6cc98e3257200e4828e1fd3d9e866d4c7126263d4095610f080bc4` (67041 B, 921 lines).
-- **Superseded by this pass (card `t_6dd13d76`, 2026-10-16T17:22-05:00 CDT):** `sha256 0fa019b079dd738f1bf4f93ff593e6beb41335fd0fd62262ca4e8df70ac96ef1` (960 lines / 69893 B) — §8's plan reading was refreshed against the live file (`/var/lib/music-plans/` is rewritten by every planning pass; the 15:07 reading was the earlier plan) and §10's panel citation was re-pointed from `music/rubrics/panel.py:462` to `:463` — `:462` is blank and `:463` opens `call_judge`, the block the prose names. The plan's own content claims (bpm 150, `D Phrygian`, 120 s, instrumental, 7 bare section tags) were re-read and still hold. No genre finding was reopened.
+- **Superseded by this pass (card `t_6dd13d76`, 2026-10-16T17:22-05:00 CDT):** `sha256 0fa019b079dd738f1bf4f93ff593e6beb41335fd0fd62262ca4e8df70ac96ef1` (960 lines / 69893 B) — §8's plan reading was refreshed against the live file (`/var/lib/music-plans/` is rewritten by every planning pass; the 15:07 reading was the earlier plan) and §10's panel citation was re-pointed from `music/rubrics/panel.py:462` to `:463` —  `:462` is blank and `:463` opens `call_judge`, the block the prose names. The plan's own content claims (bpm 150, `D Phrygian`, 120 s, instrumental, 7 bare section tags) were re-read and still hold. No genre finding was reopened.
+
+---
+
+## 16. The loop-tile decision — `t_b75ccb4a`, 2026-10-16T17:39 CDT
+
+The card: the delivered loop was 4 bars (6.400 s) and 4 does not divide 375, so it tiles
+93.75× into the 600.000 s `loop-10min` video — a jump cut at the video's last seam. The
+genre's own §4 had locked 120.0 s (75 bars) *for exactly this reason*, and 75 bars turned
+out to be unreachable. This section decides one answer. **Nothing was re-rendered:** the
+master and the delivered loop on nexus are the artifacts `t_28146d70` verified, and every
+number below is a measurement taken in this pass (2026-10-16 ~22:00–22:40 UTC).
+
+### The decision
+
+**The delivered loop for a `loop-10min` genre is declared per genre in `music/genres.yaml`
+as `loop_bars` — a whole number of bars — and for `elemental-fire` it is 25 bars =
+40.000 s, which tiles exactly 15× into the 600.000 s video.**
+
+The rule, which is what makes the value checkable rather than declared:
+
+```
+bar_s      = 240 / bpm                      a 4/4 bar; at 150 BPM exactly 1.600 s
+shape_bars = 600.0 / bar_s = 2.5 x bpm      the shape's bar count — TEMPO-DEPENDENT
+loop_bars  must DIVIDE shape_bars           or the video's last seam is a jump cut
+span       = loop_bars x bar_s              must be <= 120.000 s (ceiling: the
+                                            master-loop length the briefs locked)
+                                            and    >=  24.000 s (floor: below
+                                            that it is a fragment, not a phrase)
+tiles      = 600.0 / span                   must be an INTEGER
+```
+
+`shape_bars = 2.5 × bpm` is the finding that reframed the card's own question. The card asks
+"which divisor of 375", but 375 is only the 150 BPM answer: **205** bars at 82 BPM, **220** at
+88, **230** at 92. So no single number is right for the shape — the legal set is a function of
+the genre's tempo, and the declared value is therefore per genre. The card's own reasoning
+already had this shape once: `elemental-water`'s brief independently derived **41 bars =
+120.000 s** for its own 82 BPM, and the rule above reproduces it exactly.
+
+### The per-genre values, and the arithmetic
+
+Tempo read from each template's own caption through the planner's own
+`planner.bpm_in_caption()` (none of these five genres has a lyric blueprint, so the caption is
+the whole resolution chain); the shape's duration from `music/visuals/loop_10min.mp4`, measured
+**600.000000 s** by ffprobe.
+
+| Genre | bpm | shape_bars | `loop_bars` | span | tiles into 600 s | why this one |
+|---|---|---|---|---|---|---|
+| `elemental-fire` | 150 | 375 | **25** | **40.000 s** | **15.000** | 75 bars (120.000 s) is REFUSED on a 120.000 s render — see below; 25 is the largest divisor that survives |
+| `elemental-water` | 82 | 205 | 41 | 120.000 s | 5.000 | the ceiling; matches this genre's own brief |
+| `elemental-earth` | 88 | 220 | 44 | 120.000 s | 5.000 | the ceiling |
+| `elemental-air` | 92 | 230 | 46 | 120.000 s | 5.000 | the ceiling |
+| `chiptune-8bit` | 150 | 375 | 75 | 120.000 s | 5.000 | the ceiling — its queue entry plans a 600 s render, so 375 bars is whole-bar and the render is long enough |
+
+Exact arithmetic, `Fraction`, not float (a float is how 93.75 hides):
+
+```
+fire   150 BPM: bar 1.600 s   loop 25 x 1.600 = 40.000 s   600 / 40.000 = 15     EXACT
+water   82 BPM: bar 2.926829  loop 41 x 2.926829 = 120.000 s  600 / 120.000 = 5 EXACT
+earth   88 BPM: bar 2.727273  loop 44 x 2.727273 = 120.000 s  600 / 120.000 = 5 EXACT
+air     92 BPM: bar 2.608696  loop 46 x 2.608696 = 120.000 s  600 / 120.000 = 5 EXACT
+chip   150 BPM: loop 75 x 1.600 = 120.000 s                   600 / 120.000 = 5 EXACT
+
+the delivered 4-bar loop: 4 x 1.600 = 6.400 s                 600 / 6.400   = 93.75 FRACTIONAL
+```
+
+### Why 25 and not 15 for `elemental-fire`
+
+Both 15 bars (24.000 s, 25 tiles) and 25 bars (40.000 s, 15 tiles) are legal, deliverable, and
+pass both rulers — measured on the real master in this pass. 25 is taken, on three measured
+grounds and one product one:
+
+1. **It is the largest legal length this render can carry.** Measured with
+   `loop_close.py` driven at each length against the delivered master (probe
+   `…/workspaces/t_b75ccb4a/probe_loops_result.json`): 75 bars → **rc=1**, *"the musical
+   region (115.197s) is shorter than one 120.000s loop — nothing to close"*. The ACE node
+   emits 4.803 s of digital silence inside its own 120.000 s window, so a loop as long as the
+   render can never be closed. 25 bars is the next divisor down.
+2. **It closes on the best seam of the four lengths measured** — 0.0 dB tail/head level
+   delta, against 0.3 dB (4 bars), 1.0 dB (5 bars), 2.0 dB (15 bars) — and passes all three
+   rulers of `gate_loop_points.py` (rc=0: curvature 0.33×, level Δ 0.0 dB, end-ramp −1.8 dB)
+   plus `loop_seam_check.py` (rc=0).
+3. **It wraps 15× instead of 25×.** Fewer seams in the 600 s video is fewer chances of an
+   audible one, and the tile is the longest phrase the render supports, i.e. it discards the
+   least of the master's 75-bar arc.
+4. **15 bars would invert this genre's own loop ladder.** §2 specs cutdowns at 25.6 s and
+   51.2 s "for in-engine use"; a 24.000 s delivered loop would be shorter than the genre's own
+   shortest cutdown and the video would be built from that fragment.
+
+### Where it lives (question 2)
+
+`music/genres.yaml` — a `loop_bars` key on each of the five loop-claiming genres, with the rule
+and the arithmetic written out in the gamer-family comment block, and the schema note updated.
+**Not** in the rail: the rail already reads this file (its PyYAML-free reader in
+`music/scripts/loop_close.py` resolves each genre's `video_shape` at runtime), and a length
+hardcoded in `cronjob-render.yaml` could not follow a genre. The field is enforced by a new
+lane check, `music/scripts/check_loop_tiling.py` — 12-case `--selftest`, run in this pass:
+
+```
+$ /usr/bin/python3 music/scripts/check_loop_tiling.py
+elemental-fire      loop-10min      150         375         25    40.000   15.00  OK
+    legal: 15 (24.000s/25x), 25 (40.000s/15x), 75 (120.000s/5x)   [tempo: template caption]
+… (5 loop-claiming genres, all OK)
+PASS check_loop_tiling (5 loop-claiming genre(s): every declared loop_bars divides
+its shape's bar count exactly)
+```
+
+Its selftest reproduces this card's incident (`4 bars @150 BPM → 93.75 tiles FAILS`), the
+shipped values, `4 bars @88 BPM` (which *does* tile 55× and still fails the 24 s phrase
+floor), and every fail-closed path (no field, no tempo, unreadable shape artifact, a field on
+a shape that is not tiled). The failure it guards against is not "a wrong number", it is
+"nothing checked the contract": the tiling arithmetic previously lived in this brief's prose,
+which is why a 4-bar loop reached the rail.
+
+### Audio and visual (question 3)
+
+**The visual cycle must share the delivered loop's own period** — for `elemental-fire` 25 bars
+= 40.000 s, not the 8-bar / 12.800 s cycle `music/visuals/element-fire.md` currently asks for.
+Two reasons, one structural and one measured:
+
+- The visual's motion grammar is driven by the audio's own events (taiko hits → ember flares,
+  ostinato → shimmer speed, the reprise downbeat → the white-hot flash). A visual period that
+  differs from the audio's re-phases the audio's arc against the picture after the first
+  cycle: the "peak flash on the reprise" lands somewhere else every time. One period for the
+  whole video is also what makes the video exactly periodic — every seam, audio and visual,
+  is the same seam.
+- The spec's 8-bar figure does not tile 600 s at all: 600 / 12.8 = **46.875**. A shared
+  40.000 s period gives 15.000 for both.
+- Measured (`gate_youtube_authentic`, real gate, synthetic 600 s tiled visuals in
+  `…/workspaces/t_b75ccb4a/vis_probe/`): a 12.8 s tile → **22 distinct** frame signatures,
+  a 24.0 s tile → **12**, a 40.0 s tile → **12**, against the gate's floor of 10. So the
+  §10 warning holds and is sharper than it was: a tiled visual clears the floor with only
+  **2 signatures of headroom** at either candidate length, and the distinct count is set by
+  the tile length, not by how busy the picture looks. The visual stage must measure the
+  distinct count on the real 600 s render; if it lands near 10, lengthen the cycle.
+
+`music/visuals/element-fire.md` is corrected in place by this pass to name the loop's period.
+
+### What was not re-decided
+
+- **`BARS_PREFERRED = 4` in `music/assets/pack.py` stays.** It is the PACK lane's own cutdown
+  default and is bound bitwise to the rail's port by `music/tests/test_loop_close.py`.
+  Deciding otherwise would change every loop-claiming genre's cutdowns. Recorded here so a
+  later reader does not "fix" the pack to match this number: a pack cutdown loop is repeated
+  by the game engine, which will loop any length it is handed — it carries **no tiling
+  requirement**. Only the video tile does.
+- **Nothing re-rendered.** The master (`sha256 013339ab…a82382f`, 120.000000 s) and the
+  delivered loop (`sha256 a5e3dd5d…12aa9c5`, 6.400000 s) are the artifacts `t_28146d70`
+  verified. The 6.400 s loop is now **out of contract** and the rail-side card below rebuilds
+  it at 25 bars; until then, `loop_points.json` on disk still describes the 4-bar artifact and
+  is correct about *that* artifact (it passes both rulers).
+- **No sibling brief was edited in this pass**, and none is left unspecified: `elemental-water`
+  already states 41 bars = 120.000 s (the value this rule derives); `elemental-earth` (4 bars
+  = 10.909 s), `elemental-air` and `chiptune-8bit` carry loop lengths that the registry field
+  now supersedes — card `t_00d3dbbd` owns correcting those three in prose.
+
+### Checks run after the edit (all quoted from real runs, 2026-10-16T17:47 CDT)
+
+`/usr/bin/python3 music/registry.py validate` → rc=0, `14 genres, 10 lanes, 1 stage gate
+rule(s), 1 derived product(s)` (the new `loop_bars` key changes nothing the validator
+requires) · `music/scripts/check_loop_tiling.py` → rc=0, the five genres table above ·
+`--selftest` → rc=0, 12 cases · `check_brief_figures.py` → **clean for this file** (the
+lane-wide FAIL is 7 stale claims in six OTHER briefs about the architecture playbook's size,
+which grew to 45 674 B in `6725ed7`; this file's two sites were corrected here, card
+`t_b29712b8` owns the rest) · `check_brief_drift.py` → PASS (22 live counts) ·
+`check_brief_line_refs.py` → this file's citations all resolve (117 OK lane-wide; the rc=1
+lane-wide failures are in `jungle-dnb.md` and `elemental-*`'s own ranges, not here) ·
+`check_brief_paths.py` → PASS (21 `mining-k8s/…` citations) · `check_video_shapes.py` → PASS
+(2 pre-existing WARNs) · `check_stage_scripts.py` → PASS (21 script paths) ·
+`python3 -m unittest music.tests.test_loop_close` → OK, 15 tests (the pack parity is intact —
+this pass did not touch `loop_close.py` or `pack.py`).
+
+The visual-period correction grew `music/visuals/element-fire.md` to **1522 B** (35 lines), so
+the two claims in this file that cite its size were re-measured in the same edit. (Do not
+write the previous size as a `B` figure when citing it: `check_brief_figures.py` parses any
+such token against the referent in the sentence and flags the sentence you just corrected.)
+`brain/playbooks/music-lane-architecture.md`'s size was re-measured the same way
+(45 674 B), because `check_brief_figures.py` had it stale here too.
+
+### Handoff
+
+`music/genres.yaml` (the field + the rule), `music/scripts/check_loop_tiling.py` (the check),
+`music/visuals/element-fire.md` (the visual period), and this file (§2, §4, §16) are the
+decision. The rail side — building the delivered loop at the declared length, refusing a
+length that does not tile, and wiring the check into the scheduled matrix — is
+**`t_2f4fae09`** (assignee `nexus-core`).
+
+hotspot: `music/briefs/` — this file was written and re-verified by four `music-producer`
+cards on 2026-10-16 and sits in a directory ~8 concurrent workers write; every write needs a
+path-scoped commit and a lock retry. `music/scripts/run_gate_matrix.sh` and
+`music/gates/check_gate_suite.sh` were being edited by sibling cards during this pass, so this
+decision touched neither.
