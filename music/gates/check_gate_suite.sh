@@ -544,6 +544,30 @@ fail_expected "no approval record fails" 1 \
   --package-dir "$GOOD_SYNC"
 
 # ------------------------------------------------------------------
+# 11. the render rail's loop check (card t_b21aeb51)
+# ------------------------------------------------------------------
+# The render rail wrote its success `.rendered` marker on `rc=0` alone, and
+# every ACE render ends in 1.5-6.2 s of digital silence, so the rail certified
+# masters that cannot carry a seamless-loop claim (elemental-fire "Emberfall":
+# head-1s -25.1 dB, tail-1s -58.7 dB, delta 33.6 dB). The rail now runs
+# music/scripts/loop_close.py after a render of a loop-claiming plan. These two
+# cases are what makes that a check rather than a claim:
+#   * the FROZEN pre-fix artifact (music/tests/fixtures/loop_silence_tail.wav,
+#     15.000 s = 10 s of that master + 5 s of digital silence, sha256 51473534…)
+#     must still FAIL, and must fail FOR THE LEVEL/SILENCE reason;
+#   * the whole loop_close suite must stay green — it binds the ported loop
+#     builder to music/assets/pack.py (constants, bar count, bitwise-identical
+#     crossfade/edge fade), binds the PyYAML-free registry reader to PyYAML, and
+#     builds a loop out of a silence-tailed render that passes BOTH rulers.
+say "the render rail's loop check (music/scripts/loop_close.py)"
+fail_reason "frozen pre-fix rail output fails the rail's loop check (silence tail)" 1 \
+  "is silence" \
+  "$PY" "$REPO/music/scripts/loop_close.py" --check-only \
+  --master "$REPO/music/tests/fixtures/loop_silence_tail.wav"
+pass "loop_close suite: pack.py parity, registry reader, frozen fixture, close/refuse" \
+  "$PY" -m unittest music.tests.test_loop_close
+
+# ------------------------------------------------------------------
 rm -f /tmp/gate_out.$$
 if [ "$fails" -eq 0 ]; then
   echo
