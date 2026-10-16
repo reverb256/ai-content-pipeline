@@ -23,7 +23,7 @@
 > `sha256 22a596a42832aae7a36583cf1c2b31871c0779bfb530602cd7a51d772ef14e9c` (44182 B, 691
 > lines, written 13:43). The current digest re-reads with
 > `sha256sum music/briefs/epic-orchestral-boss.md`.
-> **Rubric size re-measured (card `t_6dd13d76`, 2026-10-16T17:40-05:00 CDT):** the family
+> **Rubric size re-measured (card `t_6dd13d76`, 2026-10-16T17:21-05:00 CDT):** the family
 > rubric `music/rubrics/gamer.json` reads 12 444 bytes (12 428 characters) on disk now — it
 > grew again after the 12 000-byte rewrite the surviving-card pass recorded. §1 and §13 are
 > corrected in place. Superseded revision of this file:

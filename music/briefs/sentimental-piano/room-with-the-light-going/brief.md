@@ -21,7 +21,7 @@
 > `1010965f2d911039f32c98c1eb6958692c0b1072bb54f0ef3167ee335572fa9d` (21918 B, 460 lines,
 > committed by the brief stage 2026-10-16T13:21); the current digest is re-readable with
 > `sha256sum music/briefs/sentimental-piano/room-with-the-light-going/brief.md`.
-> **Superseded by card `t_6dd13d76` (2026-10-16T17:40-05:00 CDT):** the pre-edit blob was
+> **Superseded by card `t_6dd13d76` (2026-10-16T17:21-05:00 CDT):** the pre-edit blob was
 > `sha256 6fdc85d43cd15c4c80a0c6cc619c9f3759bacc14f60646cf3631f44ddf3295d7` (563 lines / 30164 B).
 
 This brief resolves the oracle card against the live registry and the live
@@ -512,7 +512,7 @@ byte-identical.
    the loop-close rail added to the render job.
 5. **§6b** — image tag v0.1.3; the deployed `translate.py` quoted at its new line
    numbers; the repo mirror's pre-v0.1.3 divergence named. **Superseded by card
-   `t_6dd13d76` (2026-10-16T17:40-05:00 CDT):** card `t_42bc85ba` reconciled the two
+   `t_6dd13d76` (2026-10-16T17:21-05:00 CDT):** card `t_42bc85ba` reconciled the two
    copies, so the mirror is 113 lines and no longer diverges — §6b and this entry are
    restated, and the pre-edit blob was
    `sha256 6fdc85d43cd15c4c80a0c6cc619c9f3759bacc14f60646cf3631f44ddf3295d7` (563 lines /

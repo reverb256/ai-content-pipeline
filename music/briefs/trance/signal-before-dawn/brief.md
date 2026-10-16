@@ -7,7 +7,7 @@ Track slug: signal-before-dawn
 
 Superseded digest: this file was sha256 `59992a334a44d63a4e2791e222330bd342c8087e580444255d82d310f6a2532b`
 (14 677 B) when the oracle ruling named it. The revision below supersedes that copy, and the
-figure pass of card `t_6dd13d76` (2026-10-16T17:40-05:00 CDT) supersedes
+figure pass of card `t_6dd13d76` (2026-10-16T17:21-05:00 CDT) supersedes
 `sha256 cb9a11c10edac5303b830da725acbef882c1ce08db7ec93604a3408c772e616b` (408 lines / 23449 B).
 
 The scorer's ruling (oracle, 2026-10-16, `music/oracle.py` @ `b2d11f7`): the NEWEST scoring
@@ -116,7 +116,7 @@ rail refused it (§8):
   (The 14:10 reading this section first recorded was 2434 B; the rail re-plans the track on
   every pass.) Its refusal marker is now
   `/var/lib/music-plans/trance-signal-before-dawn.refused` (written 2026-10-16 17:15) — the
-  `.rendered` marker recorded at 14:18 is not on disk (re-read 17:40).
+  `.rendered` marker recorded at 14:18 is not on disk (re-read 17:21).
 - No `.flac`, `.wav` or `.mp3` for trance exists under `/var/lib/music-plans/` or in the
   repo. The only master file on that volume is `elemental-fire-emberfall.flac`
   (11 421 612 B); `/var/lib/music-plans/loops/` holds its loop pair.

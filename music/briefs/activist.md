@@ -941,7 +941,7 @@ this brief was touched.
   `music-pipeline-payload` ConfigMap: 38 keys, 6 of them blueprints), §11 (the "3 blueprints
   only" line) and §12 correction 5.
 - **Superseded by this pass (card `t_e6d422ec`, 2026-10-16):** `sha256 3b8a9d7404380bcf129652902f6892d536ce148b3de224c60b3c3887ba0879fc` (688 lines / 43483 B) — the census statements above and in §1 and §6 were restated as live claims when `music/lyrics/blueprints/jungle-dnb.yaml` landed. Only the counts moved; no genre finding was reopened.
-- **Superseded by this pass (card `t_6dd13d76`, 2026-10-16T17:40-05:00 CDT):** `sha256 12d1e1001c001cd2fb0876e590dd222ebc479f824e2c84232a000cd1550f88e5` (1070 lines / 73389 B) — two citations that had aged under the file they name: the ACE-Step tempo/key pair (§3 and §12) now reads `acestep_plan.py:234`–`:235` with `duration` at `:224`, and the engine mirror `music/sunolocal/translate.py` is no longer pre-v0.1.3 — card `t_42bc85ba` reconciled the two copies (4 907 B, 113 lines, `sha256 25fb26ee…`). No genre finding was reopened.
+- **Superseded by this pass (card `t_6dd13d76`, 2026-10-16T17:21-05:00 CDT):** `sha256 12d1e1001c001cd2fb0876e590dd222ebc479f824e2c84232a000cd1550f88e5` (1070 lines / 73389 B) — two citations that had aged under the file they name: the ACE-Step tempo/key pair (§3 and §12) now reads `acestep_plan.py:234`–`:235` with `duration` at `:224`, and the engine mirror `music/sunolocal/translate.py` is no longer pre-v0.1.3 — card `t_42bc85ba` reconciled the two copies (4 907 B, 113 lines, `sha256 25fb26ee…`). No genre finding was reopened.
 
 ## 14. Surviving-card pass — the oracle ruling and every claim re-measured (`t_752f02a8`, 2026-10-16T16:00-05:00)
 

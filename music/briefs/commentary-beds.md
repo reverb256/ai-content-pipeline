@@ -513,7 +513,7 @@ Repo-wide `check_brief_figures` still FAILs on **other** briefs (`elemental-wate
 `7db8ea568da53bd1983bb53737680223dc72d4f862421900e299c481aeea1398` (320 lines / 19360 B, commit
 `63440da`); this pass's revision is committed on `main` and its digest is re-readable with
 `sha256sum music/briefs/commentary-beds.md`. The figure pass of card `t_6dd13d76`
-(2026-10-16T17:40-05:00 CDT) supersedes
+(2026-10-16T17:21-05:00 CDT) supersedes
 `sha256 695a48c6de68ab892ca9e3bafd2edde8eef2fc97d19589a9d63850d1aca2e064` (515 lines / 32830 B):
 the two-rail-walls entry was restated — the style-field wall is FIXED by `t_3497b627` and both
 kit plans were re-measured. The chain resumes at the stage after `brief` —

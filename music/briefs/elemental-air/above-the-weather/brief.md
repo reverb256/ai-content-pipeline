@@ -22,7 +22,7 @@ Superseded revisions of this file:
   ba6fbbf8f13d81a61f8cd7e58cfe47e8bf657169c48865991728953b2ea85cfd`;
 - before this surviving-card pass of 2026-10-16 16:07 CDT — `sha256
   7c2c790faf648932f24e383824cc03014e55d388a466b79c721a8ad87d26e93f`;
-- before the figure re-measurement pass of 2026-10-16 17:40 CDT (card `t_6dd13d76`) — `sha256
+- before the figure re-measurement pass of 2026-10-16 17:21 CDT (card `t_6dd13d76`) — `sha256
   0487c2c8feee739099055ecc4819ea8cc10c5ed6096598903dbac64b76ccf370`; §7's plan reading was
   refreshed against the live file under `/var/lib/music-plans/`, which the rail rewrites on
   every planning pass, so that figure is a reading at a time, not a constant.
