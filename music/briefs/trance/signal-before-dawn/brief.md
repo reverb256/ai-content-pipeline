@@ -133,12 +133,32 @@ and the file never appears in the history of the local `main` branch. It does ex
 on `origin/main`, added by commit `ba28f55` ("music: instrumental mode in generation
 path", 2026-10-14, card t_82ed3b8a).
 
-Measured 2026-10-16 13:0x, after a concurrent worker fetched:
+Measured 2026-10-16 13:0x, after a concurrent worker fetched. Re-measured 2026-10-16
+13:29 by the duplicate-card pass (`t_1a6a7d74`): the local tip moves as this lane
+commits, the split does not.
 
 | Ref | Tip | Gap |
 |---|---|---|
-| local `main` | `9c2d2d3` | 2 commits ahead of the merge base `e278f61` |
+| local `main` | `0e4fe5b` | 19 commits ahead of the merge base `e278f61` |
 | `origin/main` | `ba28f55` | 15 commits ahead of the merge base `e278f61` |
+
+`origin/main` is current as of the fetch at 2026-10-16 13:11 (`git rev-list --count
+e278f61..main` = 19, `e278f61..origin/main` = 15). `origin/main` carries both
+`music/suno-gen.py` and `music/sunolocal/` (adapters, checks, README); the local
+working tree carries neither.
+
+A standing check now guards this defect: `music/scripts/check_stage_scripts.py`
+(commit `7f2ded8`) reads `music/stages.yaml`, tests every referenced path against the
+checkout, and names the ref that carries a missing file. Re-run 2026-10-16 13:2x:
+
+```
+FAIL check_stage_scripts: 1 of 11 referenced path(s) absent from the working tree of /home/j_kro/ai-content-pipeline
+  music/suno-gen.py   (named by: generate)
+    CHECKOUT DIVERGENCE - this repo DOES carry the file, on: origin, origin/main, origin/wip/atlas-backup-20261014
+    Fix: merge those refs into the checked-out branch. Do NOT delete the reference.
+```
+
+It stays red until the branches merge, so this defect cannot go quiet again.
 
 The lineages have diverged. The local checkout — the tree the systemd
 `music-pipeline-driver.service` runs against — is missing 15 commits of this lane's
@@ -149,12 +169,34 @@ Fix: reconcile the branches (merge `origin/main` into `main`), not "delete the
 reference". The engine actually in service is still the ACE-Step cluster path in the
 table above; the Suno CDP path needs a logged-in browser session on a host.
 
-**2. The oracle re-emits every card on every run.** `music/oracle.py`
-(`create_kanban_card`) creates board cards with no `idempotency_key` and no check for
-an open card for the same genre. Observed 2026-10-09: 14 cards at 03:27 and 14 more
-at 03:37 — including a second trance card, `t_1a6a7d74` (score 8.5, still `ready`),
-which duplicates this one. The `music-oracle.timer` runs daily, so the board grows by
-~14 cards per day and each duplicate card is independently dispatched.
+**2. The oracle re-emitted every card on every run — FIXED 2026-10-16 13:09, 95 s
+after this brief was corrected.** When this brief was written, `music/oracle.py`
+(`create_kanban_card`) created cards with no `idempotency_key` and no check for an
+open card for the same genre. Observed 2026-10-09: 14 cards at 03:27 and 14 more at
+03:37 — including a second trance card, `t_1a6a7d74` (score 8.5), which duplicates
+this one, and `music-oracle.timer` runs daily, so each duplicate put a whole stage
+chain in flight.
+
+Commit `ade6e87` added the guard (`open_oracle_genres` / `skip_genres`) and
+`music/test_oracle_dedupe.py`. Both are in this working tree; the test file passes
+12/12 (`python3 music/test_oracle_dedupe.py`, rc=0). `performance/music-oracle-runs.log`
+shows the guard doing its job live:
+
+```
+2026-10-16T13:07:40 — oracle run: 14 scored, 0 created,           0 skipped (open), board_read_ok=True
+2026-10-16T13:08:45 — oracle run: 14 scored, 0 created,          14 skipped (open), board_read_ok=True
+```
+
+The 13:08 run is the real one: it skipped all 14 genres instead of creating 14 more
+cards. The two runs that log `0 skipped` are `--dry-run` invocations — `run_oracle`
+sets `open_cards = {}` when `dry_run` is set (`music/oracle.py:439`), so a dry run
+never reads the board and logs `board_read_ok=True` regardless. Nothing anomalous.
+
+What the guard does NOT do: it cannot remove the 14 duplicate cards already on the
+board from the 2026-10-09 second wave (the fixes prevent new dupes; they do not clean
+up old ones). Card `t_bf0e5edd` (assignee `oracle`) owns that cleanup and the
+8.3-vs-8.5 score conflict. This card, `t_1a6a7d74`, is one of those pre-guard
+duplicates.
 
 **3. No music stage advanced its card's stage marker (fixed during this run).**
 Every music stage prompt omitted `advance-stage.sh`, and that script hardcoded
@@ -165,9 +207,10 @@ action needed; recorded here so the finding is not lost.
 
 ### Repo state for this deliverable
 
-Commit `4daf132` on local `main`, files under `music/briefs/trance/signal-before-dawn/`.
-It is **not** on `origin/main` (local `main` is 2 ahead, 15 behind). Pushing it needs
-the branch reconciliation in defect 1.
+Commit `4daf132` on local `main`, files under `music/briefs/trance/signal-before-dawn/`,
+corrected by `132a781`, then by the verification pass in §10.
+It is **not** on `origin/main` (re-measured 2026-10-16 13:29: local `main` is 19 ahead,
+15 behind). Pushing it needs the branch reconciliation in defect 1.
 
 ## 7. Queue entry for this track
 
@@ -207,3 +250,49 @@ implementer picks one:
 ## 9. Next stage
 
 Stage `brief` is complete. Next: `genre-select`.
+
+## 10. Duplicate-card verification pass — `t_1a6a7d74` (2026-10-16 13:29)
+
+`t_6272da09` (trance, score 8.3) wrote this brief and is `done`. Card `t_1a6a7d74`
+(trance, score 8.5, second oracle wave) is the duplicate. Briefs in this lane are
+keyed by **genre**, so both cards resolve to this one artifact. **No second brief
+was written; no second stage chain was started.** The surviving queue handoff is
+`t_791b48f7` (assignee `nexus-core`, status `ready`), already created from
+`t_6272da09`. Nothing was re-scored — the 8.3-vs-8.5 conflict is `t_bf0e5edd`'s call.
+
+Every figure in this brief was re-measured this pass. Results:
+
+| Claim | Re-measured | Verdict |
+|---|---|---|
+| `registry OK: 14 genres, 10 lanes` | same string, rc=0 | reproduced |
+| trance entry (family edm, 4 lanes, 2/wk, mix-60min) | byte-identical to §1 table | reproduced |
+| all four lanes at rung `advisory`, 0/0/$0 | same | reproduced |
+| `PASS gate_quota`, period 2026-10, 0/60, studio 0 | same | reproduced |
+| `PASS gate_lyrics_original`, 9 sections, 84 words, j_kro | same | reproduced |
+| `sha256(lyrics.suno.txt)` = `e667e248…` matches manifest | same hash from `sha256sum` | reproduced |
+| planner cap 420 s, floor 30 s | `planner.py:82-83` (`MIN_DURATION_S=30`, `MAX_DURATION_S=420`) | reproduced |
+| 417 s = 240 bars at 138 BPM | 240 × 1.7391 = 417.4 s | reproduced |
+| no trance plan, no trance audio | `/var/lib/music-plans/` = `final-round`, `smoke-chill-lounge`, `testplan` only; repo-wide search finds the lyrics and brief dirs only | reproduced |
+| live queue = `smoke-chill-lounge` only | ConfigMap `mining/music-pipeline-briefs` key `briefs.json` read back | reproduced |
+| last render job output quoted in §6 | job `music-pipeline-render-29869541`: `ComfyUI up at http://comfyui-zephyr.mining.svc.cluster.local:8188` / `skip×3` / `done: found=3 rendered=0 skipped=3 failed=0` | reproduced |
+| `values.yaml` reads `briefs: []` | same; live ConfigMap holds only `smoke-chill-lounge` → drift stands | reproduced |
+
+Two facts were **stale** and are corrected above:
+
+1. The divergence counts in §6 defect 1 (`9c2d2d3` / 2 ahead) — the local tip is now
+   `0e4fe5b` / 19 ahead. Cause: this lane keeps committing while `origin/main` stays
+   at `ba28f55`. The invariant (same merge base `e278f61`, `suno-gen.py` on the
+   remote and not in the working tree) is unchanged.
+2. §6 defect 2 (`the oracle re-emits every card on every run`) — fixed at 13:09 by
+   `ade6e87`, 95 s after this brief's `132a781` correction. The guard is verified
+   live in `performance/music-oracle-runs.log`.
+
+Also confirmed on the live rail: the plan CronJob (`music-pipeline-29869517`) logged
+`skip smoke-chill-lounge (plan exists)` → `done: 1/1 planned`, and the `.rendered`
+markers read `refused` for `smoke-chill-lounge` and `testplan`, `""` for
+`final-round`. That is the §8 blocker in production: a `draft`-mode plan carries no
+sections, so `acestep_plan.py` refuses it.
+
+No new handoff cards: every blocker named here already has one — `t_8a715681`
+(divergence), `t_25a6499c` + `t_8c5a6b91` (instrumental/BPM/render rail), `t_5a93164a`
+(stage advance refused), `t_791b48f7` (queue this brief), `t_bf0e5edd` (oracle dupes).
