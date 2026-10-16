@@ -45,14 +45,22 @@ Invariants
   B3  No open oracle card sits BEHIND its genre's resume stage — the stage
       music/stage_state.py resolves from the genre's artifacts on disk. A card
       at or behind a delivered stage spends a worker run re-doing delivered
-      work (incident 2). The card's position is the LAST `stage:` match in the
-      card, exactly as the driver reads it (card t_92a09bdc: the driver takes
-      the last match, so the check must too).
-  B4  That marker must name a stage DECLARED in music/stages.yaml. The driver
-      logs "unknown stage" and skips such a card, so it stalls silently.
-      Measured 2026-10-16: the live card t_92a09bdc resolves to `advance-stage`
-      — prose in a run summary, not the advance step (check_stage_advance.py
-      cites an earlier reading of that same window as `advance`).
+      work (incident 2).
+  B4  The card's stage marker must name a stage DECLARED in music/stages.yaml.
+      The driver logs "unknown stage" and skips such a card, so it stalls.
+
+A card's stage comes from the marker CONVENTION (scripts/automation/stage_marker.py,
+card t_669bb02b): a marker is a LINE whose entire content is `stage: <token>`, in
+the card body or in a comment body; the LAST such line wins, and run summaries and
+event payloads are prose that can never carry one. Reading the board db read-only
+means the check runs where the checks run (a dispatcher-spawned worker's CLI is
+fenced for mutations). Measured 2026-10-16 against the live board: the convention
+yields the same token as the driver's `stage_of` last-match read on 40 of the 42
+oracle cards, and it is right on both differences — t_92a09bdc resolved to the
+undeclared `advance-stage` out of a summary sentence ("Did not advance the stage:
+advance-stage.sh is refused …"), and t_354d5d25 resolved to `brief` although its
+own comment marker said `genre-select`. That read is the defect card t_669bb02b
+fixes in the driver; this check follows the convention, not the old read.
 
 Run:  /usr/bin/python3 music/scripts/check_oracle_board.py [--db PATH]
                                                           [--stages PATH]
@@ -72,8 +80,11 @@ DEFAULT_DB = Path.home() / ".hermes/kanban/boards/music/kanban.db"
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_STAGES = REPO / "music" / "stages.yaml"
 
-# The driver's own regex (pipeline-driver.sh::stage_of takes the LAST match).
-MARKER = re.compile(r"stage: ([a-z-]+)")
+# The marker CONVENTION (declared in scripts/automation/stage_marker.py, card
+# t_669bb02b): a card's stage marker is a LINE whose entire content is
+# `stage: <token>`. The driver used to take the last `stage: <word>` ANYWHERE in
+# the `hermes kanban show` output, which let run-summary prose capture the route.
+DIRECTIVE = re.compile(r"^stage: ([a-z-]+)$")
 
 
 def _load_module(name: str, path: Path) -> Any:
@@ -104,46 +115,56 @@ def read_board(db: Path) -> list[tuple[str, str, str, float]]:
         con.close()
 
 
-def read_card_windows(db: Path) -> dict[str, str]:
-    """task_id -> the text the driver greps for its stage marker.
+def marker_of(body: str, comments: list[str]) -> str | None:
+    """The card's current stage, by the lane's marker CONVENTION — or None.
 
-    The driver takes the LAST `stage: [a-z-]+` match from the output of
-    `hermes kanban show <card>`, whose sections run: body, latest run summary,
-    comments, runs. This reader reproduces that order from the board db, so the
-    check and the driver agree on where a card stands. Measured 2026-10-16 on
-    the live board: this reader reproduced the CLI's token for 42/42 oracle
-    cards (every alternative section order did as well, so no card on this board
-    is ambiguous today).
+    A marker is a LINE whose entire content is `stage: <token>`, in the card body
+    or in a comment body; the LAST such line wins. Run summaries and event
+    payloads are prose and can never carry one.
+
+    Why the convention, and not the last `stage: <word>` anywhere: the driver read
+    the last match in the whole `hermes kanban show` output until card t_669bb02b,
+    and the run summary renders AFTER the comments, so prose wins. Measured
+    2026-10-16 on the live board: t_92a09bdc resolved to the undeclared token
+    `advance-stage` out of a summary sentence, and t_354d5d25 resolved to `brief`
+    although its own comment marker said `genre-select`. The convention is
+    declared in scripts/automation/stage_marker.py (card t_669bb02b); this reader
+    implements the same rule off the board db, read-only, so it runs in a fenced
+    worker session. Measured: identical to the driver's current last-match token on
+    40 of the 42 oracle cards, and correct where it differs.
     """
+    token = None
+    for block in [body] + list(comments):
+        for line in (block or "").splitlines():
+            match = DIRECTIVE.match(line.strip())
+            if match:
+                token = match.group(1)
+    return token
+
+
+def read_card_markers(db: Path) -> dict[str, str | None]:
+    """task_id -> the card's current stage (marker_of over body + comments)."""
     con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
     try:
-        windows: dict[str, str] = {}
+        markers: dict[str, str | None] = {}
         for task_id, body in con.execute("select id, coalesce(body, '') from tasks"):
             comments = [r[0] or "" for r in con.execute(
                 "select body from task_comments where task_id=? "
                 "order by coalesce(created_at, 0), id", (task_id,))]
-            runs = [r[0] or "" for r in con.execute(
-                "select summary from task_runs where task_id=? order by id", (task_id,))]
-            windows[str(task_id)] = "\n".join([body] + runs[-1:] + comments + runs)
-        return windows
+            markers[str(task_id)] = marker_of(body, comments)
+        return markers
     finally:
         con.close()
 
 
-def last_stage_marker(window: str) -> str | None:
-    """The stage the driver would route the card to, or None when it has none."""
-    hits = MARKER.findall(window or "")
-    return hits[-1] if hits else None
-
-
 def find_violations(oracle: Any, rows: list[tuple[str, str, str, float]],
-                    windows: dict[str, str] | None = None,
+                    markers: dict[str, str | None] | None = None,
                     resume: Any = None, order: list[str] | None = None,
                     default: str | None = None) -> list[str]:
     """Pure check over board rows. No board, no clock, no network.
 
     B1: >1 open card for one genre. B2: an open card the guard cannot parse.
-    B3: an open card behind its genre's resume stage (needs `windows`, `resume`
+    B3: an open card behind its genre's resume stage (needs `markers`, `resume`
     and `order`). B4: an open card whose marker names no declared stage.
     """
     problems: list[str] = []
@@ -175,7 +196,7 @@ def find_violations(oracle: Any, rows: list[tuple[str, str, str, float]],
             f"a genre must carry at most 1 (one card owns the genre's stage chain; "
             f"each extra card dispatches a second chain). Cards: {detail}")
 
-    if windows is None or resume is None or order is None:
+    if markers is None or resume is None or order is None:
         return problems
 
     index = {stage: i for i, stage in enumerate(order)}
@@ -188,7 +209,7 @@ def find_violations(oracle: Any, rows: list[tuple[str, str, str, float]],
                 f"have diverged, so this card cannot be judged.")
             continue
         for task_id, _title, status, _created in cards:
-            stage = last_stage_marker(windows.get(task_id, "")) or default
+            stage = markers.get(task_id) or default
             if stage not in index:
                 problems.append(
                     f"B4 VIOLATED: open card {task_id} [{status}] for {genre!r} carries "
@@ -228,41 +249,47 @@ def selftest(oracle: Any) -> int:
     # Fixture genre "chill-lounge" has a brief on disk -> resume genre-select.
     resume = lambda genre: stage_state.resume_stage(REPO, genre)[0]  # noqa: E731
 
-    def win(*markers: str) -> str:
-        return "\n".join(markers)
-
-    def windows_for(rows, override: dict | None = None) -> dict[str, str]:
+    def markers_for(rows, override: dict | None = None) -> dict[str, str | None]:
         """Every card positioned at its resume stage unless `override` says otherwise."""
         override = override or {}
-        return {tid: override.get(tid, win("stage: genre-select")) for tid, *_ in rows}
+        return {tid: override.get(tid, "genre-select") for tid, *_ in rows}
 
-    # The shape the 14:05 wave carried: a fresh body marker, `stage: brief`, for a
+    # The shape the 14:05 wave carried: a body marker line `stage: brief` for a
     # genre whose brief is already delivered.
     behind = [("t_h", "music-oracle: chill-lounge (score 8.6)", "ready", 8.0)]
-    behind_windows = windows_for(behind, {"t_h": win("stage: brief")})
+    behind_markers = markers_for(behind, {"t_h": marker_of("stage: brief", [])})
     # A card already advanced to the resume point (and beyond) is fine.
     on_point = [("t_i", "music-oracle: chill-lounge (score 8.6)", "ready", 9.0)]
-    on_point_windows = windows_for(on_point)
-    # The driver reads the LAST match: prose after the real marker must not pass.
-    marker_lost = [("t_j", "music-oracle: chill-lounge (score 8.6)", "ready", 10.0)]
-    marker_lost_windows = windows_for(marker_lost,
-                                      {"t_j": win("stage: genre-select\n\nstage: brief")})
-    # A marker naming no declared stage stalls the card. 'advance-stage' is the
-    # token measured on the live card t_92a09bdc (run-summary prose).
+    on_point_markers = markers_for(on_point)
+    # A body that carries two marker lines: the LAST one is the card's stage.
+    two_markers = [("t_j", "music-oracle: chill-lounge (score 8.6)", "ready", 10.0)]
+    two_marker_markers = markers_for(
+        two_markers, {"t_j": marker_of("stage: genre-select\n\nstage: brief", [])})
+    # The measured t_354d5d25 shape: the body still says brief, the worker's own
+    # comment advanced the card. The comment marker must win (the card is NOT
+    # behind), and prose in a run summary must never become a marker — with the
+    # measured t_92a09bdc sentence as the negative control.
+    advanced = [("t_l", "music-oracle: chill-lounge (score 8.6)", "ready", 12.0)]
+    advanced_markers = markers_for(advanced, {"t_l": marker_of(
+        "stage: brief",
+        ["stage: genre-select",
+         "Did not advance the stage: advance-stage.sh is refused for dispatcher-spawned workers"])})
+    # A marker LINE naming no declared stage stalls the card.
     unknown = [("t_k", "music-oracle: chill-lounge (score 8.6)", "ready", 11.0)]
-    unknown_windows = windows_for(unknown, {"t_k": win("stage: advance-stage")})
+    unknown_markers = markers_for(unknown, {"t_k": marker_of("stage: advance-stage", [])})
 
-    got_clean = find_violations(oracle, clean, windows_for(clean), resume, order, default)
-    got_dup = find_violations(oracle, duplicate, windows_for(duplicate),
+    got_clean = find_violations(oracle, clean, markers_for(clean), resume, order, default)
+    got_dup = find_violations(oracle, duplicate, markers_for(duplicate),
                               resume, order, default)
-    got_unparseable = find_violations(oracle, unparseable, windows_for(unparseable),
+    got_unparseable = find_violations(oracle, unparseable, markers_for(unparseable),
                                       resume, order, default)
-    got_behind = find_violations(oracle, behind, behind_windows, resume, order, default)
-    got_on_point = find_violations(oracle, on_point, on_point_windows, resume, order, default)
-    got_marker_lost = find_violations(oracle, marker_lost, marker_lost_windows,
-                                      resume, order, default)
-    got_unknown = find_violations(oracle, unknown, unknown_windows, resume, order, default)
-
+    got_behind = find_violations(oracle, behind, behind_markers, resume, order, default)
+    got_on_point = find_violations(oracle, on_point, on_point_markers, resume, order, default)
+    got_two = find_violations(oracle, two_markers, two_marker_markers,
+                              resume, order, default)
+    got_advanced = find_violations(oracle, advanced, advanced_markers,
+                                   resume, order, default)
+    got_unknown = find_violations(oracle, unknown, unknown_markers, resume, order, default)
     checks = [
         ("clean board (one open card per genre, advanced past its resume stage)",
          len(got_clean), 0),
@@ -270,10 +297,18 @@ def selftest(oracle: Any) -> int:
         ("open card whose title names no genre", len(got_unparseable), 1),
         ("body marker `stage: brief` for a genre whose brief is on disk", len(got_behind), 1),
         ("card already at its resume stage (genre-select)", len(got_on_point), 0),
-        ("marker pushed behind by later prose (driver takes the LAST match)",
-         len(got_marker_lost), 1),
+        ("two marker lines in one body (the LAST is the card's stage)", len(got_two), 1),
+        ("body says brief, the worker's comment advanced it (measured t_354d5d25 shape)",
+         len(got_advanced), 0),
         ("marker naming an undeclared stage", len(got_unknown), 1),
     ]
+    got_advanced_only_b4 = [
+        p for p in got_advanced if not p.startswith("B4")]
+    checks.append(("the same card's marker, read directly by the convention",
+                   int(marker_of("stage: brief",
+                                 ["stage: genre-select",
+                                  "Did not advance the stage: advance-stage.sh is refused"])
+                       == "genre-select"), 1))
     ok = all(got == want for _, got, want in checks)
     print(f"SELFTEST {'PASS' if ok else 'FAIL'} check_oracle_board:")
     for label, got, want in checks:
@@ -320,8 +355,8 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
         rows = read_board(db)
-        windows = read_card_windows(db)
-        problems = find_violations(oracle, rows, windows, resume, order, default)
+        markers = read_card_markers(db)
+        problems = find_violations(oracle, rows, markers, resume, order, default)
         open_cards = [
             (r[0], oracle.genre_from_title(r[1]), r[2])
             for r in rows
@@ -336,8 +371,11 @@ def main(argv: list[str] | None = None) -> int:
     print(f"stage map : {stages}")
     print(f"open cards: {len(open_cards)} across "
           f"{len({g for _, g, _ in open_cards})} genre(s)")
+    if not open_cards:
+        print("  none — B3/B4 have nothing to judge on this board right now; "
+              "their firing cases are proved by --selftest")
     for tid, genre, status in sorted(open_cards, key=lambda c: (str(c[1]), c[0])):
-        stage = last_stage_marker(windows.get(tid, "")) or default
+        stage = markers.get(tid) or default
         print(f"  {genre:22} {tid}  [{status}]  at {stage:16} resume {resume(genre)}")
 
     if problems:

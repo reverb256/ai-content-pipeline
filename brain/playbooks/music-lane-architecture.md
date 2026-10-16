@@ -303,9 +303,13 @@ Three callers, one rule:
 
 Guards: `music/test_stage_state.py` (the rule, 16 cases), `music/test_oracle_dedupe.py`
 (the emitter's body marker and its fail-closed path), `check_oracle_board.py --selftest`
-(B1–B4 on known-bad boards). Measured 2026-10-16: the check's read-only DB reader
-reproduces the driver's last-marker token for 42/42 oracle cards, so the check
-judges the same position the driver routes on.
+(B1–B4 on known-bad boards), and B3 fired on real board data (a copy of the live db
+with one delivered-stage card re-opened, board untouched). The check reads a card's
+stage by the marker **convention** (`scripts/automation/stage_marker.py`, card
+`t_669bb02b`) rather than the driver's old last-match read: measured 2026-10-16 it
+agrees with that read on 40 of the 42 oracle cards and is right on both differences
+(`t_92a09bdc` → an undeclared token out of summary prose; `t_354d5d25` → `brief`
+although its own comment marker said `genre-select`).
 
 ---
 
