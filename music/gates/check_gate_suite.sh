@@ -640,6 +640,25 @@ else
 fi
 
 # ------------------------------------------------------------------
+# 14. the planner's own regression suite (card t_96dfc521)
+# ------------------------------------------------------------------
+# `music/tests/test_planner.py` had NO scheduled home: no .github/workflows, no
+# caller in this suite, and the music units run the pipeline and the render,
+# never the planner — so a rail regression was found only when a card happened
+# to run it by hand. It is the acceptance matrix for the planner, which is what
+# every other section here is for a gate, so it runs here (and therefore in
+# `music/scripts/run_gate_matrix.sh`, the daily systemd timer).
+#
+# Section 6 of that file is card t_96dfc521's check: the duration rail admits the
+# registry's own 16.0 s kit sting (`MIN_DURATION_S` 30 -> 16) and still refuses
+# the off-grid 15 s cutdown, elemental-earth's 600 s `loop-10min` shape (card
+# t_909069f0) still plans, and a refused duration writes NO plan file for the
+# render rail to pick up. Section 7 is card t_3497b627's style-field check.
+say "the planner regression suite (music/tests/test_planner.py)"
+pass "planner: every genre plans + the duration rail admits 16 s and refuses 15 s (t_96dfc521)" \
+  "$PY" "$REPO/music/tests/test_planner.py"
+
+# ------------------------------------------------------------------
 rm -f /tmp/gate_out.$$
 if [ "$fails" -eq 0 ]; then
   echo
