@@ -26,6 +26,9 @@
 > `7e9a1cc8…67c` (41 631 B) → `3b8a9d74…9fc` (43 483 B) → the blob above. This pass edits the
 > file in place and records the supersession here and in §14, as
 > `music/scripts/check_brief_figures.py` requires.
+> **Blueprint census re-measured and corrected (card `t_c5a98379`):** 2026-10-16 — 7 of the 14
+> genres carry a lyric blueprint; §14's "re-measured and held" list still said six. Superseded
+> blob recorded in §15.
 > **Oracle:** **true score 7.0/10** — the oracle's dedupe ruling of 2026-10-16
 > (`music/oracle.py` @ `b2d11f7`): quota headroom 10.0, lane coverage 6.0, revenue potential
 > 10.0, cadence fit **0.0**, policy risk 10.0, trend signal 3.0. Threshold 5.0 → produce.
@@ -798,7 +801,7 @@ four file sizes (1399/1009/1013/18 B); `gate_lyrics_original --strict` PASS (7 s
 FAIL rc=1 (4 items); `gate_sync_ready --lane sync` FAIL rc=1 (7 items);
 `gate_human_approval` FAIL rc=1; `--lane sync-documentary` rc=2 at `gate_sync_ready.py:47`;
 `music/lanes.yaml:66`; `music/stages.yaml:74`; the `video_shape` table (4 of 5 shapes have a
-template, `lyric_video.mp4` does not); 6 blueprints now (3 when this pass ran); autonomy all `advisory`;
+template, `lyric_video.mp4` does not); 7 blueprints now (3 when this pass ran); autonomy all `advisory`;
 `campaigns/` nine campaigns and none for this genre; `~/Music` empty; no `music/generated/`;
 `~/Music` and `find /home/j_kro -name suno-gen.py` both empty; the rubric's 3/3/2/2/1/1
 weights at `pass_threshold` 7.0. **§8.1 reproduced exactly** by re-running
@@ -1073,3 +1076,32 @@ the chart checkout, the board DB) or anchor it to the revision and time you meas
 present-tense claim about another repository ages exactly as fast as a divergence count.
 Also: `git log --grep=<card>` can find a fix that is **not** in your branch — t_9546841b is
 `done` and its fix is on a publish branch, so a "done" card is not the same as "fixed here".
+
+## 15. Blueprint census corrected; the drift check now sees every shape this lane writes it in (card `t_c5a98379`, 2026-10-16)
+
+`music/scripts/check_brief_drift.py` covered two of the ways this lane states the blueprint census.
+Card `t_c5a98379` widened it to the rest and ran it across `music/briefs/**`. On the widened check
+this brief FAILed once — §14's "re-measured and held" list, which still carried the 15:31 value.
+
+- **Superseded revision of this file:** `sha256 12d1e1001c001cd2fb0876e590dd222ebc479f824e2c84232a000cd1550f88e5` (1070 lines / 73 389 B).
+- **Corrected in place (§14's list):** "6 blueprints now" → **7 blueprints now (3 when
+  this pass ran)**. Live at this pass (2026-10-16 17:18 CDT) `music/lyrics/blueprints/*.yaml` holds
+  seven files — `activist`, `anime-ending`, `anime-opening`, `chill-lounge`,
+  `epic-orchestral-boss`, `jungle-dnb`, `trance` — the 7 of the 14 genres §13 already states, and
+  the 7 that leaves on the planner's flat-`100` fallback is what §6 records.
+- **Not corrected here, deliberately:** the *deployed payload* counts. They describe `ConfigMap
+  mining/music-pipeline-payload`, not this repo, and no repo-local check can recompute cluster
+  state, so the widened check prints them as skips instead of guessing (six lines in this brief,
+  in §8, §11, §13 and §14). Measured for the record at this pass, 2026-10-16 17:18 CDT: **42 keys,
+  7 of them blueprints**, 15 prompt entries, 14 visuals — the payload has moved since the 15:31
+  read (38 keys, 6 of them blueprints) and now matches the repo. The payload-census class is its
+  own card, created by this pass.
+- **The check's change:** four shapes it could not see — an emphasis-wrapped number, a census pair
+  with no `genres` after it, the same pair split across two lines, and a brace list of the
+  blueprints directory — plus a bare count of blueprints. The anchored rule, the fenced-quote rule
+  and the two classes it already covered are unchanged. `--selftest` runs 23 cases: one per shape
+  plus the escapes (anchored, fenced, quoted, cluster).
+- **Regression proof, same card:** `--rev e40c7f9` FAILs with 20 stale counts, 8 of them in the
+  new shapes across five briefs and none of them visible to the previous check; this worktree
+  PASSes. Re-run both from the repo root; the drift pair itself is not quoted here, because a
+  clone-divergence pair ages in minutes and §12's corrections already show the anchored form.

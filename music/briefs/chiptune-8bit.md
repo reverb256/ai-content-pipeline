@@ -11,6 +11,8 @@
 > **Aged counts re-measured (card `t_0f7aed63`):** 2026-10-16 — see §13.
 > **Re-measured (surviving-card pass, `t_60767fb1`):** 2026-10-16 15:58–16:08 CDT (commit
 > `41b7b1e`) — see §14.
+> **Census correction anchored (card `t_c5a98379`):** 2026-10-16 — §12's correction row 5 now
+> carries the stamp for the blueprint census it quotes; see §15.
 > Every section the live world has moved past carries its correction inline; §14 tabulates all
 > of them against the revision that supersedes this copy.
 > **Repo:** `/home/j_kro/ai-content-pipeline` (main) — NOT `~/Projects/ai-content-pipeline`,
@@ -800,7 +802,7 @@ NOT re-run.** The surviving chain resumes at the stage after brief — `genre-se
 | 2 | §1, §11 | the registry `defaults:` block cited at 19–25 | the block is **20–25**; line 19 is blank (`check_brief_line_refs` FAIL) — corrected |
 | 3 | §1 | two quoted `reject_signals` | rubric carries **6 criteria** and **6 reject_signals**; `no_stated_tempo_key` and `clipped_master` added to the quotes |
 | 4 | §3.3, §6.4 | planner cap `MAX_DURATION_S = 420`; a 600 s render is impossible | cap **600** (`planner.py:104`, commit `52ae620`); `elemental-earth-chamber-loop.json` is `duration: 600` with a `.rendered` marker; 600.000 s = 375 bars at 150 BPM, whole-bar |
-| 5 | §4, §7, §12 | 6 lyric blueprints; `bpm = 100` fallback wrong for 150 BPM | **7** blueprints (+`jungle-dnb.yaml`); the fallback reads the caption's own BPM (`planner.py:199`, `:212`), so this genre plans at 150 |
+| 5 | §4, §7, §12 | 6 lyric blueprints; `bpm = 100` fallback wrong for 150 BPM | **7** blueprints (+`jungle-dnb.yaml`, added 15:49 by card `t_e6d422ec`); the fallback reads the caption's own BPM (`planner.py:199`, `:212`), so this genre plans at 150 |
 | 6 | §5 | cadence fit 6.7 | **3.3** (surviving card's true breakdown) |
 | 7 | §6.1 | render log `found=3 rendered=0 skipped=3`; 3 plans; 1 queue entry | `found=13 rendered=1 skipped=12 failed=0`; **13 plans, 12 markers, 1 master + `loops/`**; queue holds **11 entries**, none of this genre |
 | 8 | §6.1 | `music/suno-gen.py` absent; lineages diverged | present (42 652 B); `origin/main` is an ancestor; **0 behind / 72 ahead** at `c296db6`; `check_stage_scripts` PASS 11/11 |
@@ -887,3 +889,26 @@ none:
   carry. The re-emitted-card stage marker this card arrived with is `t_6599927d`.
 - The loop-10min delivery chain — the discarded render output and the rail's loop close — is
   `t_320bae4c` and `t_d7f6d053`; neither changes this brief's recommendation.
+
+## 15. The census correction row is stamped; the drift check now sees every shape this lane writes (card `t_c5a98379`, 2026-10-16)
+
+`music/scripts/check_brief_drift.py` could see a bare count and a "N of the M genres" census, but
+not the other ways this lane states the blueprint census. Card `t_c5a98379` widened it and ran it
+across `music/briefs/**`. On the widened check this brief FAILed once, in §12's correction table.
+
+- **Superseded revision of this file:** `sha256 d0dbe76af7c0fc57ee94390402de61ac8949356238f6c91339caa9e6c42036cc` (889 lines / 54 344 B).
+- **Corrected in place (§12 correction row 5):** the row reads "**7** blueprints
+  (+`jungle-dnb.yaml`, added 15:49 by card `t_e6d422ec`)". The number was already the live one;
+  what was missing is the stamp — the row quotes BOTH the pre-pass value ("6 lyric blueprints")
+  and the pass's value, and a line carrying the measurement it was taken at is a history record,
+  which the check skips by rule. That rule is the remedy the check's own FAIL text prints.
+- **Live at this pass (2026-10-16 17:18 CDT):** `music/lyrics/blueprints/*.yaml` holds 7 files —
+  `activist`, `anime-ending`, `anime-opening`, `chill-lounge`, `epic-orchestral-boss`,
+  `jungle-dnb`, `trance`. This genre still has none, so §4's decision that none is needed stands.
+- **The check's change:** four shapes it could not see — an emphasis-wrapped number, a census pair
+  with no `genres` after it, the same pair split across two lines, and a brace list of the
+  blueprints directory — plus a bare count of blueprints. Anchoring, the fenced-quote rule and the
+  two classes it already covered are unchanged. `--selftest` runs 23 cases.
+- **Regression proof, same card:** `--rev e40c7f9` FAILs with 20 stale counts, 8 of them in the
+  new shapes (this brief's brace list at `e40c7f9:321` among them) and none of them visible to the
+  previous check; this worktree PASSes. Re-run both from the repo root.
