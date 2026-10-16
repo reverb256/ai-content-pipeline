@@ -169,19 +169,37 @@ get_ready_cards() {
   hermes kanban --board "$BOARD" list 2>/dev/null | grep -E "^▶" | awk '{print $2}' || true
 }
 
+# ---- Stage marker: ONE convention, resolved by stage_marker.py (t_669bb02b) ----
+# `hermes kanban show` prints the run summary BEFORE the comments and the event
+# payloads / run summaries AFTER them, so a read of the rendered text
+# (`grep -oE "stage: [a-z-]+" | tail -1`) can be captured by prose that reads
+# "stage: <word>". Measured live 2026-10-16: card t_92a09bdc resolved to the
+# UNDECLARED stage `advance-stage` from its run summary ("Did not advance the
+# stage: advance-stage.sh is refused ..."), so this driver would log
+# "unknown stage" and SKIP the card — a silent stall instead of a route.
+# The marker is now read from the card's own statements only — a body line or a
+# comment line whose entire content is `stage: <token>` — never from a summary.
+# The convention and its measurements live in scripts/automation/stage_marker.py;
+# this driver and music/scripts/check_stage_markers.py both call that file, so
+# one rule decides every route. `music/stages.yaml` documents the write side.
+STAGE_MARKER_PY="$REPO/scripts/automation/stage_marker.py"
+
 stage_of() {
-  # Check the card body first, then comments, then default to opportunity
-  local body
-  body=$(hermes kanban --board "$BOARD" show "$1" 2>/dev/null)
-  local s
-  # Read the LAST (most recent) stage marker — the first one is stale.
-  # Stage names may contain hyphens (music lane: genre-select,
-  # human-approval), so the class is [a-z-]+, not [a-z]+.
-  s=$(echo "$body" | grep -oE "stage: [a-z-]+" | tail -1 | awk '{print $2}' || true)
+  local s rc=0
+  if [ ! -f "$STAGE_MARKER_PY" ]; then
+    # Fail loud, never guess: a missing resolver must not fall back to a read
+    # prose can capture — that is the incident this replaced.
+    log "stage_of: $STAGE_MARKER_PY is missing — cannot resolve the stage marker; skipping this tick"
+    return 0
+  fi
+  s=$(python3 "$STAGE_MARKER_PY" "$1" --board "$BOARD" 2>/dev/null) || rc=$?
+  if [ "$rc" -ne 0 ]; then
+    log "stage_of: card $1 could not be read (stage_marker rc=$rc) — skipping this tick"
+    return 0
+  fi
   if [ -z "$s" ]; then
-    # No stage label yet → the oracle created it; treat as the
-    # board's default stage (faceless-youtube: opportunity,
-    # music: brief).
+    # No marker line → the oracle created it; treat as the board's default
+    # stage (faceless-youtube: opportunity, music: brief).
     s=$(cat "$CONFIG_PARSE.default" 2>/dev/null || true)
     s="${s:-opportunity}"
   fi

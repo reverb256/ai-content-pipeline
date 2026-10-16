@@ -50,11 +50,16 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
-# Update the card's stage. The driver's stage_of greps the LAST "stage: <x>"
-# marker it finds for the card (body, then run summary, then comments), so a
-# comment is the append-only way to move a card forward without rewriting the
-# body. The marker must be the LAST board write, so do not follow it with prose
-# that itself reads "stage: <word>".
+# Update the card's stage. The marker convention (t_669bb02b,
+# scripts/automation/stage_marker.py): a marker is a LINE that IS
+# `stage: <stage>` — nothing before it and nothing after it on the line — and a
+# reader takes it from the card body and from comment bodies ONLY, never from a
+# run summary (`hermes kanban show` prints the run summary AFTER the comments, so
+# prose in a summary used to capture the driver's last-match read — measured on
+# t_92a09bdc, which resolved to the undeclared stage `advance-stage`). A comment
+# is the append-only way to move a card forward without rewriting the body, and
+# the comment posted below IS the marker line. Do not write a lone
+# `stage: <word>` line anywhere else in the card.
 RC=0
 OUT=$(hermes kanban --board "$BOARD" comment "$CARD" "stage: $STAGE" 2>&1) || RC=$?
 

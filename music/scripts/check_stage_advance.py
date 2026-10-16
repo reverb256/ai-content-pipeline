@@ -52,9 +52,16 @@ Rules enforced (FAIL)
    `hermes kanban … complete` (refused for the same workers).
 
 Not enforced, printed: whether a `stage:` marker is the LAST marker the driver
-sees. Prose in a card's run summary that reads "stage: <word>" can capture the
-last-match window (measured on t_92a09bdc, whose marker resolves to the bogus
-stage `advance`); that fix belongs to the driver, and is carded separately.
+sees. Prose in a card's run summary that reads "stage: <word>" can capture a
+reader that greps the rendered `show` output (measured on t_92a09bdc, whose
+marker resolved to the bogus stage `advance-stage`). That hazard is FIXED:
+the marker convention — a marker is a LINE that IS `stage: <token>`, in the card
+body or in a comment, and a run summary is never a marker source — lives in
+`scripts/automation/stage_marker.py`, the driver reads through it, and
+`music/scripts/check_stage_markers.py` FAILs any card the driver would dispatch
+whose legacy positional read disagrees with the convention (card t_669bb02b).
+The rule enforced HERE is the write side: the prompt must tell the worker to
+post the marker in that exact form (`the marker 'stage: <next>'`).
 
 Run:   /usr/bin/python3 music/scripts/check_stage_advance.py [--stages PATH]
        /usr/bin/python3 music/scripts/check_stage_advance.py --selftest
@@ -72,7 +79,12 @@ from pathlib import Path
 
 DEFAULT_STAGES = Path("/home/j_kro/ai-content-pipeline/music/stages.yaml")
 CITED = "t_5a93164a (advance refused for dispatcher-spawned workers)"
-MARKER = re.compile(r"stage: ([a-z-]+)")
+CITED_MARKER = "t_669bb02b (marker convention: scripts/automation/stage_marker.py)"
+# The marker as the prompt must tell the worker to post it. The convention
+# (scripts/automation/stage_marker.py) reads a LINE that IS `stage: <token>`, so
+# the write instruction must name the marker in that form — quoted, with no
+# prose on the same line.
+MARKER = re.compile(r"""the marker ['"]stage: ([a-z-]+)['"]""")
 CLI_TARGET = re.compile(
     r"advance-stage\.sh \{card\} ([a-z-]+) --board ([a-z-]+)"
 )
@@ -134,8 +146,9 @@ def run(stages: dict) -> tuple[list[str], list[str]]:
         # 2 — the marker must name a declared stage.
         if not markers:
             problems.append(
-                f"{stage}: names a CLI advance but no `stage: <next>` marker, so a "
-                f"tool-only caller has nothing to post."
+                f"{stage}: names a CLI advance but no `the marker 'stage: <next>'` "
+                f"instruction, so a tool-only caller has nothing to post. "
+                f"Cite {CITED_MARKER}."
             )
         else:
             for token in markers:
@@ -176,8 +189,9 @@ def run(stages: dict) -> tuple[list[str], list[str]]:
         f"{len(gates)} human gate(s) exempt ({', '.join(str(g.get('stage')) for g in gates) or 'none'})"
     )
     notes.append(
-        "not checked here: whether the marker is the LAST `stage:` match the driver sees — "
-        "prose in a run summary can capture it (t_92a09bdc resolves to the bogus stage `advance`)"
+        "the marker's ROUTE is checked by music/scripts/check_stage_markers.py: the driver "
+        "reads a LINE that IS `stage: <token>` (scripts/automation/stage_marker.py), so prose "
+        "in a run summary can no longer capture it (t_669bb02b)"
     )
     return problems, notes
 
