@@ -1219,6 +1219,27 @@ brief to correct another genre's line numbering). Filed as `t_8d6c40ac` with the
 revision anchor sits on the fence's prose line, not on the quoting line — and two narrow candidate
 fixes. The quoted output was left verbatim: mutating it would falsify the record.
 
+**The regression itself could not finish, and was repaired in this pass** (the long form is §15 of
+`music/briefs/elemental-fire.md`; the fix and its assertions are in the check). `LINK_RE` nests a
+repeat inside a repeat over two overlapping classes — the `(a+)+` shape — so it backtracked
+exponentially on any gap that fails to match: a gap of 8 spaces then `#` measured 0.002 s, 12 →
+0.27 s, 16 → 35 s. `music/briefs/elemental-water.md` aligns a trailing comment 23 spaces out inside
+a fenced transcript, so one brief took >45 s and the repo-wide run >200 s — and **the two sites this
+section is about were invisible for as long as that lasted.** `LINK_RE` is now one unrolled
+alternation over the same vocabulary, accepting the same language (brute-forced over every string up
+to length 6: 0 disagreements), and `--selftest` asserts the incident gap stays under 50 ms.
+That repair made the check reach the end of the briefs list, where it found two more blank-open
+citations in `music/briefs/elemental-fire.md` (it cited a blank line 54 of `music/oracle.py` for a
+`WEIGHTS` dict that now sits at 75). Both are corrected, with the supersession recorded in that
+file's header.
+
+**Final reading at 16:50 CDT, after the repair and those two corrections:**
+`PASS check_brief_line_refs: 117 cited line range(s) across 14 brief(s) resolve and hold`, rc=0, in
+**0.86 s**; `--selftest` PASS with the incident gap at 0.003 ms. `check_brief_figures` still FAILs —
+7 of 122, and every finding is the playbook's superseded size after
+`brain/playbooks/music-lane-architecture.md` grew twice today under other cards
+(`t_fa731c5b`, `t_6dd13d76`); **none of the seven is this file.**
+
 **Standing checks at this pass** (`/usr/bin/python3 music/scripts/<name>.py`, all at 16:12–16:15 CDT
 @ `5aed5cc`): `check_brief_line_refs` PASS, 118 ranges across 14 briefs; `check_brief_paths` PASS,
 22 citations; `check_brief_bpm_solutions` PASS, 5 styleWeight claims; `check_prompt_style_counts`

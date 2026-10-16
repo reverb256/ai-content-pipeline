@@ -33,6 +33,11 @@
 > live re-score is **7.0/10** — quota headroom 10.0, **lane coverage 6.0**, revenue 8.0,
 > cadence fit **3.333**, policy risk 9.0, **trend signal 3.0**. Threshold 5.0 → produce. The
 > spread is the calendar plus one network fetch, not genre heat.
+> **Superseded by the citation sweep (`t_e86c2110`):**
+> `sha256 eac7238cab6cc98e3257200e4828e1fd3d9e866d4c7126263d4095610f080bc4` (67041 B, 921 lines) —
+> the revision that still cited the blank line 54 of `music/oracle.py`. The `WEIGHTS` dict moved to
+> line 75 when `oracle.py` grew its stage-marker block, so that citation opened on a blank line.
+> Both references are corrected in place (§15); nothing else in this file changed.
 
 ## 1. Genre resolution (live, not transcribed)
 
@@ -74,8 +79,10 @@ Entry from `music/genres.yaml` (lines 86–93):
 
 ### The composite score, re-derived (arithmetic checked, not eyeballed)
 
-`music/oracle.py:54` — weights 0.25 / 0.20 / 0.20 / 0.15 / 0.10 / 0.10 (`WEIGHTS` sums to 1.0,
-re-measured). Recomputed from the scored card's own components: **7.505 → 7.5**, the pair's
+`music/oracle.py:75` — weights 0.25 / 0.20 / 0.20 / 0.15 / 0.10 / 0.10 (`WEIGHTS` sums to 1.0,
+re-measured). *(t_e86c2110: this cited line 54; line 54 is blank since `oracle.py` grew its
+stage-marker block, and `WEIGHTS` is the dict at 75.)* Recomputed from the scored card's own
+components: **7.505 → 7.5**, the pair's
 scoring-day number. Per-component derivation, each re-executed live against the registry:
 
 | Component | Value | Derivation (all re-run live) |
@@ -708,9 +715,11 @@ function of the lane set, which is identical for all four. Consequences:
   `gate_loop_points` PASS on a seamless loop (1.56×, Δ 0.0 dB) and **FAIL on the faded loop**
   (§9 — this is the fix; the first pass measured a false PASS); `gate_youtube_authentic` FAIL
   on the 5 s fixture (quoted); `gate_loudness` PASS on the delivered master (−13.10 dB, +0.90)
-- Oracle math: `music/oracle.py` lines 54, 179–305 — every score component re-executed live
+- Oracle math: `music/oracle.py:75` (the `WEIGHTS` dict) and its scorer functions,
+  `music/oracle.py` lines 179–305 — every score component re-executed live
   against the registry and `music/quota-ledger.json`; `score_genre()` takes
-  `(genre_name, genre_spec, lanes, quota)` and `WEIGHTS` sums to 1.0 (both re-measured)
+  `(genre_name, genre_spec, lanes, quota)` and `WEIGHTS` sums to 1.0 (both re-measured).
+  **t_e86c2110: this cited `lines 54, 179–305`; `WEIGHTS` is at 75 — see §15.**
 - Rubric: `music/rubrics/gamer.json` (family `gamer`, includes `elemental-fire`;
   pass_threshold 7.0; **applicable to this genre: `battle_energy` 3, `loop_safety` 3,
   `asset_packaging` 1, `loudness_target` 1** — measured through `panel.applicable_criteria()`,
@@ -919,3 +928,33 @@ hotspot: `music/briefs/` — this file was written and re-verified by three `mus
 on 2026-10-16 while other workers wrote the 13 sibling briefs in the same tree; every write
 needs a path-scoped commit and a lock retry. `music/briefs/elemental-fire.md` now holds four
 commits, all on this genre.
+
+---
+
+## 15. Citation sweep — `t_e86c2110`, 2026-10-16T16:45 CDT
+
+That card was filed for the `genres.yaml` defaults-range class in two OTHER briefs; it found those
+two sites already fixed, and found this file's last remaining defect while verifying the regression
+repo-wide: two references to line 54 of `music/oracle.py`, which is a BLANK line.
+
+| Section | Claimed | Measured live at 16:45 CDT | Verdict |
+|---|---|---|---|
+| §1 score block | the weights were cited at line 54 of `music/oracle.py` | line 54 is empty; `WEIGHTS = {` is line **75**, holding `quota_headroom 0.25 / lane_coverage 0.20 / revenue_potential 0.20 / cadence_fit 0.15 / policy_risk 0.10 / trend_signal 0.10` — every value the sentence claims | **corrected** |
+| §12 provenance | "lines 54, 179–305" of `music/oracle.py` | 179 is `def load_quota()` and 305 is inside `trend_signal_score()` — the range holds; only the leading 54 was blank | **corrected** |
+
+Why it drifted: `oracle.py` grew its stage-marker block (its comment now names card `t_6599927d`),
+which pushed `WEIGHTS` from 54 to 75. No figure, gate result, lane, registry value or `brief.json`
+was touched.
+
+### What the regression itself needed
+
+`music/scripts/check_brief_line_refs.py` could not finish. Its link-gap pattern nested a repeat
+inside a repeat over two overlapping character classes — the `(a+)+` shape — so it backtracked
+exponentially on any gap that fails to match: 8 spaces then `#` measured 0.002 s, 12 → 0.27 s,
+16 → 35 s. `music/briefs/elemental-water.md` aligns a trailing comment 23 spaces out inside a
+fenced transcript, so one brief took >45 s and the repo-wide run >200 s: **this file's two sites
+were invisible because the tool never reached them.** The pattern is now one unrolled alternation
+that accepts the same language (brute-forced over every string up to length 6: 0 disagreements),
+the repo-wide run takes **0.8 s**, and `--selftest` asserts the incident gap stays under 50 ms.
+
+- **Superseded revision of this file:** `sha256 eac7238cab6cc98e3257200e4828e1fd3d9e866d4c7126263d4095610f080bc4` (67041 B, 921 lines).

@@ -27,6 +27,16 @@ a hand fix did not hold. That is the same shape as the two figure incidents
 `check_brief_figures.py` records: one wrong claim, copied between briefs, surviving a manual
 pass because nothing measured it.
 
+SECOND INCIDENT (2026-10-16, card t_e86c2110, the citation sweep for the two remaining files)
+----------------------------------------------------------------------------------------------
+The check stopped finishing. Its link-gap pattern nested a repeat inside a repeat over two
+overlapping character classes — the classic `(a+)+` shape — so it backtracked exponentially on
+any gap that fails to match: 8 spaces then `#` measured 0.002 s, 12 measured 0.27 s, 16 measured
+35 s, and `music/briefs/elemental-water.md` carries a fenced transcript whose trailing comment
+sits 23 spaces out. One brief took >45 s, the repo-wide run >200 s. The pattern is now a single
+unrolled alternation that accepts the same language (brute-forced over every string up to length
+6) and `--selftest` asserts the gap from that incident stays linear.
+
 WHAT IT DOES
 ------------
 For every `music/briefs/**/*.md` it finds line citations and measures each one against the
@@ -87,7 +97,18 @@ PATH_TOK = r"[A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:md|yaml|yml|py|json|sh|txt|jsonl)"
 PATH_RE = re.compile(PATH_TOK)
 RANGE_RE = re.compile(r"(\d+)\s*[–—-]\s*(\d+)")
 POINT_RE = re.compile(r"(?P<f>" + PATH_TOK + r"):(?P<n>\d+)")
-LINK_RE = re.compile(r"^(?:[\s(),;:\[]*(?:lines?|around|~|≈)?[\s(),;:]*)*$")
+# The gap vocabulary: whitespace, the punctuation a brief writes between a path and its claim,
+# and the words that introduce a line claim. ONE unrolled alternation, deliberately — the obvious
+# form, `(?:[\s(),;:\[\]*(?:lines?|around|~|≈)?[\s(),;:]*)*`, nests a repeat inside a repeat over
+# two overlapping classes (the `(a+)+` shape) and backtracks exponentially when a gap fails to
+# match. Measured 2026-10-16 (card t_e86c2110): a gap of 8 spaces then `#` took 0.002 s, 12 took
+# 0.27 s, 16 took 35 s. `music/briefs/elemental-water.md` carries a fenced transcript whose
+# trailing comment is 23 spaces out, so the whole check stopped finishing (>45 s on that one
+# brief, >200 s on the repo). Both forms accept the SAME language: the old one is
+# `(C1* (?:lines?|around|~|≈)? C2*)*` with C1 and C2 both subsets of `[\s(),;:\[]`, i.e.
+# `(?:C|lines?|around|~|≈)*` — verified by brute force over every string up to length 6.
+# `--selftest` now asserts the incident gap stays fast.
+LINK_RE = re.compile(r"^(?:[\s(),;:\[]|lines?|around|~|≈)*$")
 # A citation ANCHORED to a revision or a clock time is a historical fact, not a claim about the
 # file a reader opens today — exactly the rule `music/scripts/check_brief_drift.py` uses for
 # counts (its `ANCHORED`, lines 90–96). Skipped, not guessed at.
@@ -268,6 +289,7 @@ def selftest() -> int:
     import contextlib
     import io
     import tempfile
+    import time
 
     with tempfile.TemporaryDirectory() as td:
         repo = Path(td)
@@ -292,10 +314,27 @@ def selftest() -> int:
 
     caught = [ln.strip() for ln in out_bad.splitlines() if "BLANK OPEN" in ln]
     skipped_amb = "ambiguous referent" in out_amb
-    ok = rc_good == 0 and rc_bad == 1 and len(caught) == 1 and rc_amb == 0 and skipped_amb
+    # Regression, card t_e86c2110 (2026-10-16): the link-gap pattern used to nest a repeat inside a
+    # repeat, so a gap that fails to match backtracked exponentially. `music/briefs/elemental-water.md`
+    # aligns a trailing comment 23 spaces out inside a fenced transcript, and that made the whole
+    # check stop finishing (>45 s on the one brief, >200 s on the repo). The gap must be REJECTED,
+    # and rejected fast — the nested form this replaced needed 35 s on the 16-space case alone.
+    t0 = time.perf_counter()
+    gap_is_link = bool(LINK_RE.match(" " * 23 + "# "))
+    gap_ms = (time.perf_counter() - t0) * 1000
+    # The 12-space case is the fast-failing half of the same regression: the nested form needed
+    # 0.27 s here, so a reintroduction fails this bound at once instead of hanging the suite.
+    t0 = time.perf_counter()
+    small_is_link = bool(LINK_RE.match(" " * 12 + "# "))
+    small_ms = (time.perf_counter() - t0) * 1000
+    gap_linear = not gap_is_link and gap_ms < 50 and not small_is_link and small_ms < 50
+    ok = (rc_good == 0 and rc_bad == 1 and len(caught) == 1 and rc_amb == 0 and skipped_amb
+          and gap_linear)
     print(f"SELFTEST {'PASS' if ok else 'FAIL'} check_brief_line_refs: "
           f"correct-range rc={rc_good} (want 0), off-by-one rc={rc_bad} (want 1), "
-          f"caught={len(caught)} (want 1), ambiguous-basename rc={rc_amb} (want 0, skipped)")
+          f"caught={len(caught)} (want 1), ambiguous-basename rc={rc_amb} (want 0, skipped), "
+          f"aligned-comment gap {gap_ms:.3f} ms / 12-space {small_ms:.3f} ms "
+          f"(want <50 each, not links: {not gap_is_link and not small_is_link})")
     for ln in caught:
         print(f"  (caught) {ln}")
     return 0 if ok else 1
