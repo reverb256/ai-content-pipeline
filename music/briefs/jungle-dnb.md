@@ -1175,7 +1175,7 @@ lyrics.py scaffold --genre jungle-dnb BEFORE  rc=2  FAIL: no lyric blueprint for
 - **Same class, not fixed here (no check reads code comments).** `music/planner/planner.py` and `music/tests/test_planner.py` still quote the blueprint census as it stood when they were written:
 
   ```text
-  planner.py:182  (load_blueprint docstring)   "… when it exists (3 of 15 genres do)."
+  planner.py:297  (load_blueprint docstring)   "… when it exists (3 of 15 genres do)."
   planner.py      (bpm_in_caption docstring)   "the only tempo signal available for the 11 genres that have no blueprint yet"
   tests/test_planner.py:44  (comment)          "Only 3 of 14 genres have a blueprint, so 11 …"
   ```
@@ -1256,6 +1256,7 @@ file's in any of the three readings**, and this pass changed no figure — the d
 people's writes landing under a shared tree.
 
 - **Superseded revision of this file:** `sha256 5b3914191c5108814cccaaaa2c51f8a5b5eff1efc17455f7ddc4c173dac486ea` (1168 lines / 76 392 B).
+- **Superseded by this pass (card `t_6dd13d76`, 2026-10-16T17:40-05:00 CDT):** `sha256 3411f2eb58de226cc6d7d5ef524b6c06d78fd34e1c2a99c445278eabc21cd15f` (1261 lines / 85229 B) — the code-comment citation above was re-pointed from `planner.py:182` to `planner.py:297`: the file grew since that reading and `:182` is blank now, while `:297` is the `load_blueprint` docstring the line names. The census text it quotes is unchanged and still belongs to card `t_a54fb00d`.
 - **Not changed, not re-filed otherwise:** the trend-fallback card `t_eb648761` is still a
   duplicate to close, and the blueprint-census comments in `music/planner/planner.py` and
   `music/tests/test_planner.py` still belong to card `t_a54fb00d` (§16).

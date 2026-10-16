@@ -277,14 +277,16 @@ this one do not rediscover them):
    **FIXED by card `t_96dfc521`**: the floor is 16 s now — the shortest shape the registry
    actually names — and a duration outside the rail writes no plan at all, so the render rail
    cannot read one (see `music/tests/test_planner.py` §6).
-2. **The planner reads the FIRST style field, and this template carries two.**
-   `music/planner/planner.py:135` takes the first `## Style field` fenced block;
-   `music/prompts/commentary-beds.md` declares INTRO STING (line 7) before LOOPABLE TALK BED
-   (line 13). So BOTH kit plans carry the sting caption, byte-identical — measured in this pass
-   on `/var/lib/music-plans/commentary-beds-lo-fi-jazz-sting.json` and
-   `...-bed.json`: the two `caption` values are the same string. The 32 s artifact is therefore
-   the sting at 32 s, not the anti-melody bed that §2 defines. Carded `t_3497b627` (fix +
-   re-plan + re-render). Do not ship the current 32 s render as the talk bed.
+2. **The planner used to read the FIRST style field; this template carries two.**
+   `music/planner/planner.py:169` (`parse_style_fields`) parses EVERY `## Style field` block and
+   `music/planner/planner.py:188` (`resolve_style_caption`) resolves the one the QUEUE ENTRY
+   names — there is no fallback to the first block. `music/prompts/commentary-beds.md` still
+   declares INTRO STING (line 7) before LOOPABLE TALK BED (line 13), and before the fix BOTH
+   kit plans carried the sting caption, byte-identical. **FIXED by card `t_3497b627`** (fix +
+   re-plan): re-measured 2026-10-16 by card `t_6dd13d76`, the two plans on disk now carry
+   DIFFERENT captions — `caption` 420 characters for the sting plan, 422 for the bed plan — so
+   the sting's caption is no longer the bed's. The 32 s artifact on disk is still the sting at
+   32 s, not the anti-melody bed §2 defines: re-render before shipping it as the talk bed.
 
 Live route into audio (in-cluster, not the kanban stage machine): ConfigMap
 `music-pipeline-briefs` → CronJob `music-pipeline` (plans via `planner.py` →
@@ -510,6 +512,10 @@ Repo-wide `check_brief_figures` still FAILs on **other** briefs (`elemental-wate
 **Supersession record.** Superseded blob
 `7db8ea568da53bd1983bb53737680223dc72d4f862421900e299c481aeea1398` (320 lines / 19360 B, commit
 `63440da`); this pass's revision is committed on `main` and its digest is re-readable with
-`sha256sum music/briefs/commentary-beds.md`. The chain resumes at the stage after `brief` —
+`sha256sum music/briefs/commentary-beds.md`. The figure pass of card `t_6dd13d76`
+(2026-10-16T17:40-05:00 CDT) supersedes
+`sha256 695a48c6de68ab892ca9e3bafd2edde8eef2fc97d19589a9d63850d1aca2e064` (515 lines / 32830 B):
+the two-rail-walls entry was restated — the style-field wall is FIXED by `t_3497b627` and both
+kit plans were re-measured. The chain resumes at the stage after `brief` —
 `genre-select`, whose resolution §1–§3 already carry. The re-emitted card's body marker
 (`stage: brief`) is the defect card `t_6599927d` owns, not a reason to re-run the brief stage.

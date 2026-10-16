@@ -6,7 +6,9 @@ Brief written: 2026-10-16 (music-producer, run 4) · re-measured 2026-10-16 by t
 Track slug: signal-before-dawn
 
 Superseded digest: this file was sha256 `59992a334a44d63a4e2791e222330bd342c8087e580444255d82d310f6a2532b`
-(14 677 B) when the oracle ruling named it. The revision below supersedes that copy.
+(14 677 B) when the oracle ruling named it. The revision below supersedes that copy, and the
+figure pass of card `t_6dd13d76` (2026-10-16T17:40-05:00 CDT) supersedes
+`sha256 cb9a11c10edac5303b830da725acbef882c1ce08db7ec93604a3408c772e616b` (408 lines / 23449 B).
 
 The scorer's ruling (oracle, 2026-10-16, `music/oracle.py` @ `b2d11f7`): the NEWEST scoring
 run owns the genre. This card (`t_a7a7d998`) is that run, and its true score is **7.8** —
@@ -110,9 +112,11 @@ identical to `manifest.json`. The authorship claim is bound to the text on disk.
 
 Audio: none. No trance audio exists. As of 2026-10-16 a trance PLAN does, and the render
 rail refused it (§8):
-- `/var/lib/music-plans/trance-signal-before-dawn.json` — 2434 B, written 2026-10-16 14:10.
-  Its marker `/var/lib/music-plans/trance-signal-before-dawn.rendered` holds only the word
-  `refused` (8 B, written 14:18).
+- `/var/lib/music-plans/trance-signal-before-dawn.json` — 2511 B, re-planned 2026-10-16 16:57.
+  (The 14:10 reading this section first recorded was 2434 B; the rail re-plans the track on
+  every pass.) Its refusal marker is now
+  `/var/lib/music-plans/trance-signal-before-dawn.refused` (written 2026-10-16 17:15) — the
+  `.rendered` marker recorded at 14:18 is not on disk (re-read 17:40).
 - No `.flac`, `.wav` or `.mp3` for trance exists under `/var/lib/music-plans/` or in the
   repo. The only master file on that volume is `elemental-fire-emberfall.flac`
   (11 421 612 B); `/var/lib/music-plans/loops/` holds its loop pair.
@@ -375,7 +379,7 @@ Every checkable figure in this brief was re-measured against live state this pas
 | divergence `main` 19 ahead / 15 behind, merge base `e278f61` | `main` @ `1a450e0` = 69 ahead / 0 behind `ba28f55`; `origin/main` is an ancestor | **STALE — the merge landed** |
 | live queue = `smoke-chill-lounge` only | 11 entries; `trance-signal-before-dawn` among them | **STALE — the queue grew** |
 | `values.yaml` reads `briefs: []` | 11 entries; trance at line 110 | **STALE — the GitOps card landed** |
-| no trance plan | plan exists (2434 B), marker `refused` | **STALE — the queue ran** |
+| no trance plan | plan exists (2511 B, re-planned 16:57), `refused` marker | **STALE — the queue ran** |
 | planner cap 420 s | `MIN_DURATION_S = 30` (l.103), `MAX_DURATION_S = 600` (l.104) | **STALE — `52ae620` raised it** |
 
 Corrections applied in place, this revision: the header (surviving card, true score 7.8,

@@ -21,7 +21,11 @@ Superseded revisions of this file:
 - before the duplicate pass of 2026-10-16 13:45 CDT — `sha256
   ba6fbbf8f13d81a61f8cd7e58cfe47e8bf657169c48865991728953b2ea85cfd`;
 - before this surviving-card pass of 2026-10-16 16:07 CDT — `sha256
-  7c2c790faf648932f24e383824cc03014e55d388a466b79c721a8ad87d26e93f`.
+  7c2c790faf648932f24e383824cc03014e55d388a466b79c721a8ad87d26e93f`;
+- before the figure re-measurement pass of 2026-10-16 17:40 CDT (card `t_6dd13d76`) — `sha256
+  0487c2c8feee739099055ecc4819ea8cc10c5ed6096598903dbac64b76ccf370`; §7's plan reading was
+  refreshed against the live file under `/var/lib/music-plans/`, which the rail rewrites on
+  every planning pass, so that figure is a reading at a time, not a constant.
 
 `brief.json` superseded: `sha256 de3ec94ee74d93a786b2f7d9e19a4e25f3c7fa1ebd6047cd5dfd67a5daf67c09`
 (before the duplicate pass,
@@ -442,7 +446,7 @@ and will send a human looking for a check digit that the standard does not defin
 
 **Assets: no audio yet, and the first plan now exists.** No `music/lyrics/elemental-air/`
 directory, no master, no stems, no render. The generation rail has planned this track:
-`/var/lib/music-plans/elemental-air-above-the-weather.json` (1557 B, written 2026-10-16 14:57 CDT)
+`/var/lib/music-plans/elemental-air-above-the-weather.json` (1582 B, re-planned 2026-10-16 16:57 CDT)
 carries `bpm: 92`, `key: "C major"`, `duration: 334`, `instrumental: true` and the template's six
 section tags in the lyrics field. Beside it sits
 `elemental-air-above-the-weather.rendered` (0 B, 15:00 CDT) and **no audio file** — the render

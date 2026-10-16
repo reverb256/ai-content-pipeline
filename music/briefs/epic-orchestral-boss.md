@@ -23,6 +23,12 @@
 > `sha256 22a596a42832aae7a36583cf1c2b31871c0779bfb530602cd7a51d772ef14e9c` (44182 B, 691
 > lines, written 13:43). The current digest re-reads with
 > `sha256sum music/briefs/epic-orchestral-boss.md`.
+> **Rubric size re-measured (card `t_6dd13d76`, 2026-10-16T17:40-05:00 CDT):** the family
+> rubric `music/rubrics/gamer.json` reads 12 444 bytes (12 428 characters) on disk now — it
+> grew again after the 12 000-byte rewrite the surviving-card pass recorded. §1 and §13 are
+> corrected in place. Superseded revision of this file:
+> `sha256 7bc9752f68011a6dbeb4ef5a3b9c78828f842d7592c300500a0d2bbd38e472bc` (948 lines /
+> 65354 B).
 > **Repo:** `/home/j_kro/ai-content-pipeline` — the lane repo. Its `main` tip at write time
 > was `d491663`, then `afa242e` (13:38), then `c296db6` (16:00) — this lane commits
 > constantly, so the tip is a timestamp, not an identity. Re-measured 16:00:
@@ -74,7 +80,7 @@ The shell's bare `python3` is the Hermes bundled interpreter and has no PyYAML.
 | Lanes | `game-assets`, `youtube-gaming`, `sync`, `streaming` |
 | Cadence | `1/wk` |
 | Video shape | `single-4min` |
-| Family rubric | `music/rubrics/gamer.json` (12000 bytes), `pass_threshold` 7.0 |
+| Family rubric | `music/rubrics/gamer.json` (12444 bytes), `pass_threshold` 7.0 |
 | Lyric blueprint | `music/lyrics/blueprints/epic-orchestral-boss.yaml` — **PRESENT**, 7073 bytes (§6) |
 | Registry defaults | export `studio`, stems `true`, lyrics `human-original`, release_private `true`, gate_profile `reviewer-deepseek` |
 
@@ -674,7 +680,7 @@ the renderer rather than stated as policy (§7).
   weirdness 40%, style influence 80%, 6 exclude terms, anchor 150 BPM / C minor
 - Visual: `music/visuals/dark-fantasy.md` (1387 B); rendered `dark_fantasy.mp4` probed and
   gate-run, plus the shape-matched `single_4min.mp4` (240.0 s, §5)
-- Rubric: `music/rubrics/gamer.json` (**12000 B**, `version` 2, `pass_threshold` 7.0). The
+- Rubric: `music/rubrics/gamer.json` (**12444 B**, `version` 2, `pass_threshold` 7.0). The
   criteria are data now, each with an `applies_to` scope: "Boss/battle energy
   (elemental-fire, epic-orchestral-boss)" weight 3, "Loop safety for game use (all gamer
   genres)" weight 3, "Asset-pack packaging (stems, BPM/key metadata, naming)" weight 1,

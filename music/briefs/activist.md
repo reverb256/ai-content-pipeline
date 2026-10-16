@@ -588,19 +588,23 @@ Against that route, three measured gaps:
    **third** case alongside the instrumental gap: not "no lyrics", not "AI lyrics", but "load the
    claimed sheet". Recorded on t_25a6499c, now done as far as the instrumental cases go;
    the human-sheet case is stated here.
-2. **Tempo: both rails honour an explicit bpm now.** `acestep_plan.py:189-190`
+2. **Tempo: both rails honour an explicit bpm now.** `acestep_plan.py:234-235`
    passes `plan["bpm"]` and `plan["key"]` into the ACE-Step `GenerationParams` as `bpm` and
-   `keyscale` (`:179` carries `duration`), so the CronJob render rail honours 96 — the old
-   citation `:98-100` is stale. The studio rail's chart copy
+   `keyscale` (`:224` carries `duration`), so the CronJob render rail honours 96 — the old
+   citation `:98-100` is stale. Re-read by card `t_6dd13d76` (2026-10-16): the `:189`–`:190`
+   this brief carried was stale — the file grew under the citation, and `:234`–`:235` is where
+   the two fields are set now. The studio rail's chart copy
    (`/home/j_kro/mining-k8s/helm/charts/sunolocal/files/music/sunolocal/translate.py`, 4 907 B)
    now reads `bpm = None; if req.bpm is not None: bpm = int(req.bpm)` (`:62`–`:64`), falls back
    to the style-weight mapping only when no bpm is given (`:67`), and defaults to 120 last
    (`:69`): **an explicit tempo wins**, so a studio-service render of this plan is no longer
    1.25× too fast. The `bpm = 120` / `int(60 + req.style_weight * 120)` lines the brief quoted
-   as `:42`/`:45` of the CHART file still exist with exactly those line numbers — but in this
-   repo's own pre-v0.1.3 mirror, `music/sunolocal/translate.py` (3 202 B), which is a second
-   copy of the engine source (cards t_0be5f2bf, t_42bc85ba, both ready). Read the pod, not the
-   mirror: the pod runs v0.1.3.
+   as `:42`/`:45` sit in NEITHER copy now: card `t_42bc85ba` (done) reconciled this repo's
+   mirror `music/sunolocal/translate.py` (4 907 B, 113 lines) with the chart's copy and the two
+   are byte-identical (`sha256 25fb26ee…`), card `t_0be5f2bf` deleted the dead third copy, and
+   the last-resort `bpm = 120` now sits at line 69, after the explicit-tempo branch
+   (`bpm = int(req.bpm)` at line 64) and beside `key = req.keyscale or "C major"` at line 76.
+   Read the pod, not a mirror: the pod runs v0.1.3.
    Acceptance for this genre stays: the plan's `bpm` field reads **96**, never 120 and
    never the 100 fallback.
 3. **The key field is fixed in the live rail.** The chart copy now reads
@@ -934,6 +938,7 @@ this brief was touched.
   `music-pipeline-payload` ConfigMap: 38 keys, 6 of them blueprints), §11 (the "3 blueprints
   only" line) and §12 correction 5.
 - **Superseded by this pass (card `t_e6d422ec`, 2026-10-16):** `sha256 3b8a9d7404380bcf129652902f6892d536ce148b3de224c60b3c3887ba0879fc` (688 lines / 43483 B) — the census statements above and in §1 and §6 were restated as live claims when `music/lyrics/blueprints/jungle-dnb.yaml` landed. Only the counts moved; no genre finding was reopened.
+- **Superseded by this pass (card `t_6dd13d76`, 2026-10-16T17:40-05:00 CDT):** `sha256 12d1e1001c001cd2fb0876e590dd222ebc479f824e2c84232a000cd1550f88e5` (1070 lines / 73389 B) — two citations that had aged under the file they name: the ACE-Step tempo/key pair (§3 and §12) now reads `acestep_plan.py:234`–`:235` with `duration` at `:224`, and the engine mirror `music/sunolocal/translate.py` is no longer pre-v0.1.3 — card `t_42bc85ba` reconciled the two copies (4 907 B, 113 lines, `sha256 25fb26ee…`). No genre finding was reopened.
 
 ## 14. Surviving-card pass — the oracle ruling and every claim re-measured (`t_752f02a8`, 2026-10-16T16:00-05:00)
 
@@ -986,7 +991,7 @@ defects the brief carded. Twelve claims are corrected, in the header and §1–�
 | §5 | title "verbatim in the chorus twice"; outro differs by case | all 18 image terms present (3 are line-initial capitals); the title-cased string occurs once, in the sheet header; chorus **and** outro both carry the sentence-case phrase |
 | §6 | planner `:470`/`:471` read the bpm anchor; `--key` at `:533` | `:830`/`:831`, `bpm_anchor_for()` at `:203`/`:212`, `--key` at `:912`, and a new `--keyscale` at `:914`; live draft plan → 96 BPM · C minor · 180 s |
 | §7 | `lyric-video` has **no** artifact; `video_shape` read by nobody but the registry | `music/visuals/lyric_video.mp4` exists — ffprobe: h264 1280×720, **240.000000 s**, 41 447 357 B (t_ec378832, done); readers now incl. `loop_close.py:301`, `render_lyric_video.py`, `check_video_shapes.py:66`; the visual stage resolves its gate per genre → `gate: none` |
-| §8 | `suno-gen.py` "not in this checkout"; studio rail `v0.1.2`; `translate.py:42/45/49` in the chart; payload "no `music/lyrics/`"; chart `briefs: []`; 1 queue entry | `music/suno-gen.py` 42 652 B / 1025 lines **in tree** (probe re-run against it, same results); pod runs **`v0.1.3`**; the chart now honours an explicit `bpm` (`:62`–`:64`) and `req.keyscale` (`:76`) — the old lines survive only in `music/sunolocal/translate.py`; payload 39 keys with 6 blueprints but no sheet; chart + ConfigMap both carry **11 entries / 9 genres**; `acestep_plan.py:189`–`:190` (was `:98-100`) |
+| §8 | `suno-gen.py` "not in this checkout"; studio rail `v0.1.2`; `translate.py:42/45/49` in the chart; payload "no `music/lyrics/`"; chart `briefs: []`; 1 queue entry | `music/suno-gen.py` 42 652 B / 1025 lines **in tree** (probe re-run against it, same results); pod runs **`v0.1.3`**; the chart now honours an explicit `bpm` (`:62`–`:64`) and `req.keyscale` (`:76`) — the old lines survive only in `music/sunolocal/translate.py`; payload 39 keys with 6 blueprints but no sheet; chart + ConfigMap both carry **11 entries / 9 genres**; `acestep_plan.py:234`–`:235` (was `:98-100`) |
 | §8 | render rail "runs exactly" acestep_plan | it now also runs `loop_close.py` (loop claim → build → level check, t_b21aeb51); for activist `--claims-loop` → `{"claim": false}`, rc=1 |
 | §9 | `campaigns/` holds nine campaigns | **ten**; `~/Music` still empty; quota still 0/60 with 0 studio exports (ledger gained a `renders` list that does not touch the counters) |
 | §10/§11 | visual "blocked on the missing shape"; brain docs untracked; `check_stage_scripts` FAIL; 12 cards listed as open/ready | visual unblocked; both brain docs **tracked in HEAD** (arch doc now 34 328 B) and still absent from `origin/main`; `check_stage_scripts` PASS; of the 12 carded items, 9 are `done` (t_8a715681, t_41f354be, t_25a6499c, t_bf0e5edd, t_b0a4db92, t_75aacf8b, t_d9983bb9, t_ec378832, t_85db696a), 1 is done **on a branch** (t_9546841b), 1 is still blocked (t_e504b516), and t_9546841b's sibling `t_f65b0f4c` (the placeholder key) is ready |

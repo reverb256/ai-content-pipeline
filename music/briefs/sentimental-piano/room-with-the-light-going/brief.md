@@ -21,6 +21,8 @@
 > `1010965f2d911039f32c98c1eb6958692c0b1072bb54f0ef3167ee335572fa9d` (21918 B, 460 lines,
 > committed by the brief stage 2026-10-16T13:21); the current digest is re-readable with
 > `sha256sum music/briefs/sentimental-piano/room-with-the-light-going/brief.md`.
+> **Superseded by card `t_6dd13d76` (2026-10-16T17:40-05:00 CDT):** the pre-edit blob was
+> `sha256 6fdc85d43cd15c4c80a0c6cc619c9f3759bacc14f60646cf3631f44ddf3295d7` (563 lines / 30164 B).
 
 This brief resolves the oracle card against the live registry and the live
 generation path. Every number and quoted string below comes from a command or a
@@ -281,11 +283,14 @@ flags: `plan --seed --name --allow-empty --qa --qa-genre --timeout`.
 instrumental plan (no singable sections) render at all.
 
 **Which copy is authoritative.** The pod runs v0.1.3. This repo's own mirror,
-`music/sunolocal/translate.py` (86 lines), is **pre-v0.1.3**: it still carries
-`bpm = 120` at line 42 and `key = req.style or "C major"` at line 49. Two copies
-of the engine source exist and they disagree — card t_42bc85ba, not this card's to
-merge. Cite the pod when the question is "what will render", the mirror when the
-question is "what is in this repo".
+`music/sunolocal/translate.py` (113 lines), is **no longer pre-v0.1.3**: card
+`t_42bc85ba` (done) reconciled it with the deployed copy, so it carries the explicit-tempo
+branch (`bpm = None` at line 62, `bpm = int(req.bpm)` at line 64) and
+`key = req.keyscale or "C major"` at line 76, and the two copies are byte-identical now
+(`sha256 25fb26eefb6a9418d60caa0f57025753cadf13838fcc3daf18b0d000005d6fa5`); the dead third
+copy was deleted by `t_0be5f2bf`. Cite the pod when the question is "what will render",
+the mirror when the question is "what is in this repo". Re-measured by card `t_6dd13d76`
+(§11.3).
 
 ### 6c. What this brief translates to, executed against the deployed code
 
@@ -506,7 +511,12 @@ byte-identical.
 4. **§6a** — the queue holds 10 entries, not 1; this track's entry quoted verbatim;
    the loop-close rail added to the render job.
 5. **§6b** — image tag v0.1.3; the deployed `translate.py` quoted at its new line
-   numbers; the repo mirror's pre-v0.1.3 divergence named.
+   numbers; the repo mirror's pre-v0.1.3 divergence named. **Superseded by card
+   `t_6dd13d76` (2026-10-16T17:40-05:00 CDT):** card `t_42bc85ba` reconciled the two
+   copies, so the mirror is 113 lines and no longer diverges — §6b and this entry are
+   restated, and the pre-edit blob was
+   `sha256 6fdc85d43cd15c4c80a0c6cc619c9f3759bacc14f60646cf3631f44ddf3295d7` (563 lines /
+   30164 B).
 6. **§6c** — the variant measurement re-run against the deployed code (699/699, cue
    present in both) and the routing rule corrected.
 7. **§7** — D1-D5 re-read against live state and marked CLOSED with artifact proof;
