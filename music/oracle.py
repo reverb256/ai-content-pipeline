@@ -30,6 +30,14 @@ Scoring rubric (data-driven, weighted — musyn 6-dimension model):
     - trend_signal    (10%): external trend heat (web search)
 
   Score range: 0-10. Cards >= 5 get created on the board.
+
+Stage positioning (card t_6599927d): every card body carries exactly ONE
+`stage:` marker — the card's route, which the driver routes on. It is resolved by
+music/stage_state.py from the genre's artifacts: a card starts at the first stage
+of music/stages.yaml with no artifact on disk, so a re-emitted genre does not
+re-run a stage that is already delivered (all 14 genres' briefs were on disk on
+2026-10-16 while 13 cards were queued back through `brief`). A resolver failure
+creates NO cards — fail closed, exactly like an unreadable board.
 """
 
 import json
@@ -49,6 +57,19 @@ import yaml
 MUSIC_DIR = Path(__file__).resolve().parent
 REPO = MUSIC_DIR.parent
 PERF_DIR = REPO / "performance"
+
+# ── Where a new card starts (card t_6599927d) ───────────────────────────────
+# A card's body marker is the card's ROUTE (the driver reads the last
+# `stage:` match and dispatches that stage). This emitter used to write one
+# fixed marker, `stage: brief`, so a re-emitted card re-entered the brief stage
+# although the genre's brief was already on disk — measured 2026-10-16: all 14
+# genres, 13 music-producer runs of the 14:05 wave. The rule that replaced it
+# lives in ONE place, music/stage_state.py, and reads the stage ORDER from
+# music/stages.yaml (the file that declares it). music/ is not a package, so put
+# the lane dir on sys.path — the pattern music/scripts/check_video_shapes.py uses.
+if str(MUSIC_DIR) not in sys.path:
+    sys.path.insert(0, str(MUSIC_DIR))
+import stage_state  # noqa: E402  (needs sys.path set first)
 
 # ── Scoring weights (sum to 1.0) ────────────────────────────────────────────
 WEIGHTS = {
@@ -337,13 +358,29 @@ def score_genre(genre_name: str, genre_spec: dict, lanes: dict, quota: dict) -> 
     }
 
 
+def genre_resume_stage(genre: str) -> tuple[str, str]:
+    """(stage, note): the stage a new card for `genre` must start at.
+
+    Delegates to music/stage_state.py, which walks the order declared by
+    music/stages.yaml and stops at the first stage with no artifact on disk, so
+    this emitter carries no stage list of its own (card t_6599927d).
+    """
+    stage, evidence = stage_state.resume_stage(REPO, genre)
+    return stage, stage_state.resume_note(stage, evidence)
+
+
 def create_kanban_card(score_data: dict, dry_run: bool = False,
-                       skip_genres: dict | None = None) -> str | None:
-    """Create a scored card on the music kanban board.
+                       skip_genres: dict | None = None,
+                       resume_stage: str | None = None,
+                       resume_note: str | None = None) -> str | None:
+    """Create a scored card on the music board.
 
     skip_genres: genre -> open card id for genres that already carry an OPEN
     card. A genre in this mapping is skipped — one open card owns a genre's
     stage chain (see open_oracle_genres).
+
+    resume_stage / resume_note: where the genre's chain actually stands, from
+    genre_resume_stage(). Given neither, this function resolves them itself.
     """
     if score_data["total"] < 5.0:
         return None
@@ -357,6 +394,9 @@ def create_kanban_card(score_data: dict, dry_run: bool = False,
     if skip_genres and genre in skip_genres:
         print(f"  skip: {genre} already has an open card ({skip_genres[genre]})")
         return None
+
+    if resume_stage is None:
+        resume_stage, resume_note = genre_resume_stage(genre)
 
     title = card_title(genre, total)
     body = f"""# Music Oracle Card — {genre}
@@ -381,13 +421,16 @@ def create_kanban_card(score_data: dict, dry_run: bool = False,
 
 This genre scored {total}/10 — above the 5.0 threshold for production.
 
+**Resume at `{resume_stage}`.** {resume_note}
+
 **Next step:** Route to the pipeline driver. The oracle emits; the driver dispatches.
 
-stage: brief
+stage: {resume_stage}
 """
 
     if dry_run:
         print(f"  [DRY RUN] Would create card: {title}")
+        print(f"           resume at: {resume_stage} — {resume_note}")
         print(f"           Body: {body[:200]}...")
         return None
 
@@ -450,8 +493,37 @@ def run_oracle(dry_run: bool = False) -> dict:
 
     results.sort(key=lambda x: x["total"], reverse=True)
 
+    # ── Stage positioning (card t_6599927d) ─────────────────────────────────
+    # The body marker is the card's route: this emitter used to write
+    # `stage: brief` unconditionally, so a re-emitted card re-entered the brief
+    # stage for a genre whose brief was already on disk. Resolve every genre's
+    # resume stage BEFORE creating anything, and fail closed exactly like an
+    # unreadable board — a card positioned at a delivered stage spends a whole
+    # worker run re-doing work that already exists.
+    resume_ok = True
+    positioned: list[str] = []
+    for r in results:
+        if r["total"] < 5.0:
+            continue
+        try:
+            r["resume_stage"], r["resume_note"] = genre_resume_stage(r["genre"])
+        except Exception as exc:  # noqa: BLE001 — any failure here means NO cards
+            print(f"ERROR: cannot resolve the resume stage for {r['genre']}: "
+                  f"{type(exc).__name__}: {exc} — creating NO cards "
+                  f"(a card at the wrong stage burns a run; card t_6599927d).",
+                  file=sys.stderr)
+            resume_ok = False
+            break
+        positioned.append(f"{r['genre']}={r['resume_stage']}")
+
     print()
     print("=== Creating Cards (score >= 5.0) ===")
+    if resume_ok:
+        print("Resume stages (music/stage_state.py, order from music/stages.yaml):")
+        for item in positioned:
+            print(f"  {item}")
+    else:
+        print("Resume stages: UNRESOLVED — no cards will be created.")
 
     # Dedupe: one OPEN card per genre. Without this guard a second run
     # re-creates a card for every genre above the threshold and puts a whole
@@ -468,11 +540,13 @@ def run_oracle(dry_run: bool = False) -> dict:
     created = []
     skipped = []
     for r in results:
-        # Fail closed: with no readable board we cannot know which genres are
-        # already open, so no card may be created.
-        if not board_read_ok:
+        # Fail closed: with no readable board, or no resolvable resume stage, we
+        # cannot position a card correctly — so no card may be created.
+        if not board_read_ok or not resume_ok:
             break
-        card_id = create_kanban_card(r, dry_run=dry_run, skip_genres=open_cards)
+        card_id = create_kanban_card(r, dry_run=dry_run, skip_genres=open_cards,
+                                     resume_stage=r["resume_stage"],
+                                     resume_note=r["resume_note"])
         if card_id:
             created.append(card_id)
         elif not dry_run and r["genre"] in open_cards:
@@ -487,6 +561,9 @@ def run_oracle(dry_run: bool = False) -> dict:
         "created_ids": created,
         "skipped_existing": skipped,
         "board_read_ok": board_read_ok,
+        "resume_ok": resume_ok,
+        "resume_by_genre": {r["genre"]: r.get("resume_stage") for r in results
+                            if r["total"] >= 5.0},
         "top_genre": results[0]["genre"] if results else None,
         "top_score": results[0]["total"] if results else 0,
     }
@@ -497,6 +574,8 @@ def run_oracle(dry_run: bool = False) -> dict:
     print(f"Cards created: {summary['cards_created']}")
     print(f"Cards skipped (genre already open): {len(summary['skipped_existing'])}")
     print(f"Top genre: {summary['top_genre']} ({summary['top_score']}/10)")
+    if not resume_ok:
+        print("Resume stages UNRESOLVED — the run created nothing.", file=sys.stderr)
 
     return summary
 
@@ -517,11 +596,13 @@ def main():
                 f"{summary['cards_created']} created, "
                 f"{len(summary['skipped_existing'])} skipped (open), "
                 f"board_read_ok={summary['board_read_ok']}, "
+                f"resume_ok={summary['resume_ok']}, "
                 f"top={summary['top_genre']}({summary['top_score']})\n")
 
-    # Fail loud: if the board could not be read, no cards were created. That is
-    # a broken run, not a quiet success.
-    if not summary["board_read_ok"]:
+    # Fail loud: if the board could not be read, or a genre's resume stage could
+    # not be resolved, no cards were created. That is a broken run, not a quiet
+    # success (card t_6599927d added the second cause).
+    if not summary["board_read_ok"] or not summary["resume_ok"]:
         sys.exit(1)
 
 

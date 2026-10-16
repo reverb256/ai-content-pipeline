@@ -210,9 +210,37 @@ class NoDuplicateCardTest(unittest.TestCase):
         self.assertEqual(cmd[:4], ["hermes", "kanban", "--board", "music"])
         self.assertEqual(cmd[cmd.index("--assignee") + 1], "music-producer")
 
-        # Stage contract: the driver finds the card's stage in the body.
+        # Stage contract (card t_6599927d): the body marker IS the card's route,
+        # and it must be the genre's RESUME stage. anime-opening's brief is on
+        # disk (music/briefs/anime-opening.md), so this card must not restart the
+        # brief stage — the defect the 13 cards of the 14:05 wave paid for.
         body = fake.bodies[title]
-        self.assertIn("stage: brief", body)
+        self.assertNotIn("stage: brief", body)
+        self.assertIn("stage: genre-select", body)
+        self.assertEqual(body.count("stage: "), 1,
+                         "the driver takes the LAST `stage:` match — the body must "
+                         "carry exactly one, and it must be the resume stage")
+        self.assertIn("Resume at `genre-select`", body)
+
+    def test_resume_stage_failure_creates_no_cards(self):
+        """A resolver failure is fail-closed, like an unreadable board: a card at
+        the wrong stage spends a whole worker run re-doing delivered work."""
+        fake = FakeRun(list_payload=REAL_BOARD)
+        original = oracle.genre_resume_stage
+
+        def boom(genre):
+            raise oracle.stage_state.StageStateError("no stage map")
+
+        oracle.genre_resume_stage = boom
+        try:
+            summary = self._run(fake, {})
+        finally:
+            oracle.genre_resume_stage = original
+
+        self.assertEqual(fake.create_calls(), [],
+                         "no card may be created when its resume stage is unknown")
+        self.assertFalse(summary["resume_ok"])
+        self.assertEqual(summary["cards_created"], 0)
 
     def test_unreadable_board_fails_closed(self):
         """A failed board read must never become a flood of new cards."""
