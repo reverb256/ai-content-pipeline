@@ -23,7 +23,9 @@ unchanged. Full panel detail goes to panel-detail.json next to it.
 The pipeline is genre-generic: genre -> family -> rubric file, all data.
 The panel membership is profile names resolved from their Hermes profile
 configs (model, provider, base_url, key env) — no model is hardcoded
-here.
+here. Each member's OWN `fallback_providers` chain is walked in order, so
+a dead primary is not a dead judge (card t_3d84acfe), and a panel whose
+judges are not from disjoint families SAYS so in the findings.
 
 Usage:
   python3 music/rubrics/panel.py --audio <file> --genre <genres.yaml id> \
@@ -74,8 +76,15 @@ def _find_hermes_root() -> Path:
 
 HERMES = _find_hermes_root()
 
-DEFAULT_PANEL = ("reviewer-deepseek", "reviewer-longcat",
-                 "reviewer-minimax", "reviewer-nemotron")
+# The three reviewer profiles that EXIST, one per model FAMILY (card
+# t_3d84acfe). The previous tuple named reviewer-longcat and reviewer-minimax,
+# whose profiles were both deleted: resolve_judge() raised FileNotFoundError
+# OUTSIDE the try block, so the default panel died with a traceback instead of
+# writing an honest fail record. Membership is DATA, not prose -- the families
+# live in the profile configs and music/scripts/check_panel_membership.py
+# asserts that every name here exists, resolves, and that the primary families
+# are pairwise disjoint.
+DEFAULT_PANEL = ("reviewer", "reviewer-nemotron", "reviewer-deepseek")
 DISAGREE_SPREAD = 3.0        # max overall spread before human triage
 CRITERION_SPREAD_FLAG = 4.0  # per-criterion spread worth flagging
 MIN_VALID_JUDGES = 3
@@ -121,46 +130,117 @@ def _fleet_endpoint(provider: str) -> tuple:
     return "", ""
 
 
+def _profile_endpoint(cfg: dict, provider: str) -> tuple:
+    """(base_url, api_key_env) for ONE provider of a profile config: the
+    profile's own provider block first, then the fleet sources — fleet-route.py
+    ENDPOINTS (it covers nvidia, which the JSON spec lacks) and then
+    scripts/fleet-routing.json providers."""
+    prov = (cfg.get("providers") or {}).get(provider) or {}
+    base_url = prov.get("base_url", "")
+    key_env = prov.get("api_key_env", "")
+    if not base_url:
+        base_url, fallback_env = _fleet_endpoint(provider)
+        key_env = key_env or fallback_env
+    return base_url, key_env
+
+
+def _profile_key(profile_name: str, key_env: str) -> str:
+    """The API key for one env var: the profile's own .env first, then the
+    shared ~/.hermes/.env. Never logged."""
+    for env_file in (HERMES / "profiles" / profile_name / ".env",
+                     HERMES / ".env"):
+        key = load_env_file(env_file).get(key_env, "")
+        if key:
+            return key
+    return ""
+
+
+def _judge_dict(profile_name: str, cfg: dict, role: str, provider: str,
+                model: str) -> dict:
+    """One panel candidate: provider + model resolved to endpoint + key.
+    An entry that cannot be resolved comes back with an `error` string
+    instead of a key, so the caller records WHY it was skipped instead of
+    dropping it in silence."""
+    base_url, key_env = _profile_endpoint(cfg, provider)
+    if not (model and provider and base_url and key_env):
+        return {"name": profile_name, "role": role, "provider": provider,
+                "model": model,
+                "error": f"incomplete routing (provider={provider!r} "
+                         f"base_url={base_url!r} key_env={key_env!r})"}
+    key = _profile_key(profile_name, key_env)
+    if not key:
+        return {"name": profile_name, "role": role, "provider": provider,
+                "model": model,
+                "error": f"{key_env} not set in the profile .env or in the "
+                         f"shared .env — cannot call {model}"}
+    return {"name": profile_name, "role": role, "provider": provider,
+            "model": model, "base_url": base_url.rstrip("/"),
+            "key_env": key_env, "key": key}
+
+
 def resolve_judge(profile_name: str) -> dict:
-    """Model + endpoint + key for one reviewer profile. Never logs keys.
-    Resolution order: the profile's own config.yaml provider block first;
-    if the profile's provider is missing there, fall back to the fleet
-    routing spec (scripts/fleet-routing.json ENDPOINTS — same mapping
-    fleet-route.py probes with)."""
+    """The profile's PRIMARY judge (model + endpoint + key). Raises when the
+    profile itself cannot be resolved, so a broken profile is loud. Callers
+    that must survive a dead primary want judge_candidates() instead."""
     cfg_path = HERMES / "profiles" / profile_name / "config.yaml"
     if not cfg_path.is_file():
         raise FileNotFoundError(f"no reviewer profile config: {cfg_path}")
     cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
     model = (cfg.get("model") or {}).get("default", "")
     provider = (cfg.get("model") or {}).get("provider", "")
-    prov = (cfg.get("providers") or {}).get(provider) or {}
-    base_url = prov.get("base_url", "")
-    key_env = prov.get("api_key_env", "")
-    if not base_url:
-        # Endpoint fallback, same sources the fleet probe uses:
-        #   1. fleet-route.py ENDPOINTS (covers nvidia, which the JSON
-        #      spec lacks)
-        #   2. scripts/fleet-routing.json providers
-        base_url, fallback_key_env = _fleet_endpoint(provider)
-        key_env = key_env or fallback_key_env
-    if not (model and provider and base_url and key_env):
-        raise ValueError(
-            f"profile {profile_name}: incomplete routing "
-            f"(model={model!r} provider={provider!r} base_url={base_url!r})")
-    # key: profile .env first, then the shared ~/.hermes/.env
-    key = ""
-    for env_file in (HERMES / "profiles" / profile_name / ".env",
-                     HERMES / ".env"):
-        key = load_env_file(env_file).get(key_env, "")
-        if key:
-            break
-    if not key:
-        raise ValueError(
-            f"profile {profile_name}: {key_env} not set in profile or "
-            f"shared .env — cannot call {model}")
-    return {"name": profile_name, "provider": provider, "model": model,
-            "base_url": base_url.rstrip("/"), "key_env": key_env,
-            "key": key}
+    judge = _judge_dict(profile_name, cfg, "primary", provider, model)
+    if judge.get("error"):
+        raise ValueError(f"profile {profile_name}: {judge['error']}")
+    return judge
+
+
+def judge_candidates(profile_name: str) -> list:
+    """The profile's whole CHAIN, in order: its primary judge, then one
+    candidate per `fallback_providers` entry (card t_3d84acfe, cause 2).
+
+    Before this the panel read only model.default + the provider block, so a
+    profile whose primary was dead (exhausted, or a provider that now demands
+    a session header) was a DEAD JUDGE even though its own declared fallback
+    chain was live. Every reviewer profile shared the same primary, so all of
+    them failed together and the REVIEW stage could only ever write
+    `verdict: fail`.
+
+    Raises only when the profile config itself is missing. A chain entry that
+    cannot be resolved is returned with an `error` key, so the caller counts
+    it as a loud failure rather than losing it."""
+    cfg_path = HERMES / "profiles" / profile_name / "config.yaml"
+    if not cfg_path.is_file():
+        raise FileNotFoundError(f"no reviewer profile config: {cfg_path}")
+    cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+    model_block = cfg.get("model") or {}
+    entries = [("primary", model_block.get("provider", ""),
+                model_block.get("default", ""))]
+    for i, entry in enumerate(cfg.get("fallback_providers") or [], start=1):
+        if isinstance(entry, dict):
+            prov, model = entry.get("provider", ""), entry.get("model", "")
+        else:
+            prov, model = str(entry), ""
+        entries.append((f"fallback {i}", prov, model))
+    out, seen = [], set()
+    for role, prov, model in entries:
+        if not (prov or model):
+            continue
+        # A chain conventionally starts with the primary provider again
+        # (fleet-routing.json "chains" carry the full list). Trying one
+        # model twice in a row only delays the honest failure.
+        if (prov, model) in seen:
+            continue
+        seen.add((prov, model))
+        out.append(_judge_dict(profile_name, cfg, role, prov, model))
+    return out
+
+
+def judge_family(model: str) -> str:
+    """The model FAMILY of a judge model id — the `vendor/` prefix, with any
+    provider suffix (`:free`, `:batch`, `:US`) already outside it. The PoLL
+    contract (music/rubrics/README.md) needs a panel from DISJOINT families;
+    this is the only place that decides what "family" means."""
+    return (model or "").split("/")[0].strip().lower()
 
 
 # ── rubric + genre resolution (all data) ────────────────────────────────────
@@ -622,29 +702,59 @@ def main(argv=None) -> int:
           f"members={members}", flush=True)
     judge_scores, failures = [], []
     for name in members:
-        judge = resolve_judge(name)
         t0 = time.time()
         try:
-            score = call_judge(judge, prompt)
-        except Exception as e:  # noqa: BLE001 — record, continue
-            failures.append({"judge": name, "model": judge["model"],
-                             "error": str(e)[:400]})
-            print(f"[panel] {name} ({judge['model']}): FAILED — "
-                  f"{str(e)[:120]}", flush=True)
+            candidates = judge_candidates(name)
+        except Exception as e:  # noqa: BLE001 — record, continue to the next
+            failures.append({"judge": name, "model": "-",
+                             "error": f"{type(e).__name__}: {e}"[:400]})
+            print(f"[panel] {name}: NO PROFILE CONFIG — {str(e)[:120]}",
+                  flush=True)
+            continue
+        # Walk the profile's chain: primary first, then each declared
+        # fallback (card t_3d84acfe). A judge counts only when a member
+        # returns a complete score vector; every miss is recorded.
+        score = judge = None
+        for cand in candidates:
+            who = f"{name}/{cand['role']}"
+            model = cand.get("model") or "-"
+            if cand.get("error"):
+                failures.append({"judge": name, "model": model,
+                                 "error": f"{cand['role']}: "
+                                          f"{cand['error']}"[:400]})
+                print(f"[panel] {who} ({model}): UNUSABLE — "
+                      f"{cand['error'][:110]}", flush=True)
+                continue
+            try:
+                score = call_judge(cand, prompt)
+            except Exception as e:  # noqa: BLE001 — log, walk the chain
+                failures.append({"judge": name, "model": model,
+                                 "error": f"{cand['role']}: {e}"[:400]})
+                print(f"[panel] {who} ({model}): FAILED — "
+                      f"{str(e)[:120]}", flush=True)
+                continue
+            missing = [c["id"] for c in crits
+                       if c["id"] not in (score.get("criteria_scores") or {})]
+            if missing:
+                failures.append({"judge": name, "model": model,
+                                 "error": f"{cand['role']}: incomplete "
+                                          f"scores, missing {missing}"})
+                print(f"[panel] {who} ({model}): incomplete scores "
+                      f"{missing}", flush=True)
+                score = None
+                continue
+            judge = cand
+            break
+        if score is None or judge is None:
             continue
         score["judge"] = name
+        score["role"] = judge["role"]
+        score["provider"] = judge["provider"]
         score["model"] = judge["model"]
         score["elapsed_s"] = round(time.time() - t0, 1)
-        missing = [c["id"] for c in crits
-                   if c["id"] not in (score.get("criteria_scores") or {})]
-        if missing:
-            failures.append({"judge": name, "model": judge["model"],
-                             "error": f"incomplete scores, missing {missing}"})
-            print(f"[panel] {name}: incomplete scores {missing}", flush=True)
-            continue
         judge_scores.append(score)
-        print(f"[panel] {name} ({judge['model']}): overall="
-              f"{score.get('overall')} "
+        print(f"[panel] {name} ({judge['model']} via {judge['provider']}, "
+              f"{judge['role']}): overall={score.get('overall')} "
               f"rejects={len(score.get('reject_signals_hit') or [])} "
               f"({score['elapsed_s']}s)", flush=True)
 
@@ -690,6 +800,16 @@ def main(argv=None) -> int:
 
     agg = aggregate(rubric, judge_scores, crits)
 
+    # 3b. the PoLL contract needs judges from DISJOINT model families
+    #     (music/rubrics/README.md). The panel cannot see two configs that are
+    #     the same model, so it must SAY when the family it actually ran was
+    #     not disjoint (card t_3d84acfe, cause 3).
+    families: dict = {}
+    for js in judge_scores:
+        families.setdefault(judge_family(js["model"]), []).append(js["judge"])
+    family_collisions = {f: names for f, names in families.items()
+                         if len(names) > 1}
+
     # 4. reject signals: majority-hit = fatal (robust to one contaminated
     #    judge; geometric median alone cannot encode categorical rules).
     #    Only signals that APPLY to this genre can be fatal; a vote for
@@ -720,6 +840,13 @@ def main(argv=None) -> int:
         findings.insert(0, f"PANEL DISAGREEMENT — human triage required "
                      f"(overall spread {agg['overall_spread']}, "
                      f"valid judges {len(judge_scores)})")
+    if family_collisions:
+        findings.insert(0, "PANEL FAMILY COLLISION — the panel is NOT from "
+                     "disjoint model families, so the geometric median's "
+                     "robustness claim does not hold: "
+                     + "; ".join(f"{f} = {', '.join(n)}"
+                                 for f, n in family_collisions.items())
+                     + " (card t_3d84acfe)")
 
     # 6. write review.json (gate_quality.py contract) + panel-detail.json
     digest = hashlib.sha256(audio.read_bytes()).hexdigest()
@@ -759,6 +886,8 @@ def main(argv=None) -> int:
             "method": "geometric median (modified Weiszfeld, Vardi-Zhang 2000; "
                       "RoPoLL arXiv:2606.30931)",
             **agg,
+            "judge_families": families,
+            "family_collisions": family_collisions,
             "reject_signal_votes": signal_votes,
             "fatal_signals": fatal_signals,
             "off_scope_signal_votes": off_scope_votes,

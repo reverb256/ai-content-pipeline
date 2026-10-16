@@ -1,7 +1,7 @@
 {
   "version": 1,
   "generated": "2026-09-30",
-  "comment": "Low-cost fleet routing spec. Lanes: free = nous laguna-s-2.1/laguna-xs-2.1/ling-3.0-flash-sante + openrouter-free + commandcode free (ling-3.1-flash:free); paid workhorse = commandcode GOAT ($10/mo sunk, deepseek-v4.1-flash); quality = nvidia NIM (eval credits). opencode-zen is BLOCKED for API use (403 'free tier can only be used within OpenCode'); opencode-go quota exhausted; longcat-2.0:free retired (404 'no longer free'); minimax-m3:free and ling-3.0-flash-fin:free dead on openrouter-free. Local pair = last resort. 2026-09-30: pair dropped from all chains (llmster load broken); qwen3.8-27b:free rate-limited upstream -> publishbot/reviewer-minimax swapped. 2026-09-30: nvidia deepseek-v4.1-flash dropped from chains (2-4 min cold start); z-ai/glm-5.3 used instead.",
+  "comment": "Low-cost fleet routing spec. Lanes: free = nous laguna-s-2.1/laguna-xs-2.1/ling-3.0-flash-sante + openrouter-free + commandcode free (ling-3.1-flash:free); paid workhorse = commandcode GOAT ($10/mo sunk, deepseek-v4.1-flash); quality = nvidia NIM (eval credits). opencode-zen is BLOCKED for API use (403 'free tier can only be used within OpenCode'); opencode-go quota exhausted; longcat-2.0:free retired (404 'no longer free'); minimax-m3:free and ling-3.0-flash-fin:free dead on openrouter-free. Local pair = last resort. 2026-09-30: pair dropped from all chains (llmster load broken); qwen3.8-27b:free rate-limited upstream -> publishbot/reviewer-minimax swapped. 2026-09-30: nvidia deepseek-v4.1-flash dropped from chains (2-4 min cold start); z-ai/glm-5.3 used instead. 2026-10-16 (card t_3d84acfe): the music review panel reached ZERO judges. opencode-go now answers HTTP 400 MissingSessionID (a missing x-opencode-session header, not a quota), so every profile whose PRIMARY was opencode-go is dead; COMMANDCODE_API_KEY is absent from ~/.hermes/.env; openrouter-free answered HTTP 429 free-models-per-day-high-balance (0 of 1000 left) for the whole day; nvidia NIM 404s every slug except the ones measured live. The three reviewer profiles are therefore re-pointed at three DISJOINT model families, each with a SAME-FAMILY fallback chain so a fallback can never duplicate a family: reviewer = nous poolside/laguna-s-2.1:free (judge_poolside), reviewer-nemotron = nvidia nvidia/nemotron-3-super-120b-a12b (judge_nvidia), reviewer-deepseek = kilo dots-studio/dots-3-note-preview:free (judge_dots). The kilo gateway is new to this spec and matters: it serves explicit :free slugs on its OWN quota, so it is what keeps the panel alive while openrouter-free is exhausted. Dead on measurement, not reused: nvidia/nemotron-3-ultra-550b-a55b (404 function not found), meituan/longcat-2.5-preview:free (HTTP 200 with EMPTY content), inclusionai/ling-3.1-flash (404 requires credits), stepfun/step-3.7-flash:free and upstage/solar-mini4:free (400 missing tags), nvidia/google/gemma-4-31b-it (JSON on one call, no JSON on the next). The stale entries reviewer-longcat and reviewer-minimax were removed: neither profile exists any more. A reviewer profile NAME is a slot, not a model - the family comes from the model, and music/scripts/check_panel_membership.py enforces pairwise disjoint families.",
   "dead_slugs": [
     "meituan/longcat-2.0:free",
     "inclusionai/ling-3.0-flash-fin:free",
@@ -28,6 +28,16 @@
       "base_url": "https://api.commandcode.ai/provider/v1",
       "api_key_env": "COMMANDCODE_API_KEY",
       "model": "deepseek/deepseek-v4.1-flash"
+    },
+    "kilo": {
+      "base_url": "https://api.kilo.ai/api/gateway",
+      "api_key_env": "KILOCODE_API_KEY",
+      "model": "kilo-auto/free"
+    },
+    "nvidia": {
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "api_key_env": "NVIDIA_API_KEY",
+      "model": "nvidia/nemotron-3-super-120b-a12b"
     },
     "pair": {
       "api": "http://127.0.0.1:1235/v1",
@@ -77,6 +87,44 @@
       {
         "provider": "nous",
         "model": "poolside/laguna-s-2.1:free"
+      }
+    ],
+    "judge_poolside": [
+      {
+        "provider": "nous",
+        "model": "poolside/laguna-s-2.1:free"
+      },
+      {
+        "provider": "kilo",
+        "model": "poolside/laguna-s-2.1:free"
+      },
+      {
+        "provider": "openrouter-free",
+        "model": "poolside/laguna-s-2.1:free"
+      }
+    ],
+    "judge_nvidia": [
+      {
+        "provider": "nvidia",
+        "model": "nvidia/nemotron-3-super-120b-a12b"
+      },
+      {
+        "provider": "kilo",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      },
+      {
+        "provider": "openrouter-free",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    ],
+    "judge_dots": [
+      {
+        "provider": "kilo",
+        "model": "dots-studio/dots-3-note-preview:free"
+      },
+      {
+        "provider": "openrouter-free",
+        "model": "dots-studio/dots-3-note-preview:free"
       }
     ],
     "free_n": [
@@ -143,9 +191,16 @@
       "chain": "cc"
     },
     "reviewer-deepseek": {
-      "provider": "commandcode",
-      "model": "deepseek/deepseek-v4.1-flash",
-      "chain": "cc"
+      "provider": "kilo",
+      "model": "dots-studio/dots-3-note-preview:free",
+      "chain": "judge_dots",
+      "judge_family": "dots-studio"
+    },
+    "reviewer": {
+      "provider": "nous",
+      "model": "poolside/laguna-s-2.1:free",
+      "chain": "judge_poolside",
+      "judge_family": "poolside"
     },
     "maplespike-eng": {
       "provider": "nvidia",
@@ -189,8 +244,9 @@
     },
     "reviewer-nemotron": {
       "provider": "nvidia",
-      "model": "nvidia/nemotron-3-ultra-550b-a55b",
-      "chain": "quality"
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "chain": "judge_nvidia",
+      "judge_family": "nvidia"
     },
     "coo": {
       "provider": "openrouter-free",
@@ -210,11 +266,6 @@
     "publishbot": {
       "provider": "openrouter-free",
       "model": "nvidia/nemotron-3.5-lightning:free",
-      "chain": "free_o"
-    },
-    "reviewer-minimax": {
-      "provider": "openrouter-free",
-      "model": "dots-studio/dots-3-note-preview:free",
       "chain": "free_o"
     },
     "seobot": {
@@ -248,11 +299,6 @@
       "chain": "free_n"
     },
     "haven-bot": {
-      "provider": "nous",
-      "model": "poolside/laguna-s-2.1:free",
-      "chain": "free_n"
-    },
-    "reviewer-longcat": {
       "provider": "nous",
       "model": "poolside/laguna-s-2.1:free",
       "chain": "free_n"

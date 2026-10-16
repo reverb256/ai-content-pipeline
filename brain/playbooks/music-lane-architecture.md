@@ -475,10 +475,10 @@ Paths verified on both hosts unless the row says otherwise.
 | Quota tracking | — | `music/quota-ledger.json`, `gate_quota` |
 | Oracle / card source | — | `music/oracle.py`, `music/scheduler/music-oracle.timer` (daily 08:00, nexus) |
 | Scheduler units | — | `music/scheduler/music-{oracle,policy-watch,pipeline-driver,weekly-digest}.{service,timer}` |
-| Lane checks (drift guards) | — | `music/scripts/check_*.py` (stage scripts, stage advance, scheduler units, gate↔lane surface, brief figures, brief drift, brief line refs, oracle determinism, prompt style counts) |
+| Lane checks (drift guards) | — | `music/scripts/check_*.py` (stage scripts, stage advance, scheduler units, gate↔lane surface, brief figures, brief drift, brief line refs, oracle determinism, prompt style counts, panel membership) |
 | Lyrics | `writer` profile | `music/lyrics/`, `music/prompts/*` |
 | Video render | `videobot`, `music/visuals/*.mp4` shape templates | album / mix / loop shapes |
-| Review | `reviewer-deepseek` + panel | `music/rubrics/*.json`, `music/rubrics/measure.py` |
+| Review | `reviewer` + `reviewer-nemotron` + `reviewer-deepseek` (three families, panel) | `music/rubrics/*.json`, `music/rubrics/measure.py`, `music/rubrics/panel.py`; reachability guarded by `music/scripts/check_panel_membership.py` (offline) and `music/rubrics/probe_judges.py` (live), both in the scheduled gate-matrix run (`t_3d84acfe`) |
 | Audio mix/master | `scripts/audio/storyteller.py` | `music/mix/master.py` (zephyr only, as of 2026-10-16) |
 | Suno generation | — | `music/suno-gen.py` (both hosts — tracked on nexus from 2026-10-16; re-measured 16:15, t_e2375c5a) |
 | GPU jobs | zephyr/host GPU scheduling | not wired into the music lane |
