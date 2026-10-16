@@ -116,6 +116,38 @@ remains as an emergency override that must be explained in the card.
 | `check_stale_write.py --armed` | asserts `.githooks/pre-push` or `pre-commit` runs the guard, that `core.hooksPath` is `.githooks`, and that both are executable. A hook is file state plus one LOCAL config key, and neither travels with the tree. |
 | `music/scripts/run_gate_matrix.sh` leg **2f** | runs the daily audit (06:20, `music-gate-matrix.timer`) and exits **7** when the guard is disarmed or a stale write landed in the window — distinct from a gate (1), panel (3), render-log (4), media (5) or fence (6) defect. It reads COMMITS, never the working tree, so a sibling mid-edit cannot move its verdict. |
 
+## What the demo and the drill measured (all real, all reproducible)
+
+* **The refusal, on the incident's own bytes.** In a real clone: staged content
+  built from `9082ce3^`'s copy plus the writer's own section, committed with an
+  explicit pathspec, is REFUSED — and the SCOPE fence ALLOWED the same commit,
+  so the content guard is doing work the fence cannot. The audit on the real
+  incident commit names the real origin: `--rev edeef61` →
+  "introduced by: 9082ce3d (card t_96dfc521)". The recorded rollback
+  `--rev 5cb2e3d` is refused three times over (three paths, each byte-equal to an
+  older revision), and the re-land `--rev a31deb2` is PASS.
+* **A refusal writes nothing.** HEAD does not move and the writer's bytes stay
+  staged; a sibling's staged work is untouched.
+* **Two concurrent writers, ONE file, both changes on the origin afterwards.**
+  Non-overlapping edits: git's 3-way merge keeps BOTH sides, and the merge
+  publish goes through the armed pre-push guard (`origin/main` carries writer A's
+  and writer B's sections and section 13). Overlapping edits: the merge
+  CONFLICTS at the same lines — with a real base the loss is visible, it cannot
+  be silent — and keeping both sides publishes both.
+* **The leg is wired and red for the right reason.** The daily run in drill mode
+  exits **7**, logs `stale-write guard: armed_rc=0 audit_rc=1`, lists the named
+  commits in the failing-checks block, and writes `stale_write_rc` +
+  `stale_write_verdict` into the status JSON. With the window shortened to one
+  minute it exits 0, so it measures history and not a constant.
+* **git calls a pre-push hook with an EMPTY ref list** for an update it already
+  rejects (measured on a non-fast-forward push). Nothing to judge is not a
+  failure, so `--push` exits 0 there, and the hook maps the guard's "cannot
+  measure" (rc 3) to NOTE-and-allow. Neither can block a push for the wrong
+  reason.
+* **A relative `core.hooksPath` resolves against the linked worktree's own root**
+  — a worktree needs its own `.githooks`, or an absolute `core.hooksPath`, for the
+  hooks to run there at all. Measured while testing the push arm.
+
 ## Working in this tree now
 
     git commit -m "<msg>" -- <your paths>       # names your paths; a sibling's staged work stays staged
@@ -141,8 +173,13 @@ middle line and it is the one both incidents crossed.
   direction.
 * **`edeef61`, `5cb2e3d` and today's 5 declared-class commits are inside the
   first daily window**, so the first matrix run after this card lands reports
-  rc=7 naming them. That is the detector working on real state, not a defect:
-  the window clears itself. The 5 are the deliberate-restore class above.
+  rc=7 naming them — measured, in drill mode, at 18:48 CDT: `rc=7`, its log line
+  "stale-write guard: armed_rc=0 audit_rc=1", 11 REFUSE lines naming
+  `176b5757`, `5cb2e3d` ×3, `69bec15d`, `5aa5238f`, `d0e1d8de`, `edeef615`,
+  `9e5f2afc`, `c0bd386e`. That is the detector working on real state, not a
+  defect: the window clears itself as the commits age out. The 5 are the
+  deliberate-restore class above; a future run can silence them the only way the
+  design allows — by fixing them or by landing a commit that declares the drop.
 * **`~/mining-k8s` is not armed.** The sibling card mirrored its fence there;
   this guard is armed in the lane repo only. Arming it there is the same three
   steps (`cp music/scripts/check_stale_write.py ~/mining-k8s/`, copy
