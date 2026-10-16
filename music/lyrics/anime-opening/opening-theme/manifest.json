@@ -1,0 +1,28 @@
+{
+  "schema": "music/track-lyrics-manifest v1",
+  "track_slug": "opening-theme",
+  "title": "Opening Theme",
+  "genre": "anime-opening",
+  "genre_family": "anisong",
+  "theme": "The first thirty seconds of the arc. Someone is running toward a thing they have not named yet, and the sky opens above them. A story starts, and the song is the shape of starting. Triumphant and urgent at once: the joy carries the ache, not the other way around.",
+  "authorship": {
+    "status": "incomplete",
+    "authors": [],
+    "written_at": null,
+    "ai_assist": null,
+    "suno_generated_lyrics": false
+  },
+  "draft": {
+    "status": "draft-unclaimed",
+    "drafted_by": "writer profile (agent run, card t_9917d23b)",
+    "drafted_at": "2026-10-16T21:29:45+00:00",
+    "why_not_claimed": "authorship.status stays 'incomplete' on purpose. The pipeline's copyright path is a human-authorship claim (SOCAN / distributor AI-provenance screening) and lyrics.py claim must not be recorded for words no human wrote.",
+    "claim_command": "/usr/bin/python3 music/lyrics/lyrics.py claim --track-dir music/lyrics/anime-opening/opening-theme --author \"j_kro\"",
+    "claim_note": "claim is refused while any [section] carries a parenthetical placeholder; the draft below has none. It derives lyrics.txt from the tagged sheet and hash-binds the claim."
+  },
+  "files": {
+    "lyrics.suno.txt": null,
+    "lyrics.txt": null
+  },
+  "notes": "Lane fit: streaming, sync, direct-license, youtube-gaming. Shape single-4min: this is a SHOWPIECE, not a loop, and it must survive a 90-second TV cut with the arc intact (hook -> verse -> pre-chorus -> chorus -> bridge -> final chorus). Tempo 130-180 BPM, J-rock pocket 160-170 (160 pinned here); below 130 drifts to pop-rock, above 180 to speed-metal. The busy double-kick pattern and the eighth-note melodic bass are the engine; strings AND piano over rhythm guitars with synth pads underneath is the post-2010s anison wall of sound. Stems are mandatory for the sync and direct-license lanes. Lyrics are human-authored — queue the plan with lyricsMode draft and let j_kro write and claim the sheet; AI-written lyrics void the copyright claim this pipeline registers. Consumed by the Virtual Reflections album, tracks 7-8 (\"Opening Theme\", \"Becoming\"). One open flag: the youtube-gaming lane renders loop-10min while this genre's shape is single-4min, so that lane needs a second render or it stays unreached."
+}
