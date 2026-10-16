@@ -162,7 +162,7 @@ Four consequences that are decisions, not details:
 3. **The `loop-10min` shape is 600 s, and the planner now accepts 600 s.** The shape
    template measures exactly 600.000 s (ffprobe). When this brief was written the planner
    capped a plan at 420 s (`MAX_DURATION_S = 420`); re-measured 2026-10-16 (§14) the cap is
-   **600 s** (`music/planner/planner.py:104`, raised by commit `52ae620` for this very shape).
+   **600 s** (`music/planner/planner.py:148`, raised by commit `52ae620` for this very shape — the constant moved from `:104`; re-read 2026-10-16 by card `t_ae1d9243`).
    **600.000 s is whole-bar at this genre's tempo — 375 bars × 1.600 s a bar — so the loop can
    be rendered at full length.** Revised decision: plan the loop at 375 bars / 600 s; cut it
    to a shorter whole-bar master only if the game-asset pack wants one.
@@ -352,7 +352,7 @@ no longer needed.
 ### 6.4 Duration — corrected: a 600 s render is plannable and has been rendered
 
 ~~A 600 s render is impossible.~~ Corrected 2026-10-16 (§14): the planner's guard rail is now
-30–600 s (`planner.py:103-104`), and `/var/lib/music-plans/elemental-earth-chamber-loop.json`
+16–600 s (`planner.py:147-148`, card `t_ae1d9243`), and `/var/lib/music-plans/elemental-earth-chamber-loop.json`
 carries `duration: 600` with a `.rendered` marker — the rail has rendered a 600 s plan.
 `translate.py` still takes `duration` straight from the request with no upper guard (line 55:
 `float(req.duration)` else `30.0`), so the planner remains the only duration guard. §3.3 now
@@ -677,7 +677,7 @@ gates, the plans, the chart, or the cluster; no new card was created.
   150 BPM, weirdness 35%, Style Influence 85%, six exclude terms, loop-point ending. Blueprints
   are `activist, anime-ending, anime-opening, chill-lounge, epic-orchestral-boss, trance` (6 of the 14); still no chiptune lyric dir, no
   `loop_points.json`, no master, no stems.
-- Bar arithmetic (1.600 s/bar), the planner cap `MAX_DURATION_S = 420`, and the fallback
+- Bar arithmetic (1.600 s/bar), the planner cap `MAX_DURATION_S = 420` (**anchored** — this section is that pass's record; §14 row 4 corrects it), and the fallback
   `bpm_anchor or 100` (`music/planner/planner.py:470`).
 - `ffprobe`: `loop_10min.mp4` = 600.000000 s · 1280×720 · 25/1 fps; `pixel_scene.mp4` =
   5.000000 s · 14 244 bytes. `gate_youtube_authentic --visual music/visuals/loop_10min.mp4`
@@ -809,7 +809,7 @@ NOT re-run.** The surviving chain resumes at the stage after brief — `genre-se
 | 1 | header | card `t_9cc9b48f` (7.5) owns the genre | surviving card `t_60767fb1`, true score **7.0**; digest `2e603d85…` superseded |
 | 2 | §1, §11 | the registry `defaults:` block cited at 19–25 | the block is **20–25**; line 19 is blank (`check_brief_line_refs` FAIL) — corrected |
 | 3 | §1 | two quoted `reject_signals` | rubric carries **6 criteria** and **6 reject_signals**; `no_stated_tempo_key` and `clipped_master` added to the quotes |
-| 4 | §3.3, §6.4 | planner cap `MAX_DURATION_S = 420`; a 600 s render is impossible | cap **600** (`planner.py:104`, commit `52ae620`); `elemental-earth-chamber-loop.json` is `duration: 600` with a `.rendered` marker; 600.000 s = 375 bars at 150 BPM, whole-bar |
+| 4 | §3.3, §6.4 | planner cap `MAX_DURATION_S = 420` (**anchored**); a 600 s render is impossible | cap **600** (`planner.py:148`, card `t_ae1d9243`; commit `52ae620` raised it, and the constant moved from `:104`); `elemental-earth-chamber-loop.json` is `duration: 600` with a `.rendered` marker; 600.000 s = 375 bars at 150 BPM, whole-bar |
 | 5 | §4, §7, §12 | 6 lyric blueprints; `bpm = 100` fallback wrong for 150 BPM | **7** blueprints (+`jungle-dnb.yaml`, added 15:49 by card `t_e6d422ec`); the fallback reads the caption's own BPM (`planner.py:199`, `:212`), so this genre plans at 150 |
 | 6 | §5 | cadence fit 6.7 | **3.3** (surviving card's true breakdown) |
 | 7 | §6.1 | render log `found=3 rendered=0 skipped=3`; 3 plans; 1 queue entry | `found=13 rendered=1 skipped=12 failed=0`; **13 plans, 12 markers, 1 master + `loops/`**; queue holds **11 entries**, none of this genre |
