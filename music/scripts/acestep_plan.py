@@ -31,6 +31,51 @@ SUNOLOCAL_HOST = os.environ.get(
 POLL_INTERVAL = 5  # seconds
 DEFAULT_TIMEOUT = 900  # seconds
 
+# A REFUSAL IS NOT A FAILURE (card t_69cab80b, 2026-10-16).
+#
+# The render rail records what this script decided, and until now it had one
+# code for both: `return 1` is "the submit or the poll failed" AND the draft
+# refusal was `sys.exit("FATAL: ...")`, which is also 1. The rail therefore
+# wrote a `.refused` marker — "a human must edit the sheet" — for a network
+# blip, and a marker is what stops the plan being attempted again. Measured on
+# the live rail (job music-pipeline-render-29869781, 2026-10-16 16:41): a plan
+# refused as a draft got `.refused`, and nothing re-attempts it.
+#
+# So the two are separate codes now:
+#
+#   1  an operational failure: the engine was unreachable, the poll failed, the
+#      answer had no audio_url. The rail writes NO marker, so the next run
+#      retries it - which is what "ComfyUI was up and then it failed" means.
+#   4  a REFUSAL: the plan needs a human (a scaffold sheet, no sections, empty
+#      lyrics). It is decided locally, before any network call, and the rail
+#      records it in `<stem>.refused` WITH the plan's fingerprint, so a later
+#      edit to the plan opens it again (card t_69cab80b).
+REFUSED_EXIT = 4
+
+
+class Refused(SystemExit):
+    """The refusal the rail records: exit code 4, with a readable message.
+
+    `sys.exit("message")` exits 1, which is also what an operational failure
+    returns (see REFUSED_EXIT above), and a caller that reads only the code
+    cannot tell the two apart. This carries both: the code the render rail
+    records a `.refused` marker for, and the message a caller that catches it
+    (or the wrapper's own tests) can read.
+    """
+
+    def __init__(self, message: str) -> None:
+        sys.stderr.write(message + "\n")
+        super().__init__(REFUSED_EXIT)
+        self.message = message
+
+    def __str__(self) -> str:
+        return self.message
+
+
+def refuse(message: str) -> None:
+    """Say why, then exit with the refusal code the rail records."""
+    raise Refused(message)
+
 
 def _http_json(url, data=None, method=None, headers=None, timeout=30):
     """Perform an HTTP JSON request and return parsed JSON."""
@@ -96,10 +141,10 @@ def check_lyrics(plan: dict, allow_empty: bool) -> None:
     """Refuse a plan whose lyrics are a scaffold or a set of bare tags.
 
     This is the guard the render CronJob's own comment relies on: it calls this
-    script WITHOUT --allow-empty and writes a `.refused` marker on rc=1 (see
-    templates/cronjob-render.yaml), so a draft plan must be refused HERE, before
-    any network call, or the engine renders a track whose vocal line is the
-    template's craft notes.
+    script WITHOUT --allow-empty and records a `<stem>.refused` marker on
+    `REFUSED_EXIT` (4, card t_69cab80b - 1 is an operational failure and gets no
+    marker), so a draft plan must be refused HERE, before any network call, or
+    the engine renders a track whose vocal line is the template's craft notes.
 
     The previous version of this file only refused lyrics that were COMPLETELY
     empty. A scaffold is never completely empty - it has the tags - so a queued
@@ -121,7 +166,7 @@ def check_lyrics(plan: dict, allow_empty: bool) -> None:
     body = plan.get("lyrics", "")
     if not body.strip():
         if not allow_empty:
-            sys.exit(
+            refuse(
                 "FATAL: plan has empty lyrics — a draft section needs human input. "
                 "Use --allow-empty to force rendering anyway."
             )
@@ -131,12 +176,12 @@ def check_lyrics(plan: dict, allow_empty: bool) -> None:
     sections = re.findall(r"^\[([^\]]+)\][ \t]*\n(.*?)(?=\n\[|\Z)", body, re.M | re.S)
     if not sections:
         if not allow_empty:
-            sys.exit("FATAL: plan has no [Section] headers — nothing to sing. "
-                     "Use --allow-empty to force rendering anyway.")
+            refuse("FATAL: plan has no [Section] headers — nothing to sing. "
+                   "Use --allow-empty to force rendering anyway.")
         return
     empty = [tag for tag, content in sections if not singable_lines(content)]
     if empty and not allow_empty:
-        sys.exit(
+        refuse(
             f"FATAL: {len(empty)} section(s) have no lyrics: {', '.join(empty)}.\n"
             "       This is a DRAFT plan — a human writes the lines into it first.\n"
             "       (--allow-empty renders anyway, for instrumental or scratch passes.)"

@@ -597,22 +597,47 @@ pass "render output contract: red/green/moved on real files + the chart's outHos
   "$PY" "$REPO/music/scripts/check_render_landed.py" --selftest
 
 # ------------------------------------------------------------------
-# 13. the planner's own regression suite (card t_96dfc521)
+# 13. the render rail's marker state machine (card t_69cab80b)
 # ------------------------------------------------------------------
-# `music/tests/test_planner.py` had NO scheduled home: no .github/workflows, no
-# caller in this suite, and the music units run the pipeline and the render,
-# never the planner — so a rail regression was found only when a card happened
-# to run it by hand. It is the acceptance matrix for the planner, which is what
-# every other section here is for a gate, so it runs here (and therefore in
-# `music/scripts/run_gate_matrix.sh`, the daily systemd timer).
-#
-# Section 6 of that file is this card's check: the duration rail admits the
-# registry's own 16.0 s kit sting (`MIN_DURATION_S` 30 -> 16) and still refuses
-# the off-grid 15 s cutdown, while elemental-earth's 600 s `loop-10min` shape
-# (card t_909069f0) still plans and a refused duration writes NO plan file.
-say "the planner regression suite (music/tests/test_planner.py)"
-pass "planner: every genre plans + the duration rail admits 16 s and refuses 15 s (t_96dfc521)" \
-  "$PY" "$REPO/music/tests/test_planner.py"
+# The rail decided from `if <stem>.rendered exists: skip "already rendered"` and
+# wrote BOTH outcomes to that one path (`""` for a render, `refused\n` for a
+# draft refusal), and nothing ever removed it. Five live markers in
+# /var/lib/music-plans said `refused`, and the rail's own log (job
+# music-pipeline-render-29869781, 2026-10-16 16:41) printed
+#   skip epic-orchestral-boss-the-last-gate (already rendered)
+# for a plan whose lyrics are a scaffold - so "a human must write the sheet" was
+# reported as "finished" for every draft in the queue. These cases are what makes
+# the fix a check rather than a claim:
+#   * a refusal stored in `.rendered` (the live bytes: `refused\n`) must be
+#     ATTEMPTED, and its message must never say "already rendered";
+#   * a refusal of the SAME plan must be skipped, and the plan CHANGING must
+#     re-attempt it - the card's own regression case, refused -> changed ->
+#     attempted;
+#   * the states that cost GPU time or need a human's eyes (`.looprefused`,
+#     `.noartifact`) must stay sticky through a plan change;
+#   * `--check` must be RED on the conflated shape and green on a fingerprinted
+#     refusal (the live check the card asks for, on a fixture so it is
+#     deterministic);
+#   * the chart must CALL the state machine and must not write `.rendered` or
+#     `.refused` itself, which is how the two states shared one file.
+say "the render rail's marker state machine (music/scripts/render_state.py)"
+pass "render_state selftest: a refusal is re-entered on change, sticky states stay sticky" \
+  "$PY" "$REPO/music/scripts/render_state.py" --selftest
+pass "render_state suite: refused -> changed plan -> attempted, and the live bytes" \
+  "$PY" -m unittest music.tests.test_render_state
+CHART="${MINING_K8S:-$REPO/../mining-k8s}/helm/charts/music-pipeline/templates/cronjob-render.yaml"
+if [ -f "$CHART" ]; then
+  pass "the rail asks the state machine what a marker means (--decide)" \
+    grep -qF -- "--decide" "$CHART"
+  pass "the rail records every outcome through it (--record --state)" \
+    grep -qF -- "--record" "$CHART"
+  fail_expected "the rail no longer writes a .rendered marker itself" 1 \
+    grep -qF -- 'marker_path(stem, "rendered").write_text' "$CHART"
+  fail_expected "the rail no longer prints 'already rendered' for a marker" 1 \
+    grep -qF -- 'print(f"skip   {stem} (already rendered)' "$CHART"
+else
+  echo "SKIP  the chart is not at $CHART on this host (set MINING_K8S=...)"
+fi
 
 # ------------------------------------------------------------------
 rm -f /tmp/gate_out.$$

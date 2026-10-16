@@ -162,9 +162,14 @@ class TheRendererRefusesEverySection(unittest.TestCase):
 
 
 class TheDeployedRendererRefusesItEndToEnd(unittest.TestCase):
-    """rc=1 is the contract cronjob-render.yaml needs to write `.refused`."""
+    """rc=4 is the contract cronjob-render.yaml records as `.refused`.
 
-    def test_the_script_exits_1_before_touching_the_network(self):
+    Card t_69cab80b split the two codes: 1 is an operational failure (the rail
+    must retry it, so it writes NO marker) and 4 is a refusal that needs a human
+    (recorded with the plan's fingerprint, so an edit opens it again).
+    """
+
+    def test_the_script_exits_4_as_a_refusal_not_1_as_a_failure(self):
         with tempfile.TemporaryDirectory() as tmp:
             p = pathlib.Path(tmp) / "plan.json"
             p.write_text(json.dumps(plan(SHEET)), encoding="utf-8")
@@ -172,7 +177,10 @@ class TheDeployedRendererRefusesItEndToEnd(unittest.TestCase):
             proc = subprocess.run(
                 [sys.executable, str(RENDERER), str(p), "--name", "epic"],
                 capture_output=True, text=True, env=env, timeout=60)
-        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+        self.assertEqual(proc.returncode, 4, proc.stdout + proc.stderr)
+        self.assertNotEqual(proc.returncode, 1,
+                            "1 means the submit failed, and the rail would then "
+                            "record a network blip as 'a human must edit the sheet'")
         self.assertIn("section(s) have no lyrics", proc.stdout + proc.stderr)
         self.assertNotIn("Failed to submit", proc.stdout + proc.stderr,
                          "the guard let the draft reach the network")
