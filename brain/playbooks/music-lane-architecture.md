@@ -250,6 +250,50 @@ Two defects must be fixed whichever option wins:
 
 ---
 
+### 4.2 Resuming a re-emitted card — where a card STARTS
+
+One open card per genre (incident `t_bf0e5edd`) means a card that reaches `done`
+leaves the open set, and the next oracle wave re-emits the genre. That re-emitted
+card must start where the genre's chain actually stands. Incident `t_6599927d`
+(2026-10-16): the emitter wrote `stage: brief` unconditionally, so the 13 cards of
+the 14:05 wave sent a `music-producer` run back through the brief stage although
+**all 14 genres' briefs were already on disk** — and the briefs are keyed by
+GENRE, so both cards of a twin pair resolve to one artifact.
+
+The rule has ONE implementation, `music/stage_state.py`:
+
+- The stage ORDER comes from `music/stages.yaml` — the file that declares it —
+  read at call time. Neither the emitter nor the checks carry a stage list.
+- A stage declares a **proof** (a glob) when its output is measurable on disk:
+  `brief` (`music/briefs/<genre>.md` or `music/briefs/<genre>/<slug>/brief.md`)
+  and `lyrics` (`music/lyrics/<genre>/<slug>/lyrics.suno.txt` — the sheet
+  `gate_lyrics_original` gates, not the bare track directory).
+- A stage with **no** declared proof counts as UNPROVED, and the walk stops at
+  the first unproved stage. That direction is the safety argument: the rule can
+  never skip work that was not actually done. A human gate is never proved, so a
+  fully delivered chain stops at the gate and the card parks for j_kro — right.
+- `genre-select` declares no proof (it resolves and verifies a registry entry; it
+  produces no artifact), so today the answers are `brief` (no artifact on disk) or
+  `genre-select` (a brief exists). Resuming PAST a stage that leaves no artifact
+  needs the board's own advance marker, and that is the stage-semantics question
+  on `t_2eaa39ba` — not this rule's to guess.
+
+Three callers, one rule:
+
+| Caller | What it does with the rule |
+|---|---|
+| `music/oracle.py` | writes the resolved stage as the new card's `stage:` marker; fails CLOSED (creates no cards) when the rule cannot be resolved, like an unreadable board |
+| the `brief` stage prompt (`music/stages.yaml`) | checks the artifact FIRST: a delivered brief is verified and the card advances with no writing work |
+| `music/scripts/check_oracle_board.py` | invariant B3 fails any OPEN card sitting BEHIND its genre's resume point; B4 fails a marker naming no declared stage |
+
+Guards: `music/test_stage_state.py` (the rule, 16 cases), `music/test_oracle_dedupe.py`
+(the emitter's body marker and its fail-closed path), `check_oracle_board.py --selftest`
+(B1–B4 on known-bad boards). Measured 2026-10-16: the check's read-only DB reader
+reproduces the driver's last-marker token for 42/42 oracle cards, so the check
+judges the same position the driver routes on.
+
+---
+
 ## 5. Gates — `music/gates/` (executable, never grep)
 
 Every gate is a script that EXERCISES the artifact. A gate that greps a file for a feature
