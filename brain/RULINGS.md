@@ -61,7 +61,12 @@ convention, full citations in `music/rubrics/*.json`):
 - **Protest lyrics need a chantable chorus and a named target.** Vague
   fury with no concrete image fails the genre's function.
 - **Masters hit lane loudness targets:** -14 streaming / -16 sync,
-  +/-1 dB, measured (volumedetect dialect).
+  +/-1 LUFS, measured with ffmpeg ebur128 integrated loudness
+  (EBU R128 / ITU-R BS.1770). Ruler decided 2026-10-16, card
+  t_9546841b. The `volumedetect` mean_volume dialect it replaced
+  is retired: it is a plain RMS mean, and on the five Virtual
+  Reflections masters it disagreed with LUFS by 1.2-2.6 dB and
+  failed three masters whose integrated loudness was in window.
 
 How the panel makes decisions (research basis: PoLL arXiv:2404.18796;
 RoPoLL arXiv:2606.30931; Evaluation-Illusion arXiv:2603.11027 — all read

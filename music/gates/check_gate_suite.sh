@@ -52,13 +52,22 @@ say() { echo; echo "## $1"; }
 say "building fixtures"
 F="$SCRATCH"
 
-# masters at three loudness levels (volumedetect-verified below)
+# masters at three loudness levels, calibrated to the gate's ruler
+# (ffmpeg ebur128 integrated loudness; ruler decided on card t_9546841b).
+# Measured on this host (ffmpeg 9.0.2): a 440 Hz sine at `volume=XdB`
+# reads integrated X-21.8 LUFS, and volumedetect mean_volume X-24.1 dB.
+#   7.8 dB -> -14.0 LUFS streaming target | 5.8 dB -> -16.0 sync target
+#  12.0 dB ->  -9.8 LUFS, deliberately outside the +-1 window
 ffmpeg -y -v error -f lavfi -i "sine=frequency=440:duration=10" \
-  -af "volume=10dB" -ar 44100 -ac 2 "$F/streaming_master.wav"
+  -af "volume=7.8dB" -ar 44100 -ac 2 "$F/streaming_master.wav"
 ffmpeg -y -v error -f lavfi -i "sine=frequency=440:duration=10" \
-  -af "volume=8dB" -ar 44100 -ac 2 "$F/sync_master.wav"
+  -af "volume=5.8dB" -ar 44100 -ac 2 "$F/sync_master.wav"
 ffmpeg -y -v error -f lavfi -i "sine=frequency=440:duration=10" \
   -af "volume=12dB" -ar 44100 -ac 2 "$F/loud_master.wav"
+# ruler discriminator: mean_volume -14.1 dB (the OLD RMS ruler would pass
+# this) but -11.8 LUFS integrated, so the ebur128 ruler must FAIL it.
+ffmpeg -y -v error -f lavfi -i "sine=frequency=440:duration=10" \
+  -af "volume=10dB" -ar 44100 -ac 2 "$F/rms_true_master.wav"
 
 # four stems, time-aligned to the master
 for s in drums bass keys vox; do
@@ -260,15 +269,20 @@ fail_expected "fake + truncated stems fail" 1 \
 # 4. gate_loudness
 # ------------------------------------------------------------------
 say "gate_loudness"
-pass "streaming master (-14 dB) passes" \
+pass "streaming master (-14.0 LUFS) passes" \
   python3 "$GATES/gate_loudness.py" \
   --master "$F/streaming_master.wav" --target streaming
-pass "sync master (-16 dB) passes" \
+pass "sync master (-16.0 LUFS) passes" \
   python3 "$GATES/gate_loudness.py" \
   --master "$F/sync_master.wav" --target sync
-fail_expected "loud master (-12 dB) fails honestly" 1 \
+fail_expected "loud master (-9.8 LUFS) fails honestly" 1 \
   python3 "$GATES/gate_loudness.py" \
   --master "$F/loud_master.wav" --target streaming
+# the ruler discriminator: RMS on target, LUFS 2.3 LU loud. A regression to
+# volumedetect would PASS this and turn the line below BAD (t_9546841b).
+fail_expected "RMS-true/LUFS-loud master fails (ruler is ebur128)" 1 \
+  python3 "$GATES/gate_loudness.py" \
+  --master "$F/rms_true_master.wav" --target streaming
 
 # ------------------------------------------------------------------
 # 5. gate_quality

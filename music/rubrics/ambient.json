@@ -46,8 +46,8 @@
       "name": "Master hits the lane loudness target",
       "weight": 1,
       "type": "measured",
-      "anchor": "Long-form YouTube album lane + streaming: -14 LUFS mean (pipeline gate_loudness spec). Lo-fi should also feel soft-squashed: crest_factor typical 12-20 dB for dynamic material (musicproductionwiki: do not crush the master).",
-      "evidence": "mean_volume_db, crest_factor_db.",
+      "anchor": "Long-form YouTube album lane + streaming: -14 LUFS integrated (pipeline gate_loudness spec). Lo-fi should also feel soft-squashed: crest_factor typical 12-20 dB for dynamic material (musicproductionwiki: do not crush the master).",
+      "evidence": "integrated_lufs, crest_factor_db.",
       "guide": "10 = within +/-1 dB of -14 and crest >= 10. 7 = within +/-3 dB, crest >= 8. 4 = outside 3-6 dB or crest 5-8. 1 = far off or crushed flat."
     }
   ],
