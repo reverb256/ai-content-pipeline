@@ -74,13 +74,26 @@
     },
     {
       "id": "D4",
-      "what": "Stale stage prompt names a missing script",
-      "evidence": "music/stages.yaml generate stage -> 'music/suno-gen.py'. No file matching suno-gen* exists under /home/j_kro except music/gates/fixtures/suno-generated-umbrellas-in-space.txt",
-      "impact": "the generate stage instructs its bot to run a file that does not exist"
+      "corrected_by": "card t_d706d0a3 (2026-10-16)",
+      "what": "The generate-stage script is absent from THIS checkout, but it is not missing from the repo",
+      "evidence": "music/stages.yaml generate stage -> 'music/suno-gen.py'. Measured: 'git ls-tree -r --name-only origin/main | grep -i suno-gen' -> music/suno-gen.py; 'git ls-tree -r --name-only main | grep -i suno-gen' -> the fixture only. The file was added by ba28f55 ('music: instrumental mode in generation path'), which 'git branch -a --contains' places on origin/main and origin/wip/atlas-backup-20261014.",
+      "impact": "the generate stage names a file this checkout does not carry - checkout divergence, NOT a missing script. Fix: merge origin/main into main (see t_8a715681). The earlier reading of this defect ('no suno-gen* file exists under /home/j_kro') was wrong."
+    },
+    {
+      "id": "D5",
+      "what": "The scheduled render rail cannot render an instrumental, for two independent reasons",
+      "evidence": "Live cluster read this pass. (a) 'kubectl -n mining get cm music-pipeline-payload -o json' -> key music__scripts__acestep_plan.py, 9020 B, line 87 hardcodes '\"instrumental\": False'. (b) 'kubectl -n mining get cronjob music-pipeline-render' -> the job runs [python3, /payload/music/scripts/acestep_plan.py, <plan>, --name, <stem>] with NO --allow-empty, so an empty-section plan exits 1 and the job writes the marker 'refused' (live proof: /var/lib/music-plans/smoke-chill-lounge.rendered and testplan.rendered are both the 8-byte string 'refused\\n').",
+      "impact": "no instrumental genre can traverse the scheduler rail. Filed as t_8c5a6b91 (nexus-core) - do not re-file. The sunolocal service route in 'route' remains the only path that can render this genre.",
+      "configmap_matches_d3": "The 'kubectl -n mining get cronjob music-pipeline' args read only name, brief, genre, lyricsMode, language, title, duration from each brief - no instrumental field, and --lyrics-mode defaults to 'draft'. D3 stands as written."
     }
   ],
 
   "_duration_basis": "72 BPM, 4/4 -> one bar = 4*60/72 = 3.3333 s. 54 bars = 180.0 s, inside the planner guard rail (planner.py MIN_DURATION_S=30, MAX_DURATION_S=420).",
   "_lyrics": "none - instrumental genre by design (music/prompts/sentimental-piano.md)",
-  "_written_by": "music-producer, card t_9f7d6889, 2026-10-16"
+  "_resolves_cards": [
+    "t_9f7d6889 (score 8.9, done at stage brief)",
+    "t_d706d0a3 (score 9.1) - duplicate oracle card for the same genre, advanced to genre-select by this pass"
+  ],
+  "_addendum": "2026-10-16, card t_d706d0a3: verification pass. All §1-§6 figures re-measured and unchanged (caption 674 chars, 7 section tags, 54 bars = 180.0 s, quota 0/60, registry 14 genres / 10 lanes, /health 200). D4 corrected (divergence, not absence). D5 added (the render rail drops the instrumental flag and never passes --allow-empty). See brief.md section 10.",
+  "_written_by": "music-producer, card t_9f7d6889, 2026-10-16; verified + corrected by card t_d706d0a3, 2026-10-16"
 }
