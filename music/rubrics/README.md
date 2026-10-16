@@ -38,9 +38,44 @@ a genre with a NEW family means adding one JSON file — never a code edit.
 rubric).
 
 Panel membership is data too: profiles named on the command line
-(default: reviewer-deepseek, reviewer-longcat, reviewer-minimax,
-reviewer-nemotron), resolved from their Hermes profile configs, with
-endpoint fallback via scripts/fleet-route.py ENDPOINTS.
+(default: `reviewer`, `reviewer-nemotron`, `reviewer-deepseek`), resolved from
+their Hermes profile configs, with endpoint fallback via
+`scripts/fleet-route.py ENDPOINTS`.
+
+Each member's OWN `fallback_providers` chain is walked, in order, before that
+member counts as dead (card `t_3d84acfe`). The panel used to read only
+`model.default` + the provider block, so a profile whose primary was dead was a
+dead judge even though its declared chain was live.
+
+### Membership: three families, and the checks that keep it that way
+
+The PoLL contract needs judges from DISJOINT model families. Measured
+2026-10-16 (`t_3d84acfe`): the panel reached ZERO judges for every track,
+because every `reviewer*` profile's primary was `opencode-go`, which now answers
+`HTTP 400 MissingSessionID` (a missing `x-opencode-session` header, not a quota)
+— and nothing detected it, because the panel runs only when a human runs it. The
+membership is therefore one judge per family, each with a SAME-FAMILY chain so a
+fallback can never duplicate a sibling judge:
+
+| profile | primary | family | chain (same family) |
+|---|---|---|---|
+| `reviewer` | `nous` / `poolside/laguna-s-2.1:free` | poolside | `kilo`, then `openrouter-free` |
+| `reviewer-nemotron` | `nvidia` / `nvidia/nemotron-3-super-120b-a12b` | nvidia | `kilo`, then `openrouter-free` |
+| `reviewer-deepseek` | `kilo` / `dots-studio/dots-3-note-preview:free` | dots-studio | `openrouter-free` |
+
+A profile NAME is a slot, not a model: the family comes from the model, and the
+panel reports a `PANEL FAMILY COLLISION` finding when two judges that answered
+share one family. Two checks enforce the shape:
+
+| check | what it does | cost |
+|---|---|---|
+| `music/scripts/check_panel_membership.py` | offline: every member exists, resolves, families pairwise disjoint, every chain stays in its family, no dead provider or dead slug, endpoint follows the provider | no tokens |
+| `music/rubrics/probe_judges.py` | live: asks each member's chain the panel's own question and needs >= `MIN_VALID_JUDGES` members to answer with parseable JSON | one small call per member |
+
+Both run in the scheduled `music-gate-matrix` run
+(`music/scripts/run_gate_matrix.sh`, daily 06:20 on nexus). A panel failure exits
+that runner with **3**, distinct from a gate defect (1) and from a refused suite
+(2), and files the same board card a gate failure files.
 
 ## Corpus anchoring
 
@@ -96,7 +131,10 @@ fix scopes the data AND gives the third sub-idiom its own craft criterion,
 2. Each judge receives the rubric + measured evidence + the producer's
    style claim, and must score every criterion 1-10, list findings, flag
    reject signals, and mark unverifiable criteria. Judges CANNOT listen —
-   the prompt forbids inventing measurements.
+   the prompt forbids inventing measurements. A member whose primary call
+   fails is retried down its own `fallback_providers` chain before it
+   counts as a dead judge; every miss is recorded in
+   `panel-detail.json:judge_failures`.
 3. Aggregation: geometric median across the panel's score vectors
    (modified Weiszfeld iteration, Vardi & Zhang 2000).
 4. Verdict:
@@ -139,6 +177,42 @@ Bad < Good by 3.5 points, exactly as the rubric intends. A contaminated
 single judge (longcat voted both those signals on the GOOD track) was
 correctly outvoted by the majority on the good run — the RoPoLL property
 working in production.
+
+## Re-run 2026-10-16 — after the reachability fix (card t_3d84acfe)
+
+The run above had stopped working: every `reviewer*` profile's primary
+pointed at `opencode-go`, which now answers `HTTP 400 MissingSessionID`, the
+panel never walked the declared fallback chains, and all three profiles named
+the SAME model — so the panel reached ZERO judges and wrote
+`reviewer_model: panel[none-reachable]`, `verdict: fail` for every track, which
+made `gate_quality` unpassable. Same track, re-run on the re-pointed membership
+with NO `--panel` override (the DEFAULT panel, three families, three providers):
+
+```
+$ /usr/bin/python3 music/rubrics/panel.py \
+    --audio packages/welcome-asset-pack/loops/loop_01_bpm184_key-Cmajor.wav \
+    --genre elemental-air --style-claim music/prompts/elemental-air.md
+[panel] genre=elemental-air family=gamer rubric=gamer.json
+        criteria_applied=['elemental_atmosphere','loop_safety','asset_packaging','loudness_target']
+        criteria_excluded=['chip_timbre_authenticity','battle_energy']
+        members=['reviewer', 'reviewer-nemotron', 'reviewer-deepseek']
+[panel] reviewer (poolside/laguna-s-2.1:free via nous, primary): overall=7.0 reject... (48.2s)
+[panel] reviewer-nemotron (nvidia/nemotron-3-super-120b-a12b via nvidia, primary): overall=5.875 (65.6s)
+[panel] reviewer-deepseek (dots-studio/dots-3-note-preview:free via kilo, primary): overall=3.625 (66.7s)
+[panel] aggregate overall = 5.93 (threshold 7.0) judge overalls = [7.0, 5.88, 3.62] spread = 3.38
+[panel] fatal signals = [] triage = True -> VERDICT fail
+exit 0
+```
+
+Three judges answered, so this is a VERDICT, not an autofail: `5.93 < 7.0` and
+a spread of `3.38 >= DISAGREE_SPREAD`, so the first finding is `PANEL
+DISAGREEMENT — human triage required` and the judgement goes to a human queue.
+`reviewer_model` now records all three models;
+`music/rubrics/probe_judges.py` reports `3/3 members live, families
+['dots-studio', 'nvidia', 'poolside'] disjoint`.
+
+The panel says nothing about reachability by itself — that is what the two
+checks under "Membership" above exist for.
 
 ## Usage
 

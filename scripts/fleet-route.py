@@ -151,6 +151,17 @@ def cmd_apply(spec, only=None, dry=False):
             c.setdefault("model", {})
             c["model"]["default"] = p["model"]
             c["model"]["provider"] = p["provider"]
+            # The endpoint must follow the provider. Hermes reads model.base_url
+            # FIRST, so a profile re-pointed at another provider kept calling the
+            # OLD host as long as the stale base_url survived (measured
+            # 2026-10-16, card t_3d84acfe: the three reviewer* profiles kept
+            # base_url https://opencode.ai/zen/go/v1 after they moved).
+            pdefn = spec["providers"].get(p["provider"]) or {}
+            want_base = pdefn.get("base_url")
+            if want_base:
+                c["model"]["base_url"] = want_base
+            if c["model"].get("base_url"):
+                c["model"].setdefault("api_mode", "chat_completions")
             c["fallback_providers"] = [
                 dict(x) if isinstance(x, dict) else x
                 for x in spec["chains"][p["chain"]]
@@ -176,6 +187,8 @@ def cmd_apply(spec, only=None, dry=False):
             v = _load(tmp)
             assert v["model"]["default"] == p["model"], "post-write validation failed"
             assert v["model"]["provider"] == p["provider"], "post-write validation failed"
+            if want_base:
+                assert v["model"]["base_url"] == want_base, "base_url did not follow the provider"
             assert len(v["fallback_providers"]) == len(spec["chains"][p["chain"]]), "chain count mismatch"
             os.replace(tmp, cfg)
             print(f"OK   {name:<16} {p['provider']} / {p['model']}  chain={p['chain']}")

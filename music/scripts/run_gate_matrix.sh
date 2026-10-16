@@ -23,6 +23,13 @@
 #      Hermes interpreter has no PyYAML, which made two healthy gates report BAD
 #      (t_d3b9e218). The unit pins PY=/usr/bin/python3; this script defaults to
 #      the same and refuses to pretend a wrong-interpreter run is a gate defect.
+#   2b. CHECK THE REVIEW STAGE'S OWN JUDGES (card t_3d84acfe): an offline
+#      membership check (music/scripts/check_panel_membership.py) plus a live
+#      judge probe (music/rubrics/probe_judges.py), appended to the same output
+#      file. A panel that reaches no judge makes gate_quality unpassable for
+#      EVERY asset, and that state used to be invisible — the panel runs only
+#      when a human runs it. A panel failure exits 3, so it is never read as a
+#      gate defect.
 #   3. RECORD one summary line in performance/music-gate-matrix.log and a
 #      machine-readable performance/music-gate-matrix.status.json. Those are the
 #      files music-weekly-digest.service reads, so the result reaches the weekly
@@ -50,6 +57,7 @@
 #   GATE_MATRIX_DRILL=1         skip the alert + card legs; mark the log/status as a drill.
 #                               For deliberate fault injection only — a drill must not
 #                               fire a synthetic alert or park a fake card on the board.
+#   PANEL_CHECKS                "0" = skip the panel judge phase (default 1 = run it).
 set -uo pipefail
 
 REPO="${GATE_MATRIX_REPO:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
@@ -86,28 +94,68 @@ mkdir -p "$SCRATCH"
 # --- 2. run the suite -------------------------------------------------------
 PY="$PY" GATE_SCRATCH="$SCRATCH" bash "$SUITE" > "$OUT" 2>&1
 rc=$?
+# The suite's own verdict line, kept before the panel sections are appended
+# below (the status file must report the GATE verdict, not the last panel line).
+suite_verdict="$(tail -n 1 "$OUT" 2>/dev/null || echo '(no output)')"
+
+# --- 2b. the REVIEW stage's own judges (card t_3d84acfe) --------------------
+# `gate_quality` validates the review.json that music/rubrics/panel.py writes,
+# so a panel that reaches NO judge makes the quality gate unpassable for every
+# asset. Measured 2026-10-16: that was the state for days, and nothing noticed,
+# because the panel runs only when a human runs it. These two checks are the
+# missing detector:
+#   * check_panel_membership.py — OFFLINE: the panel's profiles exist, resolve,
+#     come from disjoint model families, and keep a same-family fallback chain.
+#   * probe_judges.py — LIVE: asks each member's chain the panel's own question
+#     and fails when fewer than MIN_VALID_JUDGES members answer.
+# Their output is appended to $OUT, so the failure lands in the same log, the
+# same status JSON and the same board card as a gate failure. Set
+# PANEL_CHECKS=0 to skip the live half (it makes real API calls).
+panel_rc=0
+if [ "${PANEL_CHECKS:-1}" != "0" ]; then
+  {
+    echo
+    echo "---- panel membership (offline: profile configs + routing spec) ----"
+    "$PY" "$REPO/music/scripts/check_panel_membership.py" --repo "$REPO"
+  } >> "$OUT" 2>&1 || panel_rc=1
+  {
+    echo
+    echo "---- panel judge liveness (live judge-shaped calls) ----"
+    "$PY" "$REPO/music/rubrics/probe_judges.py"
+  } >> "$OUT" 2>&1 || panel_rc=1
+  say "$TS — panel judges: rc=$panel_rc (review stage; sections in $OUT)"
+  panel_verdict="$(tail -n 1 "$OUT" 2>/dev/null || echo '(no panel output)')"
+  # rc=3 says "the gates may be fine; the reviewer panel cannot run". Keeping
+  # it distinct stops a panel defect from being read as a gate defect.
+  if [ "$panel_rc" -ne 0 ] && [ "$rc" -eq 0 ]; then
+    rc=3
+  fi
+fi
+
 DURATION=$(( $(date +%s) - START ))
 
 passed="$(grep -cE '^PASS ' "$OUT" || true)"
 expected="$(grep -cE '^FAILS ' "$OUT" || true)"
 bad="$(grep -cE '^BAD ' "$OUT" || true)"
 fatal="$(grep -cE '^FATAL' "$OUT" || true)"
+panel_fails="$(grep -cE '^FAIL (check_panel_membership|probe_judges)' "$OUT" || true)"
 interp="$(grep -m1 '^interpreter: ' "$OUT" 2>/dev/null | sed 's/^interpreter: //' || true)"
-verdict="$(tail -n 1 "$OUT" 2>/dev/null || echo '(no output)')"
+verdict="$suite_verdict"
 
 case "$rc" in
   0) state="OK" ;;
   1) state="BROKEN: $bad check(s) misbehaved" ;;
   2) state="REFUSED: the suite would not run" ;;
+  3) state="PANEL: the reviewer panel cannot run ($panel_fails panel check(s) failed) — the gates themselves are not implicated" ;;
   *) state="ERROR: unexpected exit $rc" ;;
 esac
 
-say "$TS — gate matrix: rc=$rc $state pass=$passed expected_failures=$expected misbehaved=$bad fatal=$fatal interpreter=${interp:-$PY} duration=${DURATION}s${DRILL:+ drill=$DRILL}"
+say "$TS — gate matrix: rc=$rc $state pass=$passed expected_failures=$expected misbehaved=$bad fatal=$fatal panel_fails=$panel_fails interpreter=${interp:-$PY} duration=${DURATION}s${DRILL:+ drill=$DRILL}"
 
 if [ "$rc" -ne 0 ]; then
   {
     echo "--- failing checks (run $TS, rc=$rc); full output: $OUT"
-    grep -E '^(BAD|FATAL)' -A 2 "$OUT" | head -60
+    grep -E '^(BAD|FATAL|FAIL (check_panel_membership|probe_judges))' -A 2 "$OUT" | head -60
   } | tee -a "$LOG"
 fi
 
@@ -129,6 +177,9 @@ cat > "$STATUS" <<JSON
   "expected_failures": ${expected:-0},
   "misbehaved": ${bad:-0},
   "fatal": ${fatal:-0},
+  "panel_rc": ${panel_rc:-0},
+  "panel_fails": ${panel_fails:-0},
+  "panel_verdict": "$(j "${panel_verdict:-(not run)}")",
   "duration_s": $DURATION,
   "drill": $([ "$DRILL" = "1" ] && echo true || echo false),
   "output_file": "$OUT",
@@ -148,19 +199,22 @@ wired \`music/gates/check_gate_suite.sh\` into \`music-gate-matrix.timer\`
 - run: $TS (rc=$rc, $state)
 - runner: \`music/scripts/run_gate_matrix.sh\` on $REPO @ $head_sha
 - interpreter: ${interp:-$PY}
-- counts: pass=$passed expected_failures=$expected misbehaved=$bad fatal=$fatal
+- counts: pass=$passed expected_failures=$expected misbehaved=$bad fatal=$fatal panel_fails=$panel_fails
 - full suite output: \`$OUT\`
 - run log: \`$LOG\`
 
 Failing checks:
 
 \`\`\`
-$(grep -E '^(BAD|FATAL)' -A 2 "$OUT" | head -60)
+$(grep -E '^(BAD|FATAL|FAIL (check_panel_membership|probe_judges))' -A 2 "$OUT" | head -60)
 \`\`\`
 
 Reproduce: \`bash music/gates/check_gate_suite.sh\` must exit 0 with
 \`OK: every gate passed its good artifact and failed its broken one\`.
-Fix the gate (or its fixture), do not weaken the check.
+For rc=3 (a panel failure, not a gate failure):
+\`/usr/bin/python3 music/scripts/check_panel_membership.py\` and
+\`/usr/bin/python3 music/rubrics/probe_judges.py\` must both exit 0.
+Fix the gate (or its fixture) or re-point the judges, do not weaken the check.
 BODY
 
 if [ "$rc" -ne 0 ] && [ "$DRILL" = "1" ]; then
