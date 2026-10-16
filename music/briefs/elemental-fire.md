@@ -428,11 +428,24 @@ land with the fix (a faded-tail fixture that must FAIL). Do not "fix" this by lo
 `--click-ratio-max` for this genre: B measures 2.21× and C measures 5.99×, so no single
 threshold separates them. The gate needs a second measurement, not a different number.
 
-**The second measurement now exists (added 2026-10-16 by `t_42a01e18`, §13):**
+**FOLDED INTO THE GATE (2026-10-16, card `t_bab8aa19`, lane commit `ae05548`).**
+`music/gates/gate_loop_points.py` now runs BOTH rulers in one call and a loop must pass both:
+the junction-curvature ruler (a click) and the rubric's own tail/head level ruler (1.0 s
+window, `ffmpeg volumedetect` mean_volume, FAIL above 6.0 dB — `music/rubrics/gamer.json`
+`loop_safety`), each printed with its measurement. So the package stage gets both rulers from
+its existing `gate_loop_points` call; the runner below stays as the standalone cross-check that
+prints both rulers in one report:
+
+**What the new ruler still cannot see (measured, card `t_8297d2c6`).** Its window is 1 s and its
+ceiling is the rubric's ~6 dB, so a fade SHORTER than ~1.15 s hides inside that budget: on a
+25.6 s 220 Hz tone a 1.0 s fade-to-silence measures a 4.7 dB tail/head delta and PASSES, a 1.2 s
+fade 6.3 dB (FAIL), a 1.6 s fade 8.8 dB (FAIL). The delta is a property of the fade length
+(a linear fade of length d ≥ the 1 s window measures `(1/d)/√3`), so the fix is a second
+property — an end-of-loop silence guard — not a lower ceiling.
+
+**The standalone second measurement (added 2026-10-16 by `t_42a01e18`, §13):**
 `music/scripts/loop_seam_check.py` runs BOTH rulers — it delegates the curvature check to the
-real gate and adds the rubric's tail/head level comparison — and PASSes only when both agree.
-Until nexus-core folds the ruler into `gate_loop_points`, the package stage runs this in
-addition to the gate:
+real gate and adds the rubric's tail/head level comparison — and PASSes only when both agree:
 
 ```
 $ python3 music/scripts/loop_seam_check.py \
@@ -470,8 +483,10 @@ card t_9546841b) → `gate` (independent review, different model than the produc
 `music/rubrics/gamer.json`: 5 criteria, pass threshold 7.0 on the geometric-median panel
 aggregate; `battle_energy` and `loop_safety` carry weight 3 each) → `package`
 (`gate_sync_ready --lane game-assets` + `gate_release_ready` + `gate_stems_present` +
-`gate_loop_points` **and** the tail/head RMS check from §9 — implemented as
-`music/scripts/loop_seam_check.py`, one call, both rulers; `loop_points.json`; ISRC with no
+`gate_loop_points`, which runs both rulers since card `t_bab8aa19` — curvature ≤ 3.0× **and**
+tail/head level delta ≤ 6 dB, so the separate call §9 asked for is no longer required;
+`music/scripts/loop_seam_check.py` stays as the standalone cross-check; `loop_points.json`;
+ISRC with no
 check digit) → `visual` (**applies** — `video_shape: loop-10min`: a 600.0 s visual, exactly
 5 × the 120.0 s master, that passes `gate_youtube_authentic`, ≥ 10 distinct frames, with
 `ai_disclosure.txt`) → `human-approval` (j_kro) → `publish` (private/draft only).
@@ -624,9 +639,10 @@ its prose names. Two guards now exist:
   measured artifact's **absolute path** next to its numbers, so a level figure can never again
   float free of the file it came from. `--selftest` builds the four fixtures from scratch and
   asserts the documented behaviour, so the finding is reproducible from the repo alone. This
-  also closes the practical hole: the package stage now has a callable that FAILs a faded loop
-  even while `gate_loop_points` passes it (nexus-core still owns folding it into the gate,
-  `t_bab8aa19`).
+  also closed the practical hole: the package stage had a callable that FAILs a faded loop
+  even while `gate_loop_points` passed it. **That fold has now landed** — `gate_loop_points`
+  itself runs the level ruler since card `t_bab8aa19` (lane commit `ae05548`), so this runner is
+  the independent second opinion, not the only guard.
 - `music/scripts/check_brief_figures.py` (sibling card, commit `cab0415`): recomputes every
   brief figure and checks its unit. It covers `B` / `chars` / `lines`; it does **not** cover
   dB or RMS figures, which is why the ruler above carries that job.
