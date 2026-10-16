@@ -643,3 +643,30 @@ pre-guard duplicate-card sweep), and `t_41f354be` (the two-dispatcher ownership 
 
 Hotspot, flagged rather than piled on: `music/briefs/` — ten-plus workers of this wave commit to
 one working tree; this file has two commits, both mine on this genre.
+
+### Standing check added — the regression for the §8.4 class
+
+A wrong figure in a brief cannot be caught by prose parsing, so the check guards the fact
+itself: `music/scripts/check_prompt_style_counts.py` FAILs when a template's declared
+`N/M chars` figure is not what its block measures, when the block overruns the `M` limit
+(the Styles box truncates silently), and when a style heading has no block at all.
+
+```
+$ /usr/bin/python3 music/scripts/check_prompt_style_counts.py
+PASS check_prompt_style_counts: 15 declared style-field length(s) across 14 template(s) match their blocks
+
+$ /usr/bin/python3 music/scripts/check_prompt_style_counts.py --selftest
+SELFTEST PASS check_prompt_style_counts: checked=3 false-claim=1 overflow=1
+```
+
+Negative control — declaring `844/1000` for this template reproduces §8.4 to the digit:
+
+```
+$ /usr/bin/python3 music/scripts/check_prompt_style_counts.py --dir <copy with 844 declared>
+FAIL check_prompt_style_counts: 1 false or unsafe style-field claim(s) across 15 checked claim(s)
+  chiptune-8bit.md:7: declares 844/1000 chars, block measures 567 (-277) — the header claim is FALSE
+```
+
+It is stdlib-only, so both `/usr/bin/python3` and the bundled interpreter run it. Incident
+cited in the script docstring: this card, plus the sibling unit mislabel in the anime-opening
+brief (`t_abaa7e2d`, commit `afa242e`).
