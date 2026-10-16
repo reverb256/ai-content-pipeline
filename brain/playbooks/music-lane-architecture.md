@@ -127,6 +127,17 @@ Decisions recorded in the file:
   genre declares it. `registry.py validate` fails on a genre lane with no block.
 - `stock-ai-native` is the only remaining stock door. Pond5, AudioJungle/Envato, Artlist,
   Epidemic Sound, Soundstripe, PremiumBeat and Musicbed all ban AI (research §1.1).
+- **Gate selection is derived from the registry, never hardcoded** (2026-10-16, card
+  `t_d9983bb9`). Two measured defects had one root cause — the registry and the gate could
+  disagree and nothing noticed: (a) `sync-documentary` declared `gate: gate_sync_ready` while
+  that gate's argparse rejected the lane name and exited **2** — a usage error that a stage
+  reads as a gate FAILURE, on the lane the activist genre's entire `revenue_potential`
+  depends on; (b) the `visual` stage ran `gate_youtube_authentic` for every genre, including
+  genres with no YouTube lane. So: a gate's accepted lane set is read from `lanes.yaml`
+  (every lane whose `gate:` is that gate), each lane's `requires:` tokens must map to a check
+  the gate can produce evidence with (an unmapped token fails the run), and a stage's gate is
+  resolved from the genre's lanes through `music/registry.py gate-for-stage`. Guarded by
+  `music/scripts/check_gate_lane_surface.py`.
 
 ---
 
@@ -147,7 +158,7 @@ editing the driver. The file holds 14 stages, 12 producing plus 2 human gates.
 | `master` | producer | loudness-normalised master | `gate_loudness` |
 | `gate` | reviewer-deepseek | pass/fail + findings | `gate_quality` (different model than the maker) |
 | `package` | producer | manifest + metadata + ISRC + artwork | `gate_release_ready` |
-| `visual` | videobot | platform-native video | `gate_youtube_authentic` |
+| `visual` | videobot | platform-native video | resolved from the genre's lanes: `lanes.yaml` `stage_gates` → `gate_youtube_authentic` when a lane of that genre is guarded by it, else `none` (stated on the card) |
 | `publish` | publishbot / distributor | private upload or distribution | human approval before public |
 | `track` | analyst | streams, revenue, lane ROI | closes the card with `kanban_complete` |
 | `human-approval` | — | parked for j_kro | `human_gate: true`, `auto_next: publish` |
@@ -244,7 +255,7 @@ name is a defect: it passes while the artifact is broken. Exit codes: 0 = PASS, 
 | `gate_stems_present` | ffprobes every stem: ≥4 stems, non-zero bytes, duration within ±0.5 s of the master |
 | `gate_loudness` | measured via `ffmpeg ebur128` (integrated loudness, LUFS; the `volumedetect` RMS ruler was retired 2026-10-16, card t_9546841b); −14 LUFS streaming / −16 sync, within ±1 |
 | `gate_quality` | reviewer verdict present, reviewer model DIFFERENT from the maker, sha256-bound to the master |
-| `gate_sync_ready` | two shapes (card t_5ed495eb). track (`sync`/`direct-license`): stems + master + instrumental (must differ from the master) + manifest metadata + real PDF clearance doc + AI disclosure. pack (`game-assets`, the lane's default): every audio file ffprobed, `pack_manifest` counts vs the files on disk, `metadata` incl. a stated sample rate verified against each file, stems mutually time-aligned, per-loop loop points with a span ≥ 2 s, every loop's seam measured, clearance + disclosure + licence |
+| `gate_sync_ready` | two shapes (card t_5ed495eb). The accepted LANE SET and each lane's requirements are READ from `music/lanes.yaml` (`gate: gate_sync_ready` → every such lane is runnable by name; `requires:` tokens are each mapped to a check and an unmapped token FAILS the run — card t_d9983bb9). track (`sync`/`sync-documentary`/`direct-license`): stems + master + instrumental (must differ from the master) + manifest metadata + real PDF clearance doc + AI disclosure + `license_tiers` when the lane requires it. pack (`game-assets`, the lane's default): every audio file ffprobed, `pack_manifest` counts vs the files on disk, `metadata` incl. a stated sample rate verified against each file, stems mutually time-aligned, per-loop loop points with a span ≥ 2 s, every loop's seam measured, clearance + disclosure + licence |
 | `gate_release_ready` | ffprobes the master, PIL-verifies the artwork, ISO 3901 ISRC syntax, manifest metadata + ai_disclosure |
 | `gate_youtube_authentic` | samples and hashes frames: shot diversity, Jaccard similarity vs prior uploads, disclosure |
 | `gate_loop_points` | renders the loop windows and measures junction curvature; seamless ≤ 3.0x. Single mode: `--master` + `--loop-points`. Pack mode: `--pack-dir <pack>` sweeps EVERY loop in the pack's `loop_points.json` |
@@ -347,7 +358,7 @@ Paths verified on both hosts unless the row says otherwise.
 | Quota tracking | — | `music/quota-ledger.json`, `gate_quota` |
 | Oracle / card source | — | `music/oracle.py`, `music/scheduler/music-oracle.timer` (daily 08:00, nexus) |
 | Scheduler units | — | `music/scheduler/music-{oracle,policy-watch,pipeline-driver,weekly-digest}.{service,timer}` |
-| Lane checks (drift guards) | — | `music/scripts/check_*.py` (stage scripts, stage advance, scheduler units, brief figures, brief drift, brief line refs, oracle determinism, prompt style counts) |
+| Lane checks (drift guards) | — | `music/scripts/check_*.py` (stage scripts, stage advance, scheduler units, gate↔lane surface, brief figures, brief drift, brief line refs, oracle determinism, prompt style counts) |
 | Lyrics | `writer` profile | `music/lyrics/`, `music/prompts/*` |
 | Video render | `videobot`, `music/visuals/*.mp4` shape templates | album / mix / loop shapes |
 | Review | `reviewer-deepseek` + panel | `music/rubrics/*.json`, `music/rubrics/measure.py` |

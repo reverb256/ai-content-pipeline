@@ -1,16 +1,23 @@
 #!/usr/bin/env python3
-"""gate_sync_ready — PASS/FAIL gate for the sync / direct-license / game-assets lanes.
+"""gate_sync_ready — PASS/FAIL gate for every lane that declares it.
+
+The lane set is READ from `music/lanes.yaml`, never copied into this file: any
+lane whose `gate:` is `gate_sync_ready` is runnable by name (measured today:
+sync, sync-documentary, direct-license, game-assets). Card t_d9983bb9: the
+`sync-documentary` lane declared this gate but argparse rejected the name, so a
+stage passing the lane through got rc=2 — an ARGUMENT error that reads as a gate
+FAILURE on the highest-value revenue lane the activist genre has.
 
 Two package SHAPES, because the lanes have two shapes (card t_5ed495eb):
 
-  track mode (default for `sync` and `direct-license`) — one track:
-    requirements (music-lane-architecture.md §3 `requires` + §5):
-      sync:           [stems, metadata, clearance_doc, instrumental_version]
-      direct-license: [stems, license_tiers]
+  track mode (default for `sync`, `sync-documentary` and `direct-license`) — one track:
+    the lane's own `requires:` list in music/lanes.yaml is read at run time:
+      sync, sync-documentary: [stems, metadata, clearance_doc, instrumental_version]
+      direct-license:         [stems, license_tiers]
     checks 1-7 below.
 
   pack mode (default for `game-assets`; `--mode pack`) — a multi-asset pack:
-    requirements (§3 game-assets requires [stems, loop_point, seamless_loop,
+    the lane's `requires:` (§3 game-assets [stems, loop_point, seamless_loop,
     metadata]; §13 "Packaging requirements"):
       loops/ + stems/ (+ one_shots/, sfx/) of real audio, a manifest with a
       package-level `metadata` object and a `pack_manifest` count block that
@@ -21,6 +28,11 @@ Two package SHAPES, because the lanes have two shapes (card t_5ed495eb):
     track shape is not applied to it. The seam of every loop is measured here
     with gate_loop_points' own measurement; `gate_loop_points.py --pack-dir
     <pack>` prints the per-loop ratios on their own.
+
+REQUIREMENT COVERAGE (card t_d9983bb9): every requirement token the lane declares
+must map to a check that produces EVIDENCE for it (TRACK_COVERAGE / PACK_COVERAGE
+below). A token with no check FAILS the run and says so. A gate that answers
+"ready" for a requirement it cannot measure is the defect this guard removes.
 
 The gate EXECUTES the artifact — nothing is trusted from a filename:
   1. Stems: >= MIN_STEMS real audio files (ffprobe must open them and
@@ -36,7 +48,7 @@ The gate EXECUTES the artifact — nothing is trusted from a filename:
   5. Clearance doc: clearance_doc is a real PDF (a PDF starts with %PDF-;
      we parse the header bytes — not a file-extension guess).
   6. AI disclosure: ai_disclosure.txt states the AI role.
-  7. License tiers (direct-license lane): license_tiers.* present.
+  7. License tiers (a lane whose `requires:` names license_tiers).
   8. Pack mode: category counts == files on disk, every audio file is real
      audio at the stated sample rate, stems mutually time-aligned, and
      every loop carries loop points inside its measured duration with a
@@ -44,7 +56,8 @@ The gate EXECUTES the artifact — nothing is trusted from a filename:
 
 Usage:
   python3 music/gates/gate_sync_ready.py --package-dir <dir> \
-      [--lane sync|direct-license|game-assets] [--mode track|pack]
+      [--lane <lane in music/lanes.yaml with gate: gate_sync_ready>] \
+      [--mode track|pack]
 
 Exit codes: 0 = PASS, 1 = FAIL (human-readable reasons on stderr),
 2 = usage error.
@@ -70,6 +83,17 @@ from gate_loop_points import (  # noqa: E402
     MIN_LOOP_SPAN_S,
     check_loop,
 )
+# The lane contract is READ, never copied (card t_d9983bb9): this module is
+# stdlib-only on purpose — every stage prompt calls a gate as `python3
+# music/gates/<gate>.py`, and bare python3 in a worker shell has no PyYAML.
+from _lane_registry import (  # noqa: E402
+    LANES_YAML,
+    LaneRegistryError,
+    lanes_declaring,
+    requirements_for,
+)
+
+GATE_NAME = "gate_sync_ready"
 
 MIN_STEMS = 4                 # architecture §5: >= 4 stems
 STEM_TOLERANCE_S = 0.5        # durations match master +/- 0.5 s
@@ -80,7 +104,6 @@ MANIFEST_NAME = "manifest.json"
 REQUIRED_META = ("title", "artist", "bpm", "key", "mood", "genre")
 REQUIRED_PACK_META = REQUIRED_META + ("sample_rate",)
 PACK_REQUIRED_CATEGORIES = ("loops", "stems")
-LANES = ("sync", "direct-license", "game-assets")
 MODES = ("track", "pack")
 AUDIO_SUFFIXES = (".wav", ".aif", ".aiff", ".flac")
 LICENCE_NAMES = ("LICENCE.txt", "LICENSE.txt", "licence.txt", "license.txt",
@@ -89,6 +112,35 @@ LICENCE_NAMES = ("LICENCE.txt", "LICENSE.txt", "licence.txt", "license.txt",
 # compares bytes when the file exists (see check_pack).
 REPO_ROOT = Path(__file__).resolve().parents[2]
 LICENCE_OF_RECORD = REPO_ROOT / "music/licences/perpetual_game_asset_v1.txt"
+
+# ---------------------------------------------------------------------
+# requirement coverage — the lane's `requires:` tokens this gate can EVIDENCE
+# ---------------------------------------------------------------------
+# Card t_d9983bb9. Each lane declares in music/lanes.yaml what it requires; this
+# gate reads that list and must have a check for every token in it. A token with
+# no check FAILS the run and names itself: a gate that answers "ready" for a
+# requirement it cannot measure is a false pass. Adding a requirement to
+# lanes.yaml therefore cannot be absorbed silently — the gate says so instead.
+TRACK_COVERAGE = {
+    "stems": f"stems/ holds >= {MIN_STEMS} real audio files, ffprobe-read, "
+             f"each within +/-{STEM_TOLERANCE_S}s of {MASTER_NAME}",
+    "metadata": f"{MANIFEST_NAME} metadata carries "
+                + ", ".join(REQUIRED_META),
+    "clearance_doc": "a real PDF clearance document (header bytes parsed)",
+    "instrumental_version": f"{INSTRUMENTAL_NAME} is real audio and is not a "
+                            f"byte-copy of {MASTER_NAME}",
+    "license_tiers": "license_tiers* is present",
+}
+PACK_COVERAGE = {
+    "stems": "stems/ holds real, mutually time-aligned audio files",
+    "metadata": f"{MANIFEST_NAME} metadata carries "
+                + ", ".join(REQUIRED_PACK_META)
+                + " (sample_rate verified against every audio file)",
+    "loop_point": "loop_points.json carries an entry per loop, inside its "
+                  "measured duration",
+    "seamless_loop": "every loop's seam is measured with gate_loop_points' "
+                     "ruler (a declared `seamless: true` is a claim)",
+}
 
 
 def probe(path: Path) -> dict | None:
@@ -203,7 +255,9 @@ def check_metadata(meta: dict, required: tuple[str, ...],
 # track mode
 # ------------------------------------------------------------------
 
-def check_track(pkg: Path, lane: str) -> tuple[list[str], dict]:
+def check_track(pkg: Path, lane: str,
+                requires: tuple[str, ...] = ()) -> tuple[list[str], dict]:
+    """Validate a one-track package for `lane`, whose `requires:` is `requires`."""
     problems: list[str] = []
     info: dict = {}
 
@@ -268,10 +322,13 @@ def check_track(pkg: Path, lane: str) -> tuple[list[str], dict]:
     check_disclosure(pkg, problems)
 
     # --- 7. lane-specific extras --------------------------------------
-    if lane == "direct-license":
+    # Driven by the lane's `requires:` in music/lanes.yaml, never by the lane's
+    # name: `license_tiers` is a requirement, so any lane that declares it is
+    # checked for it (card t_d9983bb9).
+    if "license_tiers" in requires:
         tiers = [p for p in pkg.glob("license_tiers*") if p.is_file()]
         if not tiers:
-            problems.append("direct-license lane requires license_tiers "
+            problems.append(f"{lane} lane requires license_tiers "
                             "(multi-tier licence with permitted use, "
                             "distribution, derivative rules)")
 
@@ -490,13 +547,40 @@ def check_pack(pkg: Path) -> tuple[list[str], dict]:
 # main
 # ------------------------------------------------------------------
 
+def lanes_for_this_gate() -> tuple[str, ...]:
+    """The lanes music/lanes.yaml assigns to THIS gate. Reads the registry.
+
+    This is the whole fix for card t_d9983bb9: `sync-documentary` is a lane that
+    declares `gate: gate_sync_ready`, so it must be runnable by name. Derived,
+    never copied — the next lane added to lanes.yaml works without touching this
+    file, and a lane removed from lanes.yaml stops being accepted in the same
+    breath.
+    """
+    return lanes_declaring(GATE_NAME)
+
+
 def main(argv: list[str] | None = None) -> int:
+    try:
+        lanes = lanes_for_this_gate()
+    except LaneRegistryError as exc:
+        print(f"gate_sync_ready: cannot read the lane contract: {exc}",
+              file=sys.stderr)
+        return 2
+    if not lanes:
+        print(f"gate_sync_ready: no lane in {LANES_YAML} declares gate: "
+              f"{GATE_NAME} — the registry and this gate disagree",
+              file=sys.stderr)
+        return 2
+    default_lane = "sync" if "sync" in lanes else lanes[0]
+
     parser = argparse.ArgumentParser(
-        description="gate_sync_ready — sync/direct-license/game-assets gate")
+        description=f"gate_sync_ready — gate for the lanes that declare it "
+                    f"({', '.join(sorted(lanes))})")
     parser.add_argument("--package-dir", required=True,
                         help="the packaged deliverable directory")
-    parser.add_argument("--lane", default="sync", choices=LANES,
-                        help="lane shaping which extras are required")
+    parser.add_argument("--lane", default=default_lane, choices=lanes,
+                        help="lane whose `requires:` in music/lanes.yaml this "
+                             "package must satisfy (the lane's own name)")
     parser.add_argument("--mode", default=None, choices=MODES,
                         help="package shape: 'track' (one track: full_mix + "
                              "instrumental) or 'pack' (multi-asset pack). "
@@ -510,10 +594,23 @@ def main(argv: list[str] | None = None) -> int:
 
     mode = args.mode or ("pack" if args.lane == "game-assets" else "track")
 
+    # The lane's declared requirements, read from music/lanes.yaml, drive the
+    # lane-specific checks. A requirement this gate has no check for is a hard
+    # FAIL: the gate must not certify what it cannot measure.
+    requires = requirements_for(args.lane)
+    coverage = PACK_COVERAGE if mode == "pack" else TRACK_COVERAGE
+    uncovered = [token for token in requires if token not in coverage]
+    if uncovered:
+        return fail([
+            f"the {args.lane} lane requires {', '.join(uncovered)} "
+            f"(music/lanes.yaml) but this gate has no {mode}-mode check for it "
+            f"— a gate must not certify a requirement it cannot measure"
+        ])
+
     if mode == "pack":
         problems, info = check_pack(pkg)
     else:
-        problems, info = check_track(pkg, args.lane)
+        problems, info = check_track(pkg, args.lane, requires)
 
     if problems:
         return fail(problems)
