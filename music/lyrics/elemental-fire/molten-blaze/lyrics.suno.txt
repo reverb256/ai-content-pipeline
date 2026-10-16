@@ -1,0 +1,25 @@
+# genre: elemental-fire
+# title: Molten Blaze
+# theme: A fire elemental boss battle theme. Percussion-forward, Phrygian modal color, loop-safe. Tension intro, burning theme, molten peak, smoldering breakdown, full blaze reprise.
+# provenance: human-original (writer profile) — do not paste Suno-generated lyrics here
+
+[Intro]
+(tension bed: low strings tremolo, fire crackle, single taiko pulse)
+
+[Instrumental]
+(burning theme stated on horns over the full percussion kit)
+
+[Instrumental]
+(theme develops, strings ostinato doubles, brass answers)
+
+[Break]
+(the molten peak: melody up an octave, all layers in)
+
+[Instrumental Break]
+(smoldering breakdown: percussion thins, strings sustain, fire-crackle and low drone — tension rebuilds)
+
+[Instrumental]
+(full blaze reprise: theme returns at maximum intensity)
+
+[Outro]
+(energy resolves back to the intro tension bed — LOOP POINT: the last bar must lead seamlessly into the first)
