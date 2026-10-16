@@ -296,7 +296,7 @@ EOF
 
 # --- the three end-guard fixtures (card t_8297d2c6) ------------------------
 # The 1.0 s fade: level ruler blind (4.7 dB), end guard refuses it.
-# The quiet loop (-45.5 dB, above the -50 dB floor): must still PASS.
+# The quiet loop (-28 dB, above the -50 dB floor): must still PASS.
 # The both-ends-silent loop: the symmetric hole of the level ruler.
 for name in faded_short quiet silent_ends; do
   dir="$F/${name}_loop"
@@ -495,7 +495,7 @@ else
 fi
 
 # --- the end guard must not punish a quiet (nonzero) ending ---------------
-# -45.5 dB is quiet and it clears the lane's -50 dB floor, so the end guard
+# -28 dB is quiet and it clears the lane's -50 dB floor, so the end guard
 # must leave it alone: quiet is not silence (card t_8297d2c6).
 pass "a quiet but NONZERO loop ending still passes (above the -50 dB floor)" \
   "$PY" "$GATES/gate_loop_points.py" \

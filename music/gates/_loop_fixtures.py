@@ -20,7 +20,7 @@ loop_faded_short.wav — 220 Hz with a 1.0 s fade-out at the end, the
   a linear fade of length d >= L reads (L/d)/sqrt(3)). Inside its
   last 1.0 s the first half sits 8.5 dB above the second, so the end
   guard refuses it and the refusal NAMES the ramp, not the level.
-loop_quiet.wav — 220 Hz at -45.5 dB, constant: quiet but NOT
+loop_quiet.wav — 220 Hz at -28 dB (measured -28.2), constant: quiet but NOT
   silence, so it clears the -50 dB floor and stays level at both
   ends. The end guard must leave it alone (a quiet ending is not a
   fade).
@@ -41,7 +41,7 @@ DUR = 10.0
 N = int(SR * DUR)
 FADE_S = 1.6          # the fade in loop_faded.wav (card t_bab8aa19's B)
 FADE_SHORT_S = 1.0    # the fade in loop_faded_short.wav (t_8297d2c6)
-QUIET_AMP = 0.06      # about -45.5 dB: quiet, above the -50 dB floor
+QUIET_AMP = 0.06      # about -28 dB (measured -28.2): quiet, above the -50 dB floor
 SILENT_MUSIC = (6.5, 8.5)   # where the tone sounds in loop_silent_ends.wav
 
 
