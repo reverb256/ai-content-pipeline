@@ -16,6 +16,7 @@ Usage (inside the pod):
 import argparse
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -64,8 +65,48 @@ def load_plan(path: str) -> dict:
         return json.load(fh)
 
 
+def singable_lines(content: str) -> list:
+    """The lines of a section that are meant to be SUNG.
+
+    A DRAFT plan is a scaffold: it carries the section tags and the template's
+    per-section craft notes in parentheses, and no lyrics. Those notes are
+    guidance, not words. A note can WRAP across lines, so a line that opens a
+    parenthesis and does not close it keeps the following lines out too - the
+    unwrapped version of this test passed a scaffold whose directions wrapped
+    (card t_bc6a0c00 measured it on the epic-orchestral-boss sheet).
+    """
+    kept = []
+    depth = 0
+    for raw in content.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if depth:
+            # still inside a direction opened on an earlier line
+            depth = max(depth + line.count("(") - line.count(")"), 0)
+            continue
+        if line.startswith(("#", "(")):
+            depth = max(depth + line.count("(") - line.count(")"), 0)
+            continue
+        kept.append(line)
+    return kept
+
+
 def check_lyrics(plan: dict, allow_empty: bool) -> None:
-    """Validate that lyrics are not empty unless --allow-empty."""
+    """Refuse a plan whose lyrics are a scaffold or a set of bare tags.
+
+    This is the guard the render CronJob's own comment relies on: it calls this
+    script WITHOUT --allow-empty and writes a `.refused` marker on rc=1 (see
+    templates/cronjob-render.yaml), so a draft plan must be refused HERE, before
+    any network call, or the engine renders a track whose vocal line is the
+    template's craft notes.
+
+    The previous version of this file only refused lyrics that were COMPLETELY
+    empty. A scaffold is never completely empty - it has the tags - so a queued
+    draft went straight to the engine. Measured 2026-10-16 on the three draft
+    plans the brief queue produced (card t_a14e5d52); the section-level check
+    below is the version the pre-sunolocal script carried.
+    """
     body = plan.get("lyrics", "")
     if not body.strip():
         if not allow_empty:
@@ -73,7 +114,22 @@ def check_lyrics(plan: dict, allow_empty: bool) -> None:
                 "FATAL: plan has empty lyrics — a draft section needs human input. "
                 "Use --allow-empty to force rendering anyway."
             )
-    # Optional: more detailed validation could be added here.
+        return
+    # `[ \t]*\n` and not `\s*`: `\s` matches newlines, so `\s*\n` lets an empty
+    # section swallow the next section's tag and report itself as full.
+    sections = re.findall(r"^\[([^\]]+)\][ \t]*\n(.*?)(?=\n\[|\Z)", body, re.M | re.S)
+    if not sections:
+        if not allow_empty:
+            sys.exit("FATAL: plan has no [Section] headers — nothing to sing. "
+                     "Use --allow-empty to force rendering anyway.")
+        return
+    empty = [tag for tag, content in sections if not singable_lines(content)]
+    if empty and not allow_empty:
+        sys.exit(
+            f"FATAL: {len(empty)} section(s) have no lyrics: {', '.join(empty)}.\n"
+            "       This is a DRAFT plan — a human writes the lines into it first.\n"
+            "       (--allow-empty renders anyway, for instrumental or scratch passes.)"
+        )
 
 
 def build_suno_request(plan: dict) -> dict:
