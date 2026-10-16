@@ -2,7 +2,8 @@
 
 Card: kanban `music` t_9f7d6889 · stage: brief
 Oracle score: 8.9/10 · card created 2026-10-09 03:27:44
-Brief written: 2026-10-16 (music-producer, run 3)
+Duplicate card: `music` t_d706d0a3 (score 9.1) — same genre, same brief (§10.1)
+Brief written: 2026-10-16 (music-producer, run 3) · verified + corrected 2026-10-16 (run 86)
 Track slug: room-with-the-light-going
 Genre class: **instrumental** (no lyrics by design — see §4)
 
@@ -317,5 +318,119 @@ currently `[]` while the live ConfigMap holds `smoke-chill-lounge` — chart val
 the live ConfigMap have drifted.
 
 ## 9. Next stage
+
+Stage `brief` is complete. Next: `genre-select`.
+
+## 10. Addendum — verification pass and corrections (card t_d706d0a3, 2026-10-16)
+
+Card `t_d706d0a3` (score 9.1) is a duplicate oracle card for this genre. The brief
+key is the genre, so this one file resolves both cards. This pass re-measured §1-§6
+and corrected §7.
+
+### 10.1 Duplicate resolution
+
+Board query: `select id,title,status from tasks where title like '%sentimental%'`
+on `/home/j_kro/.hermes/kanban/boards/music/kanban.db`.
+
+| Card | Score | Status | Stage |
+|---|---|---|---|
+| t_9f7d6889 | 8.9 | done | brief — could not advance (`advance-stage.sh` is refused in a worker session, filed t_5a93164a) |
+| t_d706d0a3 | 9.1 | running | brief → genre-select (this pass) |
+
+No second brief is written. Two briefs for one genre would fork the track.
+
+### 10.2 §7 D4 is wrong — corrected
+
+The earlier text read: "No file named `suno-gen*` exists under `/home/j_kro`." That
+is false. Measured this pass:
+
+```
+$ git ls-tree -r --name-only origin/main | grep -i suno-gen
+music/gates/fixtures/suno-generated-umbrellas-in-space.txt
+music/suno-gen.py
+$ git ls-tree -r --name-only main | grep -i suno-gen
+music/gates/fixtures/suno-generated-umbrellas-in-space.txt
+$ git branch -a --contains ba28f55
+  remotes/origin/main
+  remotes/origin/wip/atlas-backup-20261014
+```
+
+`music/suno-gen.py` exists on `origin/main`. Commit `ba28f55` added it ("music:
+instrumental mode in generation path"). The local `main` tree does not carry it.
+The defect is checkout divergence, not a missing script. The `trance` brief made the
+same correction earlier (commit `132a781`); this brief predates it. Fix: merge
+`origin/main` into `main`. Cited: t_8a715681.
+
+### 10.3 §7 D5 — the scheduled render rail cannot render an instrumental (new)
+
+Two independent causes. Both read from the live cluster this pass.
+
+```
+$ kubectl -n mining get cm music-pipeline-payload -o json
+  key music__scripts__acestep_plan.py (9020 B), line 87:
+      "instrumental": False,  # we assume lyrics present; ...
+$ kubectl -n mining get cronjob music-pipeline-render -o jsonpath='...containers[*].args'
+  subprocess.run([sys.executable, "/payload/music/scripts/acestep_plan.py",
+                  str(plan), "--name", stem])
+```
+
+The CronJob passes no `--allow-empty`. `acestep_plan.py` exits 1 when sections are
+empty (line 84: "FATAL: ... section(s) have no lyrics"). The job then writes
+`refused` into the marker. The two live markers reproduce it exactly:
+
+| Marker | Size | Content |
+|---|---|---|
+| `/var/lib/music-plans/smoke-chill-lounge.rendered` | 8 B | `refused` |
+| `/var/lib/music-plans/testplan.rendered` | 8 B | `refused` |
+
+Effect: no instrumental genre can traverse the scheduler rail. Filed as
+**t_8c5a6b91** (nexus-core). Do not re-file.
+
+### 10.4 §7 D3 confirmed from the live planner Job
+
+`kubectl -n mining get cronjob music-pipeline` reads only `name`, `brief`, `genre`,
+`lyricsMode`, `language`, `title`, `duration` from each brief, and `--lyrics-mode`
+defaults to `draft`. There is no `instrumental` field. D3 stands as written.
+
+### 10.5 §6b route re-probed — still live
+
+```
+$ curl -s -o /dev/null -w "%{http_code}" http://10.43.164.190:8123/health
+200
+```
+
+Service IP unchanged. ConfigMap `music-pipeline-briefs` still holds one entry,
+verbatim the `smoke-chill-lounge` record quoted in §6a.
+
+### 10.6 What the two stem-mandatory lanes accept (read from gate source)
+
+`music/gates/gate_sync_ready.py` — this gate EXECUTES the artifacts:
+
+- `stems/` must hold at least **4** real audio files. `ffprobe` must open each one,
+  and each must sit within `STEM_TOLERANCE_S` of the master's duration.
+- `instrumental.wav` must be real audio and must NOT be byte-identical to the master.
+- `manifest.json` metadata must carry title, artist, bpm, key, mood, genre.
+- `clearance_doc.pdf` must start with `%PDF-` (a `.txt` is also accepted);
+  `ai_disclosure.txt` must be non-empty.
+- `--lane direct-license` adds `license_tiers*`. `--lane game-assets` adds
+  `loop_points.json`.
+
+Consequence for this track: the instrumental version is a required deliverable of the
+`sync` lane, and it is the primary asset (§2), not a derived extra.
+
+### 10.7 Figures re-measured this pass — no change
+
+| Item | Claim | Measured now |
+|---|---|---|
+| style caption | 674 chars | 674 |
+| section tags | 7 | 7 — Intro, Verse, Verse, Bridge, Chorus, Verse, Outro |
+| duration basis | 54 bars = 180.0 s at 72 BPM | bar 3.333333 s, 180 s ÷ bar = 54.000000 |
+| registry | 14 genres, 10 lanes | `registry.py validate` rc=0 → 14 / 10 |
+| quota | 0/60 | `gate_quota.py` PASS, 0/60, studio exports 0 |
+| prompt template | 4126 B | 4126 B |
+| visual template | 1199 B | 1199 B |
+| instrumental genres | 8 of 14 | `grep -liE 'is instrumental\|leave the .*lyrics box empty' music/prompts/*.md \| wc -l` → 8 |
+
+## 11. Next stage
 
 Stage `brief` is complete. Next: `genre-select`.
