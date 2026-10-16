@@ -484,57 +484,98 @@ text in the sibling briefs is `t_1a5b018b` — this pass resolved its `elemental
 and leaves the `elemental-air` leg to that card.
 
 
-## 9. Generation path — three blockers, measured on the live engine
+## 9. Generation path — the three blockers are CLOSED; what remains is this genre's queue entry
 
-The lane's own generate prompt names `music/suno-gen.py`. **That file is in this checkout now**
-(42 652 B, mtime 14:23 — the reconciliation of card `t_8a715681`); it was missing when §9 was
-written, and the lane's own work then sat **15** commits off `origin/main`. Read from the git
-object as well as from disk,
-`origin/main:music/suno-gen.py:141 is_instrumental_template(genre)` decides whether a track may
-render with no human lyric sheet, keying on the template's `## Lyrics guidance` section — and its
-docstring **names all four elementals**, `elemental-fire/water/earth/air`. `music/prompts/
-elemental-water.md:16` says *"Instrumental. Leave the **lyrics box empty**"*, so this genre is
-detected as instrumental and **needs no lyric sheet**. That is why the lyrics stage skips (§13).
-Already carded: **t_8a715681** (diverged checkout).
+The lane's own generate prompt names `music/suno-gen.py`. **That file is in this checkout**
+(42 652 B, `is_instrumental_template()` at `music/suno-gen.py:141`) — card `t_8a715681`
+(diverged checkout, now `done`) reconciled the tree, so the file can be read from disk rather than
+from a git object — the pair read **0 behind / 86 ahead** of `origin/main` at 16:50 CDT on
+2026-10-16 (the local tip rises with every commit this lane lands) — and `is_instrumental_template()` keys on the template's `## Lyrics guidance` section and
+**names all four elementals** (`elemental-fire/water/earth/air`);
+`music/prompts/elemental-water.md:16` says *"Instrumental. Leave the **lyrics box empty**"*, so
+this genre is detected as instrumental and **needs no lyric sheet** — which is why the `lyrics`
+stage skips (§13).
 
-The live route is in-cluster, not the kanban stage machine: ConfigMap `music-pipeline-briefs` →
-CronJob `music-pipeline` (plans) → CronJob `music-pipeline-render` (`acestep_plan.py` →
-sunolocal studio API). Chart `/home/j_kro/mining-k8s/helm/charts/music-pipeline/`; its payload
-already carries `prompts/elemental-water.md`. Measured now:
+The live route is in-cluster, not the kanban stage machine: the brief queue (Argo Application
+`helm/apps/music-pipeline.yaml` `briefs:` → ConfigMap `music-pipeline-briefs`, chart
+`/home/j_kro/mining-k8s/helm/charts/music-pipeline/`, whose payload carries
+`prompts/elemental-water.md`) → CronJob `music-pipeline` (plans, `17 */6`, last schedule 3 h 53 m
+before this measurement) → CronJob `music-pipeline-render` (`41 */4`, last schedule 3 h 29 m) →
+pod `sunolocal-source-75d58dbc97-7jfmc`, image **`localhost/sunolocal:v0.1.3`**. Renders now run
+per queue card — jobs `music-pipeline-plan-t97c92df2`, `music-pipeline-render-t97c92df2`,
+`…-t6d7ad524`, `…-t8c5a6b91` and `music-pipeline-manual-1792181262` all measured `Completed`,
+and `/var/lib/sunolocal/artifacts/` holds 9 rendered FLACs from 2026-10-14…10-16 (largest
+53.7 MB). **The rail works; it is not short of machinery.**
+
+**The three blockers this section used to carry are all fixed** — cards `t_25a6499c` (render
+gaps) and `t_8c5a6b91` (the deployed wrapper dropping the instrumental flag) are both `done`,
+and this was re-measured on the running pod and the live planner:
+
+1. **"Instrumental" is now a first-class mode.** `music/planner/planner.py:905`
+   `--lyrics-mode choices=["draft", "ai", "instrumental"]`, with a refusal guard: `instrumental`
+   on a *vocal* genre exits 2 (`epic-orchestral-boss` is named in the guard), and `draft`/`ai` on
+   an instrumental genre warns loudly. The ConfigMap already uses
+   `"lyricsMode":"instrumental"` for `elemental-air`, `elemental-earth`, `elemental-fire`,
+   `sentimental-piano`, `chill-lounge-slow-gold` and both `commentary-beds` entries — the mode is
+   in production use, not merely available.
+2. **Tempo is 82 — not 100, and not 120.** The deployed `translate.py` reads an EXPLICIT tempo
+   first (`bpm = None`; `if req.bpm is not None: bpm = int(req.bpm)`, pod lines 62-64); the
+   `int(60 + req.style_weight × 120)` mapping survives only as a documented fallback and 120 is
+   the last-resort default. The planner resolves the genre's own anchor —
+   `bpm_anchor_for()` = `ctx["blueprint"].get("bpm_anchor") or ctx.get("template_bpm")`
+   (`planner.py:203-212`), with `template_bpm = bpm_in_caption(caption)`. Measured live for this
+   genre in this pass:
+
+   ```
+   $ /usr/bin/python3 music/planner/planner.py show --genre elemental-water
+   { "caption_chars": 537, "blueprint": false, "bpm_anchor": null, "instrumental": true,
+     "structure_source": "template",
+     "structure": ["Intro","Instrumental","Instrumental","Instrumental Break","Instrumental","Outro"] }
+   $ context_for("elemental-water")   →   template_bpm = 82, bpm_anchor_for = 82
+   ```
+
+   So the plan's `bpm` reads **82**, the §4 loop math (41 bars = 120.000 s, 205 bars = 600.000 s)
+   holds, and the "plans at 100" failure is closed. **Acceptance stands:** the plan's `bpm` field
+   must read 82 — and the queue entry should state `bpm: 82` explicitly rather than rely on
+   caption parsing.
+3. **Key reaches the engine.** `translate.py` (pod line 76) is `key = req.keyscale or "C major"`,
+   and `SunoGenerateRequest` carries the sunolocal extensions `bpm` / `keyscale` / `instrumental`.
+   The 537-char style string is no longer written into the key slot. **Acceptance for this genre:
+   the queue entry must state `keyscale: C minor`.** The planner's own default is the literal
+   `"C minor"` (plan path: `args.keyscale or args.key or "C minor"`), which happens to be this
+   genre's key — but a default that coincides is not a decision (card `t_f65b0f4c`, running when
+   this pass measured, owns exactly that gap; another worker was editing `planner.py` during this
+   pass, so the line numbers above are the ones this pass read, not a promise about the file's
+   next revision).
+
+**Still open for this genre, and it is not a code defect: `elemental-water` has no queue entry
+and no queue card.** Measured: the ConfigMap holds **12 entries across 10 genres** —
+`chill-lounge` ×2, `commentary-beds` ×2, `anime-ending`, `epic-orchestral-boss`, `trance`,
+`sentimental-piano`, `elemental-air`, `elemental-earth`, `elemental-fire`, `jungle-dnb` — and
+**no `elemental-water`**. The Argo Application states the reason in its own words:
 
 ```
-$ kubectl -n mining get configmap music-pipeline-briefs -o jsonpath='{.data}'
-{"briefs.json":"[{\"brief\":\"a late-night kitchen…\",\"genre\":\"chill-lounge\",
-  \"lyricsMode\":\"draft\",\"name\":\"smoke-chill-lounge\",\"title\":\"Kitchen Light\"}]"}
-$ grep -n briefs /home/j_kro/mining-k8s/helm/charts/music-pipeline/values.yaml
-39:briefs: []
-$ ls /var/lib/music-plans/*.rendered   →  smoke-chill-lounge: "refused", testplan: "refused"
+# NOT in this list, with the reason (so nobody re-derives it):
+# - the other 2 instrumental genres (chiptune-8bit, elemental-water):
+#   the mode they need now exists (card t_25a6499c), and each has its
+#   own queue card on the music board, so each entry is written once by
+#   the card that owns the genre's title and duration.
 ```
 
-Both CronJobs run and `Completed` on schedule — with nothing to render. **No elemental-water brief
-is queued anywhere.** The three blockers, all measured:
+Half of that is accurate: the mode exists, and the entries above are the record of what landed
+(`t_28146d70` fire, `t_640cc2a1` commentary-beds, `t_6d7ad524` chill-lounge, `t_78bd4754`
+epic-orchestral-boss, `t_791b48f7` trance, `t_909069f0` earth, `t_97c92df2` jungle-dnb,
+`t_a14e5d52` anime-ending, `t_b8afb055` air — all `done`). The other half is not: **there is no
+queue card for `elemental-water` on this board** — measured against every card title containing
+`water` and every card whose title contains `queue`. The genre needs the fields such a card owns
+(`name`, `title`, `duration`, `bpm: 82`, `keyscale: C minor`, `lyricsMode: instrumental`) before
+the render rail can see it. `music/plans/` holds only `.gitignore`, and no plan, master, stem or
+render for this genre exists yet (§12).
 
-1. **The planner cannot express "instrumental".** `music/planner/planner.py:528`
-   `--lyrics-mode choices=["draft","ai"]`. `draft` emits a scaffold whose section tags have empty
-   bodies, and `music/scripts/acestep_plan.py:82` FATALs on empty sections unless `--allow-empty`
-   — which is the observed `refused` marker (`"FATAL: N section(s) have no lyrics"`). `ai` would
-   write lyrics for a track that must have none, and forfeits the copyrightability the lane's
-   HARD RULE 3 exists to protect. An `instrumental` mode is required.
-2. **Tempo.** The **deployed** engine hardcodes it. Read from the running pod:
-   `/opt/sunolocal/music/sunolocal/translate.py:42 bpm = 120`, overridden only by
-   `bpm = int(60 + req.style_weight * 120)` (line 45). The local planner falls back to
-   `"bpm": ctx["blueprint"].get("bpm_anchor") or 100` (`planner.py:470`), and **only 7 of the 14 genres have a blueprint**
-   (`activist`, `anime-ending`, `anime-opening`, `chill-lounge`, `epic-orchestral-boss`, `jungle-dnb`, `trance`). So this genre plans at 100
-   and translates at 120 — both wrong. **Acceptance for this genre: the plan's `bpm` field must
-   read 82.** At 100 BPM a bar is 2.40 s and the 41-bar/120.000 s loop unit in §4 is wrong.
-3. **Key cannot reach the engine.** `translate.py:49` is `key = req.style or "C major"` — the
-   style string is used **as the key**. `music/sunolocal/spec.py`'s `SunoGenerateRequest` has
-   `style` and no `key` field, so a 537-char style string would be written into the key slot and
-   the genre's **C minor** requirement cannot be expressed at all. `key = req.style` needs a real
-   `key` field to read from.
+All three fixed blockers are the family card **t_25a6499c** (instrument/tempo/key render gaps,
+nexus-core, `done`); this section keeps the acceptance criteria it produced — `bpm` 82,
+`keyscale` C minor, `lyricsMode` instrumental — and the one open item it does not cover.
 
-All three are the same family as **t_25a6499c** (instrument/tempo/key render gaps, nexus-core) —
-cited here so §§10-12 do not rediscover them, and extended with the three measured line numbers.
 
 ## 10. ⚠ The game-assets publish path is built — and stranded on an unmerged ref
 
@@ -612,10 +653,20 @@ silent `ModuleNotFoundError` dressed as a gate defect, and it can no longer pass
 good fixture and FAIL on the broken one. `gate_loop_points` measured 1.6× (seamless) vs 6.0×
 (phase slip) against the 3.0× ceiling.
 
-**Still open, filed as a new card:** nothing runs this matrix automatically. There is no
-`.github/workflows/` in this repo and `scripts/automation/` never calls it. A defect in the gate
-library is therefore only found by a human who happens to run the suite — which is exactly how
-this one survived.
+**That "still open" is now closed, too.** `music-gate-matrix.timer` / `.service` were installed
+at 15:22 CDT and run the matrix on a schedule; the first logged run is rc=0:
+
+```
+2026-10-16T15:22:22-05:00 — gate matrix run starting (repo=/home/j_kro/ai-content-pipeline interpreter=/usr/bin/python3 …)
+2026-10-16T15:22:22-05:00 — gate matrix: rc=0 OK pass=18 expected_failures=26 misbehaved=0 fatal=0 interpreter=/usr/bin/python3 duration=272s
+$ systemctl --user list-timers music-gate-matrix.timer
+Sat 2026-10-17 06:20:00 CDT   14h   music-gate-matrix.timer   music-gate-matrix.service
+$ /usr/bin/python3 music/scripts/check_gate_matrix_scheduled.py     → PASS, last run rc=0 state=OK
+```
+
+So a defect in the gate library is now found by the timer, not only by a human who happens to
+run the suite.
+
 
 ## 11a. Regression check added in the duplicate pass (`t_d8cc0a38`)
 
@@ -631,20 +682,20 @@ raising (timeout / 403 / DNS). Three assertions: **A1** a failed fetch must not 
 successful empty one; **A2** `score_genre()` must be deterministic under a fixed fetch
 behaviour, and a failed fetch must not *raise* the total; **A3** `WEIGHTS` must close at 1.0.
 
-**Measured now (rc=1 — the defect is live, cited `t_bf0e5edd`):**
+**Measured now: rc=0 — the defect is fixed** (`music/oracle.py`, commit `b2d11f7`;
+card `t_bf0e5edd` `done`). The check is unchanged; the code under it changed:
 
 ```
 $ /usr/bin/python3 music/scripts/check_oracle_determinism.py
-trend 200/0-snippet: 3.0   trend fetch-fails: 5.0
-total 200/0-snippet: 7.0 (= 7.0)   total fetch-fails: 7.2
+  warn: trend fetch failed for elemental-water (URLError('stub: fetch failed')); scoring it as no signal (3.0)
+  warn: trend fetch failed for elemental-water (URLError('stub')); scoring it as no signal (3.0)
+oracle under test : /home/j_kro/ai-content-pipeline/music/oracle.py
+genre             : elemental-water
+trend 200/0-snippet: 3.0   trend fetch-fails: 3.0
+total 200/0-snippet: 7.0 (= 7.0)   total fetch-fails: 7.0
 WEIGHTS sum       : 1.0
-  - A1 VIOLATED: a FAILED trend fetch scores 5.0 but a SUCCESSFUL empty fetch scores 3.0 —
-    the broken run outranks the working one by 2.0 on the component, i.e. 0.2 on the 10-point
-    total (component delta x WEIGHTS['trend_signal']) ...
-  - A2 VIOLATED: a failed trend fetch raises the total for elemental-water (7.2 > 7.0) —
-    scoring depends on the network, not on the genre.
-FAIL check_oracle_determinism: the trend fetch is not a pure function of the genre
-rc=1
+PASS check_oracle_determinism: trend fetch failure never outscores an empty success; score_genre is deterministic; WEIGHTS closes at 1.0
+rc=0
 
 $ /usr/bin/python3 music/scripts/check_oracle_determinism.py --selftest
 SELFTEST PASS check_oracle_determinism: correct pair (zero=3.0 fail=3.0) errors=0 (want 0),
@@ -652,18 +703,23 @@ SELFTEST PASS check_oracle_determinism: correct pair (zero=3.0 fail=3.0) errors=
 rc=0
 ```
 
-`--selftest` proves the A1 assertion fires on an inverted pair and stays silent on a correct
-one, so a future edit that repairs `trend_signal_score()` flips this check to green rather
-than leaving it as noise. A failing check on a live, carded defect is the lane's existing
-pattern (`check_stage_scripts` fails the same way on `music/suno-gen.py`, cited `t_8a715681`).
+`--selftest` still proves the A1 assertion fires on an inverted pair and stays silent on a
+correct one, so the check cannot go green by rot: it is the code that had to change, and the
+independent 14-genre stub measurement in §2 (max |delta| = 0.0) corroborates the verdict from
+outside the check itself. The live `warn:` lines above are the same failure being *reported*
+instead of paid — the observable behaviour change this pass measured.
+
 
 ## 12. Existing assets for this genre
 
-Measured: **none.** `music/lyrics/` holds `activist/`, `anime-opening/`, `chill-lounge/`, `trance/` plus
-`blueprints/{activist,anime-ending,anime-opening,chill-lounge,epic-orchestral-boss,trance}.yaml` — no `elemental-water` sheet or blueprint
-(expected: the genre is instrumental, so there is no lyric sheet to write, and no blueprint means
-§9's bpm blocker). `music/plans/` holds only `.gitignore`. No campaign directory, master, stem,
-loop point, cover or asset pack exists for this genre anywhere in the tree. Quota is untouched:
+Measured 2026-10-16 16:3x CDT: **none.** `music/lyrics/` holds `activist/`, `anime-opening/`,
+`chill-lounge/`, `trance/` plus `blueprints/{activist,anime-ending,anime-opening,chill-lounge,epic-orchestral-boss,jungle-dnb,trance}.yaml`
+— **7 blueprints** (the census §9 uses) and no `elemental-water` sheet or blueprint. That is
+expected for an instrumental genre: there is no lyric sheet to write. `music/plans/` holds only
+`.gitignore`. No campaign directory, master, stem, loop point, cover or asset pack exists for this
+genre anywhere in the tree. The only genre-named visual asset is a prototype clip —
+`music/visuals/element_water.mp4`, ffprobe-measured **5.000 s, 1280×720, h264 + aac, 14 812 B**
+(2026-10-09) — i.e. a fixture, not the `loop-10min` render §7 specifies. Quota is untouched:
 
 ```
 $ /usr/bin/python3 music/gates/gate_quota.py
@@ -673,7 +729,13 @@ PASS gate_quota
   studio exports  : 0
 ```
 
+The ledger now also carries a `renders[]` log — this lane's local ACE renders consume no Suno
+quota and are recorded there instead (the `elemental-air` entry names its job, sha256, measured
+duration and `quota_consumed: 0`). **This genre has no such entry**, which is the same fact as
+§9's missing queue card, stated from the other side.
+
 **The first render is genuine work, not a re-run.**
+
 
 ## 13. Stage plan for this genre
 
@@ -690,33 +752,71 @@ rotating shallows/cavern/abyss, `gate_youtube_authentic`) → `human-approval` (
 (**private/draft only**; game-assets path blocked per §10).
 
 Autonomy: all three lanes are at rung **`advisory`**, `clean_publishes: 0`
-(`music/autonomy.yaml`) — every publish is proposed with evidence and approved by j_kro.
+(`music/autonomy.yaml`: `game-assets`, `youtube-gaming` and `streaming` each carry
+`rung: advisory` with zero evidence) — every publish is proposed with evidence and approved by
+j_kro. The human gates in `music/stages.yaml` (`human-approval`, with `auto_next: publish`, and
+`escalate`) are never auto-dispatched.
+
+**Stage-advance facts that govern the next worker** (re-measured 2026-10-16 16:2x CDT):
+`music/stages.yaml` gives the `brief` stage one job, and it is the one this pass closes on — post
+the marker `stage: genre-select` on the card **with the `kanban_comment` tool**, because a
+dispatcher-spawned worker's terminal is fenced and `hermes kanban --board music comment` is
+refused (`t_5a93164a`; `bash scripts/automation/advance-stage.sh <card> genre-select --board
+music` is the labelled CLI fallback for the non-worker caller). The `visual` stage resolves its
+gate from the genre's own lanes — `/usr/bin/python3 music/registry.py gate-for-stage --stage
+visual --genre elemental-water` → `gate_youtube_authentic`, since `youtube-gaming` is one of this
+genre's three lanes — rather than assuming the YouTube gate (`t_d9983bb9`).
+
 
 ## 14. Provenance
 
 - Registry: `music/genres.yaml`, `music/lanes.yaml` — validated live (14 genres, 10 lanes)
 - Template: `music/prompts/elemental-water.md` (3810 B; style field measured 537/1000 chars)
 - Visual: `music/visuals/element-water.md` (1046 B)
-- Runbook: `brain/runbooks/music-game-assets.md` (53 lines) — every executable it names missing (§10)
-- Gates: `music/gates/` — `gate_quota` PASS live; `gate_sync_ready` exercised live (FAIL output
-  quoted); full suite green after this run's fix (§11)
-- Rubric: `music/rubrics/gamer.json` (5 criteria, total weight 11, pass 7.0)
-- Autonomy: `music/autonomy.yaml` (game-assets / youtube-gaming / streaming all `advisory`)
-- Stage contract: `music/stages.yaml` (`brief` → `producer`; advance calls added in `9c2d2d3`)
-- Oracle internals read live: `oracle.py:221-253` (`cadence_fit`), `:272-289` (`trend_signal`),
-  `:189-202` (`lane_coverage`), `:256-269` (`policy_risk`), `:439` (dry-run skips the board read)
-  — **all five line citations re-verified 2026-10-16 13:52 CDT by the duplicate pass; every one
-  still lands on the named function, and `:439` is still the `if not dry_run` board-read guard.**
-- Checks run in this pass (`/usr/bin/python3 music/scripts/…`): `check_brief_figures.py
-  --briefs music/briefs/elemental-water.md` PASS (7 recomputed figures, 3 skipped as
-  cluster-only); `check_oracle_determinism.py` **rc=1 by design** (§11a); `check_brief_paths.py`
-  PASS; `check_stage_scripts.py` FAIL on `music/suno-gen.py` (pre-existing, `t_8a715681`);
-  `check_prompt_style_counts.py` PASS (15 declared style-field lengths, 14 templates);
+- Runbook: `brain/runbooks/music-game-assets.md` (**88 lines**, re-measured in this pass — the
+  write-time transcript said 53) — of the executables it names, `butler` and
+  `~/.hermes/vault/itch_io_key` are still absent (§10); `music/assets/pack.py` exists
+- Gates: `music/gates/` — `gate_quota` PASS live; `gate_sync_ready` exercised live on an empty
+  dir (16 findings, quoted in §5); `bash music/gates/check_gate_suite.sh` **rc=0**, interpreter
+  `/usr/bin/python3`, on 2026-10-16 16:3x CDT
+- Rubric: `music/rubrics/gamer.json` **v2** — 6 criteria, family total weight 14, so each
+  `gamer` genre is scored on **Σw 8** (this genre: `elemental_atmosphere`, `loop_safety`,
+  `asset_packaging`, `loudness_target`), pass 7.0; scope is data (`applies_to`), enforced by
+  `music/rubrics/panel.py` + `test_panel_math.py` (§8)
+- Autonomy: `music/autonomy.yaml` (game-assets / youtube-gaming / streaming all `advisory`,
+  `clean_publishes: 0`)
+- Stage contract: `music/stages.yaml` (`brief` → `producer`) — the brief prompt advances to
+  `genre-select` via the kanban tool; advance channel fixed in `7c4fbf2` (`t_5a93164a`), stage
+  gate rule in `54f6d3c` (`t_d9983bb9`) (§13)
+
+- Oracle internals read live in **this** pass: `oracle.py:221` (`cadence_fit_score`, body to
+  `:254`), `:283` (`trend_signal_score`, body to `:305`, with `TREND_NO_SIGNAL = 3.0` at `:280`),
+  `:189` (`lane_coverage_score`), `:256` (`policy_risk_score`), `:158` (`load_quota`), `:312`
+  (`score_genre`), `:54` (`WEIGHTS`). Three citations moved since the write: `trend_signal` was
+  `:272-289`, `cadence_fit` ends at `:254`, and the dry-run board-read guard is now `:459`
+  (was `:439`) with its second use at `:478`
+- Checks run in **this** pass (`/usr/bin/python3 music/scripts/…`), all from
+  `/home/j_kro/ai-content-pipeline` at `e597bb6`: `check_brief_figures.py` **rc=1 before the
+  edit** — its one finding was *this* brief's `53 lines` line (§16), rc=0 after;
+  `check_brief_drift.py` rc=0 (2 live counts in this brief); `check_brief_paths.py` rc=0;
+  `check_brief_line_refs.py` rc=1 with **no finding naming this brief** (all three name
+  `elemental-fire.md`); `check_brief_absence.py` **rc=1 named this brief's `music/suno-gen.py`
+  claim — corrected in this pass** (§9); `check_brief_absences.py` rc=1 (findings name
+  `activist.md`, `chiptune-8bit.md`, `jungle-dnb.md`); `check_stage_scripts.py` rc=0;
+  `check_prompt_style_counts.py` rc=0; `check_oracle_board.py` rc=0 (this card is the single open
+  `elemental-water` card); `check_oracle_determinism.py` rc=0 (§11a);
+  `check_gate_lane_surface.py`, `check_video_shapes.py` (2 warnings, other genres),
+  `check_doc_refs.py`, `check_stage_advance.py`, `check_scheduler_units.py` (NOTE: driver
+  `DRY_RUN=1`), `check_gate_matrix_scheduled.py`, `check_brief_bpm_solutions.py` rc=0;
   `bash music/gates/check_gate_suite.sh` rc=0
-- Upstream truth read from git objects: `origin/main:music/suno-gen.py:141`
-  (`is_instrumental_template`), `origin/main:music/sunolocal/translate.py`
-- Engine truth read from the running pod: `sunolocal-source-65fcc845d-fd5r6`,
-  `/opt/sunolocal/music/sunolocal/translate.py` lines 33-59; `music-pipeline-briefs` ConfigMap
+- Upstream truth read from disk in this pass: `music/suno-gen.py:141` (`is_instrumental_template`)
+  — the git-object read the write-time brief used is no longer necessary at 0 behind
+- Engine truth read from the running pod in this pass: **`sunolocal-source-75d58dbc97-7jfmc`**,
+  image `localhost/sunolocal:v0.1.3` (`/opt/sunolocal/music/sunolocal/translate.py` lines 62-76,
+  `spec.py` `SunoGenerateRequest`), plus ConfigMap `music-pipeline-briefs`, the two CronJobs,
+  `/var/lib/music-plans/` and `/var/lib/sunolocal/artifacts/`; planner truth from
+  `music/planner/planner.py show --genre elemental-water` and `context_for()` called directly
+
 - **Dangling reference — RESOLVED (`t_b0a4db92`, done).** `brain/playbooks/music-lane-architecture.md`
   is cited as "READ FIRST" by this lane's profile, `stages.yaml`, `genres.yaml`, `lanes.yaml`,
   `autonomy.yaml` and `gates/*`, and it is in this tree and in `HEAD` now (34 328 B, rewritten at
@@ -724,21 +824,35 @@ Autonomy: all three lanes are at rung **`advisory`**, `clean_publishes: 0`
   is there too. The doc's §2 genre registry carries this genre's row, §3 its lanes and §13 its
   pack lane; `music/scripts/check_doc_refs.py` resolves every `§` reference to a heading. Card
   `t_fa731c5b` stripped this reading from the sibling briefs.
-- **Not fixed here (other owners, already carded):** gate_loop_points false pass **t_bab8aa19**;
-  instrument/tempo/key render gaps **t_25a6499c**; diverged checkout — now with a **third stranded
-  ref**, see §10 — **t_8a715681**; scheduler units running the wrong checkout **t_41f354be**;
-  oracle card duplication + the 0.20 trend artifact **t_bf0e5edd** — this pass added the
-  reproducibility evidence (the same genre returning 7.0 *and* 7.2 within one session from one
-  tree, and the stubbed check that proves it is the fetch branch, §11a) as a comment on that
-  card, since the card already owns the root cause; missing architecture docs
-  **t_b0a4db92**; profile workdir + kanban env vars **t_75aacf8b**; `gate_loudness` RMS-vs-LUFS
-  ruler **t_9546841b**; the game-assets pack failing its own gate **t_5ed495eb**; the
-  `battle_energy` mis-scoping **t_426a82a3**.
+- **Statuses of every card this brief cites, re-measured 2026-10-16 16:2x CDT (board read-only):**
+  all `done` — `t_bab8aa19` (gate_loop_points), `t_25a6499c` (render gaps), `t_8c5a6b91` (wrapper
+  dropped the instrumental flag), `t_8a715681` (diverged checkout), `t_41f354be` (scheduler
+  checkout), `t_bf0e5edd` (oracle duplication + the 0.20 artifact), `t_b0a4db92` (missing
+  architecture docs), `t_75aacf8b` (profile workdir + kanban env), `t_9546841b` (`gate_loudness`
+  ruler), `t_5ed495eb` (game-assets pack failed its own gate), `t_426a82a3` (`battle_energy`
+  mis-scoping), `t_16d011e6` (review rubrics), `t_ce063b87` / `t_14d438ea` (publish adapters,
+  glass-break checklist), `t_d3b9e218` / `t_d8cc0a38` (this genre's superseded cards). **Nothing
+  this brief cites is still open** — so the fix list it produced has been consumed, and the open
+  work is the three items below.
+- **Open, and owned elsewhere (status when this pass measured):** `t_1a5b018b` (`ready`,
+  music-producer) reconciles the stale **§8** text in the sibling briefs — this pass resolved its
+  `elemental-water` leg here and left the `elemental-air` leg on that card; `t_f65b0f4c`
+  (`running`) owns the plan's placeholder `key`; `t_6599927d` (`running`) owns re-emitted oracle
+  cards that carry `stage: brief` for genres whose brief is already on disk; `t_eb648761` (`done`)
+  was the trend-signal fallback card that `b2d11f7` closed. The `t_aac32db8` / `t_bdb94fb7` /
+  `t_6dd13d76` / `t_34f496d7` family owns the remaining `check_brief_absence(s)` /
+  `check_brief_figures` findings in *other* briefs.
 - **Filed by this brief (one card, after checking the board for duplicates):** the gate matrix is
-  never run by anything (§11) → `nexus-core`. The §8 rubric finding and the §10 publish-path
-  finding were **already carded** (`t_426a82a3`, `t_5ed495eb` / `t_ce063b87`), so they are
-  referenced, not duplicated; §10's stranded-ref measurement is left as a comment on
-  **t_8a715681**.
+  never run by anything (§11) → `nexus-core`. That is **`t_b16b9046`, now `done`** —
+  `music-gate-matrix.timer` runs it (first logged run rc=0, 15:22 CDT). The §8 rubric finding
+  and the §10 publish-path finding were **already carded** (`t_426a82a3`, `t_5ed495eb` /
+  `t_ce063b87`) and are referenced, not duplicated; §10's stranded-ref measurement was left as a
+  comment on **t_8a715681**, and the still-live half of it (two refs,
+  `origin/wip/atlas-backup-20261014` @ `3882292` and the local `wip/atlas-backup-20261014` @
+  `abcf169`, neither on `main`) is carded as **`t_9682a610`** (`ops`, `running` when this line was
+  written — "decide origin/wip/atlas-backup-20261014 @ 3882292").
+
+
 - **hotspot:** `music/briefs/` — concurrent workers write this directory and commit to one
   working tree. Measured while this brief was written: **6 cards `running` on the board** (5
   music briefs + `t_aba9d2c3`) and **13 brief-stage commits plus 2 lane fixes (15 commits) inside
@@ -754,6 +868,20 @@ Autonomy: all three lanes are at rung **`advisory`**, `clean_publishes: 0`
   file (`music/scripts/check_oracle_determinism.py`) and edits only
   `music/briefs/elemental-water.md` — both untouched by the siblings running beside it
   (earth/fire each touch their own brief; activist touches `music/briefs/activist.md`).
+- **hotspot re-measured 2026-10-16 16:1x–16:5x CDT (surviving-card pass, `t_354d5d25`):** the
+  collision is now measurable *on this file*. **7 cards were `running`** while this pass ran
+  (`t_97494e6a` fire oracle twin, `t_354d5d25` this card, `t_99e6d789`, `t_eb648761`,
+  `t_e86c2110`, `t_e2375c5a`, `t_fa731c5b`), and **`t_fa731c5b` committed this brief mid-edit**
+  — commit `b2a1220` (16:16:37) swept up this pass's in-flight edits to
+  `music/briefs/elemental-water.md` (399 changed lines in that commit) together with its own
+  one-paragraph §9 correction, and touched five other briefs in the same commit. Nothing was
+  lost, but two writers committed one file, which is exactly the hazard this bullet records:
+  **a brief-stage worker cannot assume it owns its own file while it holds it.** This pass
+  therefore kept its own commit path-scoped to `music/briefs/elemental-water.md` and recorded the
+  superseded sha256 above rather than rewriting a sibling's section. `music/planner/planner.py`
+  was simultaneously dirty from `t_f65b0f4c` and `t_6599927d` was mid-run on the oracle stage
+  markers — neither was touched here.
+
 
 ## 15. Aged live counts re-measured (card `t_0f7aed63`, 2026-10-16)
 
@@ -767,8 +895,76 @@ Re-measured and corrected in place.
   cleared by the reconciliation merge `ab33ad1` (14:23), not by anything this lane did.
 - **Blueprint census:** 7 of the 14 genres carry a lyric blueprint (`activist`, `anime-ending`,
   `anime-opening`, `chill-lounge`, `epic-orchestral-boss`, `jungle-dnb`, `trance`); the other 7 do
-  not. This genre still has none, so §9 blocker 2 — the flat 100 fallback — stands exactly as
-  written. The 2026-10-16 15:31 pass behind this section measured the census at six; what landed
-  since is `music/lyrics/blueprints/jungle-dnb.yaml` (card `t_e6d422ec`).
+  not. This genre still has none — but §9's "flat 100 fallback" no longer follows from that:
+  `bpm_anchor_for()` falls back to the template's own caption, and this genre's caption states
+  82 BPM (measured live, §9 blocker 2). The 2026-10-16 15:31 pass behind this section measured
+  the census at six; what landed since is `music/lyrics/blueprints/jungle-dnb.yaml` (card
+  `t_e6d422ec`).
 - **Corrected in place:** the header table row 4, §9 blocker 2 and §12's asset listing.
-- **Superseded by this pass (card `t_e6d422ec`, 2026-10-16):** `sha256 6478e55ceee1267a299abf2ff0a95f6d4987ae826ba71e8eb8ff9a3ca27cf52a` (669 lines / 41998 B) — the census counts above and in §6.3 were restated as live claims when `music/lyrics/blueprints/jungle-dnb.yaml` landed. The genre's own blocker is untouched.
+- **Superseded by this pass (card `t_e6d422ec`, 2026-10-16):** `sha256 6478e55ceee1267a299abf2ff0a95f6d4987ae826ba71e8eb8ff9a3ca27cf52a` (669 lines / 41998 B) — the census counts above and in §6.3 were restated as live claims when `music/lyrics/blueprints/jungle-dnb.yaml` landed.
+
+## 16. Surviving-card pass — what this pass re-measured and corrected (card `t_354d5d25`)
+
+This card is the surviving one of three for `elemental-water` (`t_d3b9e218` 7.5 and `t_d8cc0a38`
+7.7 are the superseded pair, both `done`; the oracle's ruling on this card states the true score
+is **7.0**, and that is what `music/oracle.py --dry-run` returns). Briefs in this lane are keyed
+by genre, so all three resolve to this file: **no second brief was written, no second chain was
+started, and no stage was re-run.** What this pass did is re-measure every checkable claim
+against live state and correct the ones that had aged.
+
+**Revision chain for this file, with the sha256 this pass replaced:**
+
+| Revision | Size / lines | Superseded by |
+|---|---|---|
+| `578e8dd1…` | write-time | duplicate pass `t_d8cc0a38` (13:52 CDT) |
+| `b3284178…` | 40590 B / 653 | `t_0f7aed63` (15:34) |
+| `6478e55c…` | 41998 B / 669 | `t_e6d422ec` (15:56) |
+| **`3f19591d395550df4778cd21bdf461690b8848bf6923b192f202efb578cceca4`** | **42450 B / 671** | **this pass (`t_354d5d25`)** — and, mid-pass, commit `b2a1220` (`t_fa731c5b`) committed a version that contained this pass's in-flight edits plus its own one-paragraph §9 correction; the corrections below are relative to **both** |
+
+**Corrected in this pass, class by class** (each re-measured, not inferred):
+
+1. **Header** — card identity (this card is the surviving one; both twins `done`), the divergence
+   pair (0 behind / 81 ahead at `e597bb6`, `origin/main` `ba28f55`), the board census
+   (108 done / 36 ready / 8 blocked / 7 running / 4 todo / 1 archived), the running-card list,
+   and the score (7.00, reproducible — not the 7.2 title).
+2. **§1** — the registry transcript gained `, 1 stage gate rule(s)` and the `stage gate visual:`
+   line.
+3. **§2** — rewritten around the **fix**: `b2d11f7` removed the failed-fetch premium, so a
+   timeout/403 now scores `TREND_NO_SIGNAL = 3.0` and reports itself. Added the stubbed
+   14-genre measurement (both fetch branches, **max |delta| = 0.0**, range 6.5–8.4) and the live
+   oracle-card census (43 cards: 41 `done`, 2 `running`).
+4. **§5** — `gate_sync_ready` on an empty dir now returns **16 findings** (was 8: the pack
+   manifest counts and `LICENCE.txt` classes), and `gate_loop_points` now measures **loop level**
+   as well as curvature: a faded tail FAILS ("loop level drops"), so the paragraph claiming the
+   gate cannot see a faded tail was wrong as of this pass.
+5. **§8** — the rubric it asked to be fixed **has been fixed** (`56dc465`, `t_426a82a3`):
+   criteria carry `applies_to` as data, `elemental_atmosphere` (w3) exists, and this genre's
+   scored set is `elemental_atmosphere` + `loop_safety` + `asset_packaging` + `loudness_target`
+   (Σw 8, ≥56 points at the 7.0 threshold). The reject signal that fired on a correct water theme
+   is now scoped to fire + boss.
+6. **§9** — all three blockers are **closed** (`t_25a6499c`, `t_8c5a6b91`): the planner has
+   `--lyrics-mode instrumental`, the plan's `bpm` resolves to **82** from the caption, and
+   `keyscale` reaches the engine (pod `translate.py` line 76). `music/suno-gen.py` is in the
+   checkout now. What remains is **this genre's missing queue entry / queue card**, measured
+   against the ConfigMap's 12 entries and every `queue` card on the board.
+7. **§11 / §11a** — the gate matrix is now run by `music-gate-matrix.timer` (first run rc=0,
+   272 s, 18 pass / 26 expected failures / 0 misbehaved), and `check_oracle_determinism.py` is
+   **rc=0** with `--selftest` still proving A1 fires on an inverted pair.
+8. **§12** — the blueprint census is 7 (`jungle-dnb.yaml` landed); the ledger carries a
+   `renders[]` log with no entry for this genre; the only genre-named asset is a 5.000 s
+   1280×720 prototype clip (ffprobe-measured).
+9. **§13 / §14** — the advance channel (`kanban_comment` tool, `t_5a93164a`), the genre-resolved
+   visual gate (`gate_for_stage` → `gate_youtube_authentic`, `t_d9983bb9`), the runbook's real
+   line count (**88**, not 53), the rubric version, the moved `oracle.py` line citations, the
+   re-run check list, the engine pod (`sunolocal-source-75d58dbc97-7jfmc`, v0.1.3) and the status
+   of every cited card (all `done`).
+10. **Two standing-check findings that named this brief were cleared**: `check_brief_figures`
+    ("53 lines" → 88) and `check_brief_absence` ("`music/suno-gen.py` is absent" → present, §9).
+    No check names this brief now.
+
+**Not done in this pass, on purpose:** the genre was re-scored, not re-scored *by hand* — 7.0 is
+reproduced from `oracle.py`, and no card was re-emitted. No queue entry was written: that belongs
+to the `nexus-core` queue card this genre does not yet have, and writing the render queue from
+the brief would collide with the card that owns the genre's title and duration. No file outside
+`music/briefs/elemental-water.md` was modified by this pass.
+
