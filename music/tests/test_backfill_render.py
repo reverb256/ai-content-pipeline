@@ -366,9 +366,14 @@ class TestEndToEnd(Fixture):
     """The whole tool on a fixture: recover, close, no-op, and a refusal."""
 
     def test_recover_and_close_then_a_second_run_is_a_no_op(self):
+        # 81 s, not 25: elemental-earth's registry entry declares the delivered
+        # loop's length (`loop_bars: 44`), and a render must be LONGER than the
+        # loop it carries — the engine emits 1.5-6.2 s of digital silence inside
+        # every requested window, so a 25.6 s render cannot carry a 44-bar
+        # (70.400 s at 150 BPM) loop (card t_8b4fcc48).
         self.plan("earth", "Loop Claim", "loop caption", "elemental-earth",
-                  bpm=150.0, duration=25)
-        synth(self.store / "suno-fff.flac", 20.6, 5.0)
+                  bpm=150.0, duration=81)
+        synth(self.store / "suno-fff.flac", 76.0, 5.0)
         make_store_db(self.db, [("fff", {"title": "Loop Claim",
                                          "prompt": "loop caption"}, 100.0,
                                  "completed")])
@@ -384,7 +389,12 @@ class TestEndToEnd(Fixture):
         self.assertTrue(loop.is_file(), out)
         self.assertTrue(lp.is_file(), out)
         self.assertIn("PASS loop_close --check-only", out)
-        self.assertEqual(json.loads(lp.read_text())["seamless"], True)
+        idx = json.loads(lp.read_text())
+        self.assertEqual(idx["seamless"], True)
+        # the registry's declared length, not the pack lane's 4-bar default
+        self.assertEqual(idx["bars"], 44)
+        self.assertEqual(idx["declared_loop_bars"], 44)
+        self.assertAlmostEqual(idx["loop_end_s"], 44 * 1.6, 6)
         # The engine's store is untouched: no artifact changed, no row added.
         self.assertEqual(self.store_state(), store_before)
         self.assertEqual(sha256_of(self.db), db_sha)

@@ -686,10 +686,15 @@ def selftest() -> int:
         (plans / "sticky-loop.looprefused").write_text("refused once\n")
         (store / "suno-eee.flac").write_bytes(b"fLaC" + b"\x00" * 64)
         # ---- GREEN loop claim: a real, closable render (tone + silence tail).
+        # 81 s, not 25: the genre's own registry entry declares the delivered
+        # loop's length (`loop_bars: 44` for elemental-earth), and a render must
+        # be LONGER than the loop it carries — the engine emits 1.5-6.2 s of
+        # digital silence inside every requested window, so a 25.6 s render
+        # cannot carry a 44-bar (70.400 s at 150 BPM) loop (card t_8b4fcc48).
         make_plan(plans / "loop-claim.json", "Loop Claim", "loop caption",
-                  "elemental-earth", bpm=150.0, duration=25)
+                  "elemental-earth", bpm=150.0, duration=81)
         (plans / "loop-claim.rendered").write_text("")
-        tone_with_silence(store / "suno-fff.flac", 20.6, 5.0)
+        tone_with_silence(store / "suno-fff.flac", 76.0, 5.0)
 
         jobs = [
             ("aaa", {"title": "Recover Me", "prompt": "recover caption"}, 100.0),
