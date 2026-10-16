@@ -52,9 +52,10 @@ signal and not noise:
 
   * A census count inside quotation marks is a QUOTATION, not a claim: the brief is reporting
     someone else's words (a docstring it read, the checker's own earlier FAIL line). Measured on
-    `epic-orchestral-boss.md:373`, which quotes `planner.py`'s stale "(3 of 15 genres do)"
-    docstring and says so in the same breath — flagging it would be the noisy-check failure this
-    file's own §12 warns about. Skipped, and only the double-quoted span.
+    `epic-orchestral-boss.md:373`, which quotes `planner.py`'s "(3 of 15 genres do)" docstring —
+    stale then, corrected by card `t_a54fb00d` at `3967dea` — and says so in the same breath;
+    flagging it would be the noisy-check failure this file's own §12 warns about. Skipped, and
+    only the double-quoted span.
   * S7 is checked ONLY for a REPO claim. The same words also describe the DEPLOYED payload
     (`ConfigMap mining/music-pipeline-payload`, whose keys are `music__lyrics__blueprints__*`).
     That is cluster state, which this check cannot recompute from the repo — at 15:31 CDT on
@@ -175,8 +176,9 @@ def in_quotes(state: bool, text: str, start: int) -> bool:
 
     A count inside quotation marks is a QUOTATION, not the brief's own claim: it is reporting
     someone else's words. Measured on `music/briefs/epic-orchestral-boss.md:373`, which quotes
-    `planner.py`'s stale "(3 of 15 genres do)" docstring and says it is stale in the same
-    sentence; and on `activist.md:904`, which quotes the sentence this check's own first draft
+    `planner.py`'s "(3 of 15 genres do)" docstring — stale then, corrected by card `t_a54fb00d`
+    on 2026-10-16 — and says it is stale in the same sentence; and on `activist.md:904`, which
+    quotes the sentence this check's own first draft
     wrongly flagged. Skipped — the noisy-check failure mode is the one this lane cannot afford.
 
     The state is threaded across lines on purpose: `activist.md:903` opens the quote that
