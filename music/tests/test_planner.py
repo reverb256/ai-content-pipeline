@@ -59,12 +59,12 @@ def genres() -> list[str]:
 print("1. every genre plans, and gets a tempo from its own research")
 
 # REGRESSION (2026-10-09). The draft path resolved bpm as
-# `blueprint.bpm_anchor or 100`. Only 3 of 14 genres have a blueprint, so 11
-# genres were planned at a flat 100 BPM while their own template captions
-# stated the real tempo: jungle-dnb came out 100 against a stated 168,
-# anime-opening 100 against 160. A generic tempo is not a neutral default - it
-# is a wrong answer that validation then could not catch, because validation
-# read the same anchor and found nothing to disagree with.
+# `blueprint.bpm_anchor or 100`. The 7 of 14 genres with no blueprint fell back
+# to a flat 100 BPM while their own template captions stated the real tempo:
+# jungle-dnb came out 100 against a stated 168, anime-opening 100 against 160.
+# A generic tempo is not a neutral default - it is a wrong answer that
+# validation then could not catch, because validation read the same anchor and
+# found nothing to disagree with.
 for g in genres():
     out = pathlib.Path(f"/tmp/_tp-{g}.json")
     r = subprocess.run(

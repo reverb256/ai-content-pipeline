@@ -375,8 +375,10 @@ requires (`family`, `theme`, `title_candidates`, `structure`), plus `bpm_anchor:
 `FAIL: no lyric blueprint for '<genre>'`, so the lyrics stage can start. Blueprint census on
 disk at 16:00: **7 of the 14 genres** (`activist`, `anime-ending`, `anime-opening`,
 `chill-lounge`, `epic-orchestral-boss`, `jungle-dnb`, `trance`; `jungle-dnb.yaml` is still
-untracked in the lane tree). `planner.py:load_blueprint`'s docstring still reads
-"(3 of 15 genres do)" — a stale docstring, not a behaviour: the loader reads the directory.
+untracked in the lane tree). `planner.py:load_blueprint`'s docstring read
+"(3 of 15 genres do)" — a stale docstring, not a behaviour: the loader reads the directory. Card
+`t_a54fb00d` corrected that figure to "(7 of 14 genres do)" on 2026-10-16; the deployed payload
+copy of the same function picks the correction up at the next `sync-payload.sh`.
 
 ## 7. Existing assets for this genre
 
@@ -952,3 +954,14 @@ hotspot: `/home/j_kro/ai-content-pipeline/music/briefs/` — the 14 briefs under
 written and re-verified by ~8 concurrent `music-producer` workers on 2026-10-16; every write
 needs a path-scoped commit and a lock retry. This file's revisions are all on this genre, and
 this pass adds one path-scoped commit that supersedes `22a596a4…`.
+
+### 15.5 Code-prose census follow-up (card `t_a54fb00d`, 2026-10-16 17:31 CDT)
+
+§6 above recorded `planner.py:load_blueprint`'s docstring `(3 of 15 genres do)` at `3967dea`, and
+called it a stale docstring. Card `t_a54fb00d` corrected the repo's copy to `(7 of 14 genres do)`
+at the 2026-10-16 17:31 CDT reading, live census then 14 registered genres and 7 files in
+`music/lyrics/blueprints/`, and gave the class a check (`music/scripts/check_code_census.py`). No
+figure in THIS file moved — the §6 census sentence is anchored to its own 16:00 reading — and the
+deployed payload copy of the same docstring keeps the old figure until the next `sync-payload.sh`.
+
+- **Superseded by this pass (card `t_a54fb00d`, 2026-10-16):** `sha256 c8fcacf49e949e17b56eaa8692113668b15541de7e89ff2e73f5b3b5ebf48fa7` (954 lines / 65 789 B).

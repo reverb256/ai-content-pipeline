@@ -116,9 +116,10 @@ _WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven
           "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13,
           "fourteen": 14, "fifteen": 15, "sixteen": 16}
 
-# S1's shape: the number may be wrapped in emphasis. `**eleven** blueprint-less genres` is a
-# real line (activist.md:302) and the original `(\d+|eleven|…)` could not see it. `_EMPH` is
-# inside the capture so both spellings produce the same token for `num()`.
+# S1's shape: the number may be wrapped in emphasis. `**eleven** blueprint-less
+# genres` (activist.md:302, since corrected) was a real line when written, and the
+# original `(\d+|eleven|…)` could not see it. `_EMPH` is inside the capture so both
+# spellings produce the same token for `num()`.
 _EMPH = r"[*_`]{0,2}"
 _NUMTOK = rf"{_EMPH}(?:\d+|{'|'.join(_WORDS)})\b{_EMPH}"
 

@@ -322,7 +322,7 @@ def load_template(genre: str) -> dict:
 
 
 def load_blueprint(genre: str) -> dict:
-    """music/lyrics/blueprints/<genre>.yaml when it exists (3 of 15 genres do)."""
+    """music/lyrics/blueprints/<genre>.yaml when it exists (7 of 14 genres do)."""
     path = BLUEPRINT_DIR / f"{genre}.yaml"
     if not path.is_file():
         return {}
@@ -334,7 +334,7 @@ def bpm_in_caption(caption: str):
     """The BPM the genre's own caption states, e.g. "ragga jungle, 168 BPM".
 
     Every template in music/prompts/ states one. It is the researched tempo for
-    the genre and the only tempo signal available for the 11 genres that have no
+    the genre and the only tempo signal available for the 7 genres that have no
     blueprint yet - without it the draft path fell back to a flat 100, which is
     right for almost nothing: jungle-dnb came out at 100 against its own stated
     168, and anime-opening at 100 against its stated 160.

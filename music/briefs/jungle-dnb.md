@@ -460,8 +460,11 @@ Three facts fall straight out of that table and they matter for this genre:
 ### 6.3 THE BLOCKER: the plan's tempo is dropped and replaced with 120 BPM
 
 The planner resolves this genre's tempo correctly. The live payload planner
-(`music__planner__planner.py` lines 169–180 — the deployed copy; the repo's planner is a
-different file, §11.4):
+(`music__planner__planner.py` — the deployed copy. Measured 2026-10-16 17:31:54 CDT: 1157 lines,
+md5 `a1dd2b33727f8c607541b47d2e0491e5`, against this repo's `music/planner/planner.py` at 1371
+lines and md5 `1cb05ecd…`. The two were byte-identical earlier the same hour; the repo has grown
+since, so the payload LAGS the repo rather than being a different program. The fence below is the
+deployed copy's own text):
 
 ```python
 def bpm_in_caption(caption: str):
@@ -476,6 +479,15 @@ def bpm_in_caption(caption: str):
     m = re.search(r"(\d{2,3})\s*BPM", caption or "", re.I)
     return int(m.group(1)) if m else None
 ```
+
+**That fence is a superseded revision, and it is the DEPLOYED copy's own wording.** Its two census
+figures are `3 of 15 genres` and `11` genres with no blueprint, and the payload still carried both
+at the 2026-10-16 17:31:54 CDT read above. Card `t_a54fb00d` corrected the repo's copy in the same
+commit that wrote this note — `load_blueprint` now reads `(7 of 14 genres do)` and `bpm_in_caption`
+`the 7 genres that have no blueprint yet` — against a live census of **14** registered genres and
+**7** files in `music/lyrics/blueprints/`. The payload picks the correction up at the next
+`sync-payload.sh`, so the fence stays as the deployed revision and the two copies differ by this
+one docstring until then.
 
 The jungle caption opens `ragga jungle, 168 BPM, chopped and resequenced Amen break …`, so
 `template_bpm = 168`, and with no blueprint present `bpm_anchor_for()` returns **168**. The
@@ -855,11 +867,14 @@ interpreter.
 
 The repo and the deployment disagree about what `acestep_plan.py` *is*. A worker who reads
 the repo copy will conclude the tempo is honored and be wrong about the live rail; a worker
-who copies the repo file into the payload would bypass sunolocal entirely. There is also
-planner drift on the same pattern: the live payload planner (759 lines, `47839397`) is not
-the repo's (545 lines, `e2cb6eea`) — the repo still carries the flat
-`"bpm": ctx["blueprint"].get("bpm_anchor") or 100` fallback at line 470 whose jungle-at-100
-outcome the live version's docstring records as the fixed incident.
+who copies the repo file into the payload would bypass sunolocal entirely. The PLANNER does not
+show that drift at the 2026-10-16 17:31:54 CDT read: the payload's `music__planner__planner.py` is
+1157 lines at md5 `a1dd2b33727f8c607541b47d2e0491e5`, this repo's `music/planner/planner.py` is
+1371 lines at md5 `1cb05ecd…`, and the two were byte-identical earlier the same hour — the payload
+LAGS the repo, it is not a different program (§16 records the correction; the `759 lines /
+47839397` vs `545 lines / e2cb6eea` pair written here does not reproduce). The flat fallback the
+repo carries is `"bpm": args.bpm or bpm_anchor_for(ctx) or 100`, at `planner.py:1159` and `:1181`
+— `:470` is inside `load_element_index`, not the draft path.
 
 ### 11.5 Cosmetic: the repo's planner/registry drift is not visible from the card
 
@@ -1172,7 +1187,7 @@ lyrics.py scaffold --genre jungle-dnb BEFORE  rc=2  FAIL: no lyric blueprint for
 - **The scaffold is still refused, and no track dir was left behind.** `gate_lyrics_original --track-dir … --strict` FAILs the scaffolded sheet with 7 × "placeholder guidance left in" plus `authorship.status=incomplete`, so the draft guard is intact; the scaffold was written into a scratch copy of `music/`, not this worktree, so `music/lyrics/jungle-dnb/` is absent here.
 - **Still owed, and not this card's step:** the chart payload copy. `music-pipeline-payload` does not carry `jungle-dnb.yaml` until card `t_97c92df2` runs `sync-payload.sh` under `/home/j_kro/mining-k8s/helm/charts/music-pipeline/` and commits that repo; `check-payload-sync.sh` holds the two copies identical.
 - **Census consequence, corrected in the same commit:** the briefs that cited the census as six were restated as live claims — `activist.md` (§1 and its §13), `chiptune-8bit.md` (§13), `elemental-earth.md` (§15), `elemental-water.md` (§6.3 and §15) and this file (§1, §4, §8, §12, §15). `commentary-beds.md` was **not** touched: card `t_b976f49f` had that file modified and uncommitted while this pass ran, so its census bullet stays with that card.
-- **Same class, not fixed here (no check reads code comments).** `music/planner/planner.py` and `music/tests/test_planner.py` still quote the blueprint census as it stood when they were written:
+- **Same class, filed as this card, and corrected by the next pass (the fence below is the BEFORE revision).** `music/planner/planner.py` and `music/tests/test_planner.py` still quote the blueprint census as it stood when they were written:
 
   ```text
   planner.py:297  (load_blueprint docstring)   "… when it exists (3 of 15 genres do)."
@@ -1181,6 +1196,33 @@ lyrics.py scaffold --genre jungle-dnb BEFORE  rc=2  FAIL: no lyric blueprint for
   ```
 
   Each figure was accurate when written; each now reads 7 of 14. Filed as a follow-up card rather than edited inside this one.
+
+- **Superseded by the next pass (card `t_a54fb00d`, 2026-10-16).** The three sites now read
+  `7 of 14` and `7`: `planner.py:325` `(7 of 14 genres do)`, `planner.py:337` `the 7 genres that
+  have no blueprint yet`, `tests/test_planner.py:62` `The 7 of 14 genres with no blueprint fell
+  back`. The first two moved from `:297`/`:309` while this pass ran — other cards took
+  `planner.py` from 1157 to 1371 lines — so those two citations are the 17:31 CDT reading, where
+  the pass left them. Each figure in the fence above describes the revision that wrote it, and not
+  one of the three matched live state at either reading:
+
+  * `3 of 15 genres do` — the `3` was true from `3967dea` (2026-10-09 00:26, the commit that wrote
+    it) until `8f0fd9a` added the 7th blueprint. The **`15` matches no tracked revision**:
+    `music/genres.yaml` was untracked when the docstring was written, and every tracked reading
+    from `b0d4007` (2026-10-09 03:24) gives **14** genres. A figure no revision carries is the one
+    no check can recompute, which is why nothing flagged it.
+  * `the 11 genres that have no blueprint yet` — true at `dda0d32` (2026-10-09 03:39), the commit
+    that wrote it, against a 3-file `music/lyrics/blueprints/`: 14 − 3 = 11. The 2026-10-16 15:31
+    CDT re-measure in §1 read 8, and the live count is 7 (`music/lyrics/blueprints/*.yaml`).
+  * `Only 3 of 14 genres have a blueprint, so 11` — true at `dda0d32`. The test itself was never
+    stale: it compares every genre's planned `bpm` against `bpm_anchor_for(ctx)`, so it read the
+    7th blueprint correctly the moment it landed.
+  * The class now has a check: `music/scripts/check_code_census.py`, which reads the lane's own
+    comments and docstrings and recomputes this census. Measured on this pass: `--rev HEAD` (the
+    pre-correction revision) FAILs rc=1 with exactly these three sites plus the one historical
+    line in `check_brief_drift.py`'s own comments; the worktree PASSes rc=0 with 3 live claims
+    across 113 `.py` files and no false positive; `--selftest` PASS, 16 census cases plus a
+    prose-extraction case. The standing pass reads the WORKTREE, not a revision, since these
+    files move under other cards.
 
 ---
 
@@ -1256,7 +1298,70 @@ file's in any of the three readings**, and this pass changed no figure — the d
 people's writes landing under a shared tree.
 
 - **Superseded revision of this file:** `sha256 5b3914191c5108814cccaaaa2c51f8a5b5eff1efc17455f7ddc4c173dac486ea` (1168 lines / 76 392 B).
-- **Superseded by this pass (card `t_6dd13d76`, 2026-10-16T17:21-05:00 CDT):** `sha256 3411f2eb58de226cc6d7d5ef524b6c06d78fd34e1c2a99c445278eabc21cd15f` (1261 lines / 85229 B) — the code-comment citation above was re-pointed from `planner.py:182` to `planner.py:297`: the file grew since that reading and `:182` is blank now, while `:297` is the `load_blueprint` docstring the line names. The census text it quotes is unchanged and still belongs to card `t_a54fb00d`.
+- **Superseded by this pass (card `t_6dd13d76`, 2026-10-16T17:21-05:00 CDT):** `sha256 3411f2eb58de226cc6d7d5ef524b6c06d78fd34e1c2a99c445278eabc21cd15f` (1261 lines / 85229 B) — the code-comment citation above was re-pointed from `planner.py:182` to `planner.py:297`: the file grew since that reading and `:182` is blank now, while `:297` is the `load_blueprint` docstring the line names. The census text it quotes was corrected by card `t_a54fb00d` in the pass that follows — see the
+bullet two below and §16.
 - **Not changed, not re-filed otherwise:** the trend-fallback card `t_eb648761` is still a
   duplicate to close, and the blueprint-census comments in `music/planner/planner.py` and
-  `music/tests/test_planner.py` still belong to card `t_a54fb00d` (§16).
+  `music/tests/test_planner.py` were corrected by card `t_a54fb00d` (§16).
+
+---
+
+## 18. Code-prose census pass (card `t_a54fb00d`, 2026-10-16T17:31–17:45 CDT)
+
+§16 listed three census figures in the lane's own code prose and filed them here. This pass
+corrected all three and gave the class a check. No registry value, gate, plan, blueprint, chart
+file or cluster object was touched, and no figure in THIS file moved.
+
+| # | §16 site (17:31 CDT reading) | before (revision named) | after |
+|---|---|---|---|
+| 1 | `planner.py:325` `load_blueprint` docstring | `(3 of 15 genres do)` at `3967dea` | `(7 of 14 genres do)` |
+| 2 | `planner.py:337` `bpm_in_caption` docstring | `the 11 genres that have no blueprint yet` at `dda0d32` | `the 7 genres that have no blueprint yet` |
+| 3 | `tests/test_planner.py:62` comment | `Only 3 of 14 genres have a blueprint, so 11` at `dda0d32` | `The 7 of 14 genres with no blueprint fell back` |
+
+The first two citations moved from `:297`/`:309` to `:325`/`:337` at the 2026-10-16 17:34:46 CDT
+commit `f832112`, which took `planner.py` from 1157 to 1371 lines. Live census at the 17:31 CDT
+reading, recomputed through the registry loader plus the `music/lyrics/blueprints/*.yaml` glob:
+**14** registered genres and **7** blueprints.
+
+**The new check — and what it deliberately does not read.** `music/scripts/check_code_census.py`
+reads every `music/**/*.py` comment and docstring, applies the census shapes and the ANCHORED
+escape hatch IMPORTED from `check_brief_drift.py`, and recomputes this census:
+
+```text
+$ /usr/bin/python3 music/scripts/check_code_census.py --selftest
+SELFTEST PASS check_code_census: 16 census case(s) plus one prose-extraction case      # rc=0
+$ /usr/bin/python3 music/scripts/check_code_census.py --rev HEAD     # the BEFORE revision
+FAIL check_code_census: 4 stale census claim(s) in revision HEAD                       # rc=1
+  music/planner/planner.py:297  claimed "3 of 15 genres"  measured 7 of the 14
+  music/planner/planner.py:309  claimed "the 11 genres that have no blueprint"  measured 7
+  music/tests/test_planner.py:62  claimed "3 of 14 genres"  measured 7 of the 14
+  music/scripts/check_brief_drift.py:119  `**eleven** blueprint-less genres` — a historical
+      comment line, anchored "when written" in this pass so history stays history
+$ /usr/bin/python3 music/scripts/check_code_census.py                # the worktree
+PASS check_code_census: 3 live census claim(s) across 113 .py file(s)                  # rc=0
+```
+
+Three limits, recorded so a later pass does not "fix" them: a bare string literal is DATA and is
+not read (the fixtures in `check_brief_drift.py` are deliberately stale census strings); the `of`
+pair with no `genres` after it is that check's S4 shape — a brief shape, not read here, because a
+docstring can mention blueprints in one clause and count a different census in the next; and the
+brace-list shape is a PATH, which code prose does not write as a census.
+
+**Standing checks at this pass** (2026-10-16 17:35–17:44 CDT, worktree with other cards' writes
+landing): `check_code_census` PASS, 3 claims across 113 files; `check_brief_drift` PASS, 21 live
+counts (0 behind / 9 ahead of `origin/main` at `bacf245`, 14 genres, 7 blueprints);
+`check_brief_paths` PASS, 21 citations; `check_brief_bpm_solutions` PASS, 5 styleWeight claims;
+`check_prompt_style_counts` PASS, 15 declared lengths; `check_stage_scripts` PASS, 21 script paths;
+`check_doc_refs` PASS.
+
+Two checks FAIL, and neither finding is this file's (each was re-measured before and after this
+pass, same readings): `check_brief_figures` **7 of 125** at 2026-10-16 17:40 CDT — six other
+briefs cite `brain/playbooks/music-lane-architecture.md` at 34 328 B while an UNCOMMITTED sibling
+edit holds that file at 45 674 B, the class §17 already records; `check_brief_line_refs` **4 of
+127** at that same reading — `elemental-air/above-the-weather/brief.md` and `elemental-earth.md`
+cite `planner.py` ranges that the 1157 to 1371 line growth moved. `music/tests/`: `test_planner`
+PASS, `test_acestep_plan` PASS, `test_loop_close` PASS, `test_gate_loop_points_fade` PASS,
+`test_lyrics_gate_language` PASS; `test_acestep_sheet_guard` FAIL 3 (three committed lyric sheets
+against a widened placeholder rule — a sibling's gate change in flight).
+
+- **Superseded by this pass (card `t_a54fb00d`, 2026-10-16):** `sha256 f9d76960fb3c836b84653e7f5037bad161f01d7d75699fe965e3e9868bfd572c` (1262 lines / 85 699 B).
