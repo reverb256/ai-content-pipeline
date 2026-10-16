@@ -93,12 +93,13 @@
     "streaming": ["master.wav", "artwork 3000x3000", "manifest.json with title/artist/isrc/genre + ai_disclosure", "ai_disclosure.txt", "ISRC"]
   },
 
-  "_loop_verification_warning": "gate_loop_points is NOT sufficient on its own. Measured 2026-10-16: a 25.6 s loop with a 1.6 s fade-out tail PASSES with a curvature ratio of 2.21x (ceiling 3.0x), because curvature detects derivative kinks (clicks), not level discontinuities. The same artifact measures a tail-1s vs head-1s volumedetect delta of 8.8 dB (-21.1 -> -29.9), which the gamer rubric's loop_safety criterion rejects (over 6 dB). Run BOTH rulers. Card: t_bab8aa19.",
+  "_loop_verification_warning": "gate_loop_points is NOT sufficient on its own. Measured 2026-10-16 on .../workspaces/t_6f0d261e/loop/faded.wav: a 25.6 s loop with a 1.6 s fade-out tail PASSES with a curvature ratio of 2.21x (ceiling 3.0x), because curvature detects derivative kinks (clicks), not level discontinuities. The same file measures a tail-1s vs head-1s volumedetect delta of 8.8 dB (-21.1 -> -29.9), which the gamer rubric's loop_safety criterion rejects (over 6 dB). The measurement is level-dependent, so name the render: the full-scale twin .../t_6f0d261e/loop2/B_faded.wav gives the same 2.21x and the same delta 8.9 dB at -3.0 -> -11.9. Run BOTH rulers: music/scripts/loop_seam_check.py --master <wav> --loop-points <json> (added by the duplicate pass t_42a01e18; --selftest rebuilds the finding from the repo alone). Card for the gate fix: t_bab8aa19.",
 
   "_rights": "INSTRUMENTAL -> no human-authored lyrics -> an AI-Generated Output under SOCAN's guidelines, not an AI-Assisted Work. No PRO registration and no publishing-royalty path for this genre; a US Copyright Office registration would have to disclaim the whole composition. Not a blocker for game-assets (licence sale) or youtube-gaming (ad revenue). Source: music/docs/pro-registration.md sections 1 and 3.",
 
   "_isrc": "No ISRC is proposed here. An ISRC has NO check digit (IFPI International ISRC Agency Bulletin 2015/01 rev 3, ISO 3901:2019) - 12 characters, 2 letters + 3 alphanumeric + 2 digits + 5 digits. music/gates/gate_release_ready.py:92 isrc_syntax() implements exactly that and is correct; its docstring lines 13-15 wrongly claim a check digit. Do not fabricate a 13-character code.",
 
   "_lyrics": "none - instrumental genre by design (music/prompts/elemental-fire.md)",
-  "_written_by": "music-producer, card t_6f0d261e, 2026-10-16"
+  "_written_by": "music-producer, card t_6f0d261e, 2026-10-16",
+  "_verified_by": "music-producer, duplicate-card pass t_42a01e18, 2026-10-16T13:50 CDT - every checkable figure in music/briefs/elemental-fire.md was re-measured live (brief section 13). One attribution corrected: this file's _loop_verification_warning now names the render it measured. Superseded revision of this file: sha256 ebb875bd2472d0fab0a41766519db7b948bcd03334372fb53245acfe6bcc6013."
 }
