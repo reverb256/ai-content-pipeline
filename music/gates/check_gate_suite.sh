@@ -14,6 +14,33 @@ GATES="$REPO/music/gates"
 SCRATCH="${GATE_SCRATCH:-/tmp/music-gate-fixtures}"
 fails=0
 
+# ------------------------------------------------------------------
+# interpreter resolution (incident 2026-10-16, card t_d3b9e218)
+# ------------------------------------------------------------------
+# Bare `python3` is NOT safe here. In a worker shell it resolves to the
+# Hermes bundled interpreter (~/.hermes/tools/python-3.14.7+*/bin/python3),
+# which has no PyYAML. gate_lyrics_original imports music/lyrics/lyrics.py,
+# which imports yaml, so those two checks died with
+#   ModuleNotFoundError: No module named 'yaml'
+# and the suite reported "BROKEN: 2 check(s) misbehaved" for a gate that was
+# actually fine. Resolve ONE interpreter that can `import yaml` and use it
+# for every check; refuse to run rather than report a false BAD.
+# Honour an explicit PY= override when it works; else prefer /usr/bin/python3.
+if [ -n "${PY:-}" ] && "$PY" -c 'import yaml' >/dev/null 2>&1; then
+  :
+else
+  PY=""
+  for cand in /usr/bin/python3 python3; do
+    if "$cand" -c 'import yaml' >/dev/null 2>&1; then PY="$cand"; break; fi
+  done
+fi
+if [ -z "$PY" ]; then
+  echo "FATAL: no python3 with PyYAML found (tried \$PY, /usr/bin/python3, python3)" >&2
+  echo "       gate_lyrics_original needs it; refusing to report a false BAD." >&2
+  exit 2
+fi
+echo "interpreter: $PY"
+
 mkdir -p "$SCRATCH"
 
 # ------------------------------------------------------------------
@@ -189,7 +216,7 @@ EOF
 # --- loop packages (seamless 220 Hz vs phase-slip 220.5 Hz) --------
 GOOD_LOOP="$F/good_loop"; BAD_LOOP="$F/bad_loop"
 mkdir -p "$GOOD_LOOP" "$BAD_LOOP"
-python3 "$GATES/_loop_fixtures.py" "$F"
+"$PY" "$GATES/_loop_fixtures.py" "$F"
 cp "$F/loop_seamless.wav" "$GOOD_LOOP/master.wav"
 cp "$F/loop_broken.wav" "$BAD_LOOP/master.wav"
 for d in "$GOOD_LOOP" "$BAD_LOOP"; do
@@ -201,7 +228,7 @@ done
 # --- youtube visual packages ------------------------------------------
 GOOD_YT="$F/good_yt"; BAD_YT="$F/bad_yt"
 mkdir -p "$GOOD_YT" "$BAD_YT"
-python3 "$GATES/_visual_fixtures.py" "$F"
+"$PY" "$GATES/_visual_fixtures.py" "$F"
 cp "$F/good_visual.mp4" "$GOOD_YT/visual.mp4"
 cp "$F/disclosure.txt" "$GOOD_YT/disclosure.txt"
 cp "$F/raw_dump.mp4" "$BAD_YT/visual.mp4"
@@ -225,24 +252,24 @@ EOF
 # ------------------------------------------------------------------
 say "gate_quota"
 pass "quota passes at 0/60 (real ledger)" \
-  python3 "$GATES/gate_quota.py"
+  "$PY" "$GATES/gate_quota.py"
 pass "quota warns (exit 0) at 56/60" \
-  python3 "$GATES/gate_quota.py" --ledger "$F/warn_ledger.json"
+  "$PY" "$GATES/gate_quota.py" --ledger "$F/warn_ledger.json"
 fail_expected "quota HARD STOPS at 59/60" 1 \
-  python3 "$GATES/gate_quota.py" --ledger "$F/stop_ledger.json"
+  "$PY" "$GATES/gate_quota.py" --ledger "$F/stop_ledger.json"
 
 # ------------------------------------------------------------------
 # 2. gate_lyrics_original (existing gate — regression)
 # ------------------------------------------------------------------
 say "gate_lyrics_original"
 pass "chill-lounge lyrics pass (human claim)" \
-  python3 "$GATES/gate_lyrics_original.py" \
+  "$PY" "$GATES/gate_lyrics_original.py" \
   --track-dir music/lyrics/chill-lounge/amber-hour --strict
 pass "trance lyrics pass (human claim)" \
-  python3 "$GATES/gate_lyrics_original.py" \
+  "$PY" "$GATES/gate_lyrics_original.py" \
   --track-dir music/lyrics/trance/signal-before-dawn --strict
 fail_expected "suno-generated lyric rejected" 1 \
-  python3 "$GATES/gate_lyrics_original.py" \
+  "$PY" "$GATES/gate_lyrics_original.py" \
   --lyrics-file "$GATES/fixtures/suno-generated-umbrellas-in-space.txt"
 
 # ------------------------------------------------------------------
@@ -250,10 +277,10 @@ fail_expected "suno-generated lyric rejected" 1 \
 # ------------------------------------------------------------------
 say "gate_stems_present"
 pass "4 aligned stems pass" \
-  python3 "$GATES/gate_stems_present.py" \
+  "$PY" "$GATES/gate_stems_present.py" \
   --master "$F/streaming_master.wav" --stems-dir "$GOOD_SYNC/stems"
 fail_expected "fake + truncated stems fail" 1 \
-  python3 "$GATES/gate_stems_present.py" \
+  "$PY" "$GATES/gate_stems_present.py" \
   --master "$F/streaming_master.wav" --stems-dir "$BAD_SYNC/stems"
 
 # ------------------------------------------------------------------
@@ -261,13 +288,13 @@ fail_expected "fake + truncated stems fail" 1 \
 # ------------------------------------------------------------------
 say "gate_loudness"
 pass "streaming master (-14 dB) passes" \
-  python3 "$GATES/gate_loudness.py" \
+  "$PY" "$GATES/gate_loudness.py" \
   --master "$F/streaming_master.wav" --target streaming
 pass "sync master (-16 dB) passes" \
-  python3 "$GATES/gate_loudness.py" \
+  "$PY" "$GATES/gate_loudness.py" \
   --master "$F/sync_master.wav" --target sync
 fail_expected "loud master (-12 dB) fails honestly" 1 \
-  python3 "$GATES/gate_loudness.py" \
+  "$PY" "$GATES/gate_loudness.py" \
   --master "$F/loud_master.wav" --target streaming
 
 # ------------------------------------------------------------------
@@ -275,20 +302,20 @@ fail_expected "loud master (-12 dB) fails honestly" 1 \
 # ------------------------------------------------------------------
 say "gate_quality"
 pass "independent review (different model) passes" \
-  python3 "$GATES/gate_quality.py" --package-dir "$GOOD_QUAL"
+  "$PY" "$GATES/gate_quality.py" --package-dir "$GOOD_QUAL"
 fail_expected "same-model review is not independent" 1 \
-  python3 "$GATES/gate_quality.py" --package-dir "$BAD_QUAL"
+  "$PY" "$GATES/gate_quality.py" --package-dir "$BAD_QUAL"
 
 # ------------------------------------------------------------------
 # 6. gate_sync_ready
 # ------------------------------------------------------------------
 say "gate_sync_ready"
 pass "complete sync package passes" \
-  python3 "$GATES/gate_sync_ready.py" --package-dir "$GOOD_SYNC"
+  "$PY" "$GATES/gate_sync_ready.py" --package-dir "$GOOD_SYNC"
 fail_expected "broken stems + copied instrumental fail" 1 \
-  python3 "$GATES/gate_sync_ready.py" --package-dir "$BAD_SYNC"
+  "$PY" "$GATES/gate_sync_ready.py" --package-dir "$BAD_SYNC"
 fail_expected "direct-license lane requires license tiers" 1 \
-  python3 "$GATES/gate_sync_ready.py" --package-dir "$GOOD_SYNC" \
+  "$PY" "$GATES/gate_sync_ready.py" --package-dir "$GOOD_SYNC" \
   --lane direct-license
 
 # ------------------------------------------------------------------
@@ -296,21 +323,21 @@ fail_expected "direct-license lane requires license tiers" 1 \
 # ------------------------------------------------------------------
 say "gate_release_ready"
 pass "complete release package passes" \
-  python3 "$GATES/gate_release_ready.py" --package-dir "$GOOD_REL"
+  "$PY" "$GATES/gate_release_ready.py" --package-dir "$GOOD_REL"
 fail_expected "fake artwork + invalid ISRC fail" 1 \
-  python3 "$GATES/gate_release_ready.py" --package-dir "$BAD_REL"
+  "$PY" "$GATES/gate_release_ready.py" --package-dir "$BAD_REL"
 
 # ------------------------------------------------------------------
 # 8. gate_loop_points
 # ------------------------------------------------------------------
 say "gate_loop_points"
 pass "seamless loop (1.6x curvature) passes" \
-  python3 "$GATES/gate_loop_points.py" \
+  "$PY" "$GATES/gate_loop_points.py" \
   --master "$GOOD_LOOP/master.wav" \
   --loop-points "$GOOD_LOOP/loop_points.json" \
   --scratch "$SCRATCH/loop_scratch"
 fail_expected "phase-slip loop (6.0x curvature) fails" 1 \
-  python3 "$GATES/gate_loop_points.py" \
+  "$PY" "$GATES/gate_loop_points.py" \
   --master "$BAD_LOOP/master.wav" \
   --loop-points "$BAD_LOOP/loop_points.json" \
   --scratch "$SCRATCH/loop_scratch"
@@ -320,12 +347,12 @@ fail_expected "phase-slip loop (6.0x curvature) fails" 1 \
 # ------------------------------------------------------------------
 say "gate_youtube_authentic"
 pass "varied visual passes (5 distinct scenes, low similarity)" \
-  python3 "$GATES/gate_youtube_authentic.py" \
+  "$PY" "$GATES/gate_youtube_authentic.py" \
   --visual "$GOOD_YT/visual.mp4" \
   --upload-index "$F/upload_index.json" \
   --min-distinct-frames 4
 fail_expected "raw dump (static image) fails" 1 \
-  python3 "$GATES/gate_youtube_authentic.py" \
+  "$PY" "$GATES/gate_youtube_authentic.py" \
   --visual "$BAD_YT/visual.mp4" \
   --upload-index "$F/upload_index.json" \
   --min-distinct-frames 4
@@ -335,13 +362,13 @@ fail_expected "raw dump (static image) fails" 1 \
 # ------------------------------------------------------------------
 say "gate_human_approval"
 pass "j_kro approval (hash-bound, dated) passes" \
-  python3 "$GATES/gate_human_approval.py" \
+  "$PY" "$GATES/gate_human_approval.py" \
   --package-dir "$GOOD_APPR"
 fail_expected "bot approval + wrong hash fails" 1 \
-  python3 "$GATES/gate_human_approval.py" \
+  "$PY" "$GATES/gate_human_approval.py" \
   --package-dir "$BAD_APPR"
 fail_expected "no approval record fails" 1 \
-  python3 "$GATES/gate_human_approval.py" \
+  "$PY" "$GATES/gate_human_approval.py" \
   --package-dir "$GOOD_SYNC"
 
 # ------------------------------------------------------------------
