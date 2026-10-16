@@ -69,11 +69,23 @@ def suno_to_aceplan(req: SunoGenerateRequest) -> dict:
         bpm = 120
     # Clamp BPM to reasonable range
     bpm = max(30, min(240, bpm))
-    # Key. An EXPLICIT key signature wins; the default is a key signature too.
+    # Key. An EXPLICIT key signature wins. When the request states none, the plan
+    # states none — `None`, never a default. Measured against the ACE node's own
+    # source in the live pod (card t_1578cc47):
+    #   * `keyscale` is optional on the wire, and EMPTY is the documented
+    #     "leave empty for auto-detection" (acestep/inference.py:48) — that is
+    #     what lets the node resolve the key from the caption, which is where the
+    #     modality actually lives (elemental-fire's caption says "minor key with
+    #     flat-2 Phrygian color"; sentimental-piano's says nothing).
+    #   * a NON-empty keyscale is not a hint: the token is injected into the
+    #     LM's constrained decode (acestep/constrained_logits_processor.py:1913),
+    #     so a fabricated default does not "sit behind" the caption — it
+    #     OVERRIDES the caption's own mode. 11 of the 14 genres state no key, so
+    #     `or "C major"` was a musical decision made by a hardcoded string.
     # NEVER `req.style`: that is the genre's whole style caption (674 chars for
     # sentimental-piano) and acestep_plan.py passes this value straight to the
     # ACE node as `keyscale`. t_25a6499c D2.
-    key = req.keyscale or "C major"
+    key = req.keyscale or None
     # Timesignature: default 4/4
     timesignature = "4"
     return {

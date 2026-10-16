@@ -5,7 +5,7 @@ G4: Live HTTP API end-to-end with fixture engine  |  CHECK: bash music/sunolocal
 G5: Adapter contracts against stub renderer and mock HTTP  |  CHECK: bash music/sunolocal/checks/g5_adapters.sh  |  EXPECT: G5-OK
 G6: Scope integrity and no shipped stubs  |  CHECK: bash music/sunolocal/checks/g6_scope.sh  |  EXPECT: G6-OK
 G7: Pipeline-wrapper contract (top-level audio_url + live wrapper run)  |  CHECK: bash music/sunolocal/checks/g7_wrapper_contract.sh  |  EXPECT: PASS g7 (regression: t_36ca4e7c — t_a77c505b shipped a wrapper that never ran once before merge)
-G8: Explicit tempo + key contract (bpm / keyscale on the wire body)  |  CHECK: bash music/sunolocal/checks/g8_tempo_key_contract.sh  |  EXPECT: G8-OK (regression: t_25a6499c D1/D2 — `bpm` was hardcoded 120 and `key` was the whole style caption; G3 could not catch either because it asserted only `60 <= bpm <= 240` and pinned the D2 defect)
+G8: Explicit tempo + key contract (bpm / keyscale on the wire body)  |  CHECK: bash music/sunolocal/checks/g8_tempo_key_contract.sh  |  EXPECT: G8-OK (regression: t_25a6499c D1/D2 — `bpm` was hardcoded 120 and `key` was the whole style caption; G3 could not catch either because it asserted only `60 <= bpm <= 240` and pinned the D2 defect. Also regression: t_1578cc47 — the D2 fix left `key = req.keyscale or "C major"`, a key no input states, and the node's constrained decode makes a non-empty keyscale OVERRIDE the caption's mode; a plan that states no key now states none and the wire carries "")
 
 Lane-only gates (in checks/, NOT ledger lines above)
 ----------------------------------------------------
