@@ -4,14 +4,32 @@
 > assigned `music-producer` and claimed by the generic kanban dispatcher).
 > **Card:** t_d3b9e218 (`music-oracle: elemental-water (score 7.5)`)
 > **Duplicate card:** t_d8cc0a38 (`music-oracle: elemental-water (score 7.7)`) — same genre,
-> same three lanes, status `ready`. Both resolve to THIS brief; the brief is keyed by genre,
+> same three lanes. Both resolve to THIS brief; the brief is keyed by genre,
 > not by card (precedent: `music/briefs/commentary-beds.md`).
 > **Written:** 2026-10-16T13:20-05:00 (CDT)
 > **Repo:** `/home/j_kro/ai-content-pipeline` @ `49d506b` (main — HEAD when this brief was
 > written; it moved 6 times during the run, to `89d6eb2` by the time of writing this line).
 > **6 cards were `running` on this board** while this brief was written (5 music briefs +
 > `t_aba9d2c3`), and 15 commits landed in the last 40 minutes.
-> **Oracle (card):** 7.5/10. **Oracle (measured now):** 7.00/10. See §2 — the difference is not
+>
+> **Re-measured 2026-10-16 13:52 CDT by the duplicate-card pass (`t_d8cc0a38`).** Four
+> figures in the header above were true when written and have moved since — none of them
+> changes the brief:
+>
+> | Header claim (at write time) | Re-measured 13:52 CDT |
+> |---|---|
+> | twin `t_d8cc0a38` status `ready` | **`running`** — this pass claims and closes it as a duplicate |
+> | local `main` @ `89d6eb2` | @ **`fa3163f`**, then `456d525`; **24 commits landed between 13:10 and 13:51** (the "15 in 40 minutes" line is now 24) |
+> | 6 cards `running` (5 music briefs + `t_aba9d2c3`) | **4 `running`**, all `music-oracle` twins: `t_c92f566d` earth, `t_42a01e18` fire, `t_d8cc0a38` water, `t_b7dd5655` activist. Board census: 56 done / 25 ready / 7 todo / 4 blocked / 4 running / 1 archived |
+> | 6 ahead / 15 behind `origin/main` (from the §5-era `git rev-list`) | **29 ahead / 15 behind** — the local tip rises with every brief this lane commits to the shared tree; the 15-commit upstream deficit has not moved |
+>
+> Superseded revision of this file (before the duplicate pass of 2026-10-16 13:52 CDT):
+> `sha256 578e8dd10ab9bc6d45c034fa09b10b1880735b485e963a26eed376613137d26d`. The pass corrected
+> the §2 trend-fetch state (below) and re-measured the four header figures. **No second brief
+> was written and no stage chain was started** — the twin is closed as a duplicate of
+> `t_d3b9e218`, and this file remains the single artifact for `elemental-water`.
+> **Oracle (card):** 7.5/10. **Oracle (measured now):** 7.00–7.20/10 (the spread is the live
+> trend fetch; measured 13:51 the fetch failed, giving 7.20). See §2 — the difference is not
 > a re-scoring, it is a frozen number.
 
 ## 1. Genre resolution (live, not transcribed)
@@ -81,6 +99,46 @@ chill-lounge         snippet_matches=  0  html_bytes=  14292  -> trend_signal_sc
 trance               snippet_matches=  0  html_bytes=  14262  -> trend_signal_score=3.0
 sentimental-piano    FETCH FAILED (HTTPError: HTTP Error 403: Forbidden) -> trend_signal_score=5.0
 ```
+
+*Re-measured 2026-10-16 13:51 CDT (duplicate pass, `t_d8cc0a38`) — **the network branch flipped
+between the two runs, and the score with it.*** The same probe against the same endpoint now
+returns **no HTTP status at all**: all five genres timed out.
+
+```
+$ /usr/bin/python3 trend_probe.py
+elemental-water      FETCH FAILED (URLError: <urlopen error timed out>) -> trend_signal_score=5.0
+chill-lounge         FETCH FAILED (URLError: <urlopen error timed out>) -> trend_signal_score=5.0
+trance               FETCH FAILED (URLError: <urlopen error timed out>) -> trend_signal_score=5.0
+sentimental-piano    FETCH FAILED (URLError: <urlopen error timed out>) -> trend_signal_score=5.0
+elemental-fire       FETCH FAILED (URLError: <urlopen error timed out>) -> trend_signal_score=5.0
+```
+
+So the sentence below — *"returns HTTP 200 with ~14.3 KB and zero matching snippets, so every
+genre in the registry scores 3.0"* — states **one of two observed states**, not a durable fact.
+The measured states so far are: 200-with-zero-snippets → **3.0**; 403 → **5.0**; socket timeout
+→ **5.0**. Two of the three score the broken fetch higher, which is the point.
+
+**The 0.20 twin delta is now reproducible without the network.** `score_genre()` called
+directly in this session, minutes after the `--dry-run` that printed 7.0, returned **7.2** for
+the same genre, same registry, same quota ledger — and the only component that moved was
+`trend_signal` (3.0 → 5.0). That is the whole difference:
+
+```
+$ /usr/bin/python3 music/scripts/check_oracle_determinism.py      # network stubbed, deterministic
+trend 200/0-snippet: 3.0   trend fetch-fails: 5.0
+total 200/0-snippet: 7.0 (= 7.0)   total fetch-fails: 7.2
+WEIGHTS sum       : 1.0
+  - A1 VIOLATED: a FAILED trend fetch scores 5.0 but a SUCCESSFUL empty fetch scores 3.0 ...
+  - A2 VIOLATED: a failed trend fetch raises the total for elemental-water (7.2 > 7.0) ...
+FAIL check_oracle_determinism
+rc=1
+```
+
+This brief's §2 arithmetic is unchanged and verified: the "measured now" column
+(10/6/8/3.3333/9/3.0) sums to **7.00** under `WEIGHTS`, and 10/6/8/3.3333/9/**5.0** sums to
+**7.20** — `0.1 × (5.0 − 3.0) = 0.20`, exactly the twin-pair delta measured across all 14
+genres below. The check is new in this pass (§11a) and encodes the defect so it cannot drift
+silently again.
 
 The endpoint returns HTTP 200 with ~14.3 KB and **zero** matching snippets, so every genre in
 the registry scores 3.0; when DuckDuckGo rate-limits to 403, the `except` branch scores
@@ -459,6 +517,46 @@ good fixture and FAIL on the broken one. `gate_loop_points` measured 1.6× (seam
 library is therefore only found by a human who happens to run the suite — which is exactly how
 this one survived.
 
+## 11a. Regression check added in the duplicate pass (`t_d8cc0a38`)
+
+**Failure:** every score this lane quotes as evidence is unreproducible, and the failure mode
+is *inverted* — a genre whose trend fetch **breaks** scores higher than the same genre whose
+fetch **works**. Nothing detected either property.
+
+**Check:** `music/scripts/check_oracle_determinism.py`. It never touches the network: it
+imports `music/oracle.py` and stubs `urllib.request.urlopen`, then measures
+`trend_signal_score()` on two branches that differ only in how the fetch behaves — HTTP 200
+with zero `result__snippet` matches (the state that floors every genre at 3.0), and `urlopen`
+raising (timeout / 403 / DNS). Three assertions: **A1** a failed fetch must not outscore a
+successful empty one; **A2** `score_genre()` must be deterministic under a fixed fetch
+behaviour, and a failed fetch must not *raise* the total; **A3** `WEIGHTS` must close at 1.0.
+
+**Measured now (rc=1 — the defect is live, cited `t_bf0e5edd`):**
+
+```
+$ /usr/bin/python3 music/scripts/check_oracle_determinism.py
+trend 200/0-snippet: 3.0   trend fetch-fails: 5.0
+total 200/0-snippet: 7.0 (= 7.0)   total fetch-fails: 7.2
+WEIGHTS sum       : 1.0
+  - A1 VIOLATED: a FAILED trend fetch scores 5.0 but a SUCCESSFUL empty fetch scores 3.0 —
+    the broken run outranks the working one by 2.0 on the component, i.e. 0.2 on the 10-point
+    total (component delta x WEIGHTS['trend_signal']) ...
+  - A2 VIOLATED: a failed trend fetch raises the total for elemental-water (7.2 > 7.0) —
+    scoring depends on the network, not on the genre.
+FAIL check_oracle_determinism: the trend fetch is not a pure function of the genre
+rc=1
+
+$ /usr/bin/python3 music/scripts/check_oracle_determinism.py --selftest
+SELFTEST PASS check_oracle_determinism: correct pair (zero=3.0 fail=3.0) errors=0 (want 0),
+                                       inverted pair (zero=3.0 fail=5.0) errors=1 (want 1)
+rc=0
+```
+
+`--selftest` proves the A1 assertion fires on an inverted pair and stays silent on a correct
+one, so a future edit that repairs `trend_signal_score()` flips this check to green rather
+than leaving it as noise. A failing check on a live, carded defect is the lane's existing
+pattern (`check_stage_scripts` fails the same way on `music/suno-gen.py`, cited `t_8a715681`).
+
 ## 12. Existing assets for this genre
 
 Measured: **none.** `music/lyrics/` holds `activist/`, `chill-lounge/`, `trance/` plus
@@ -507,6 +605,14 @@ Autonomy: all three lanes are at rung **`advisory`**, `clean_publishes: 0`
 - Stage contract: `music/stages.yaml` (`brief` → `producer`; advance calls added in `9c2d2d3`)
 - Oracle internals read live: `oracle.py:221-253` (`cadence_fit`), `:272-289` (`trend_signal`),
   `:189-202` (`lane_coverage`), `:256-269` (`policy_risk`), `:439` (dry-run skips the board read)
+  — **all five line citations re-verified 2026-10-16 13:52 CDT by the duplicate pass; every one
+  still lands on the named function, and `:439` is still the `if not dry_run` board-read guard.**
+- Checks run in this pass (`/usr/bin/python3 music/scripts/…`): `check_brief_figures.py
+  --briefs music/briefs/elemental-water.md` PASS (7 recomputed figures, 3 skipped as
+  cluster-only); `check_oracle_determinism.py` **rc=1 by design** (§11a); `check_brief_paths.py`
+  PASS; `check_stage_scripts.py` FAIL on `music/suno-gen.py` (pre-existing, `t_8a715681`);
+  `check_prompt_style_counts.py` PASS (15 declared style-field lengths, 14 templates);
+  `bash music/gates/check_gate_suite.sh` rc=0
 - Upstream truth read from git objects: `origin/main:music/suno-gen.py:141`
   (`is_instrumental_template`), `origin/main:music/sunolocal/translate.py`
 - Engine truth read from the running pod: `sunolocal-source-65fcc845d-fd5r6`,
@@ -518,7 +624,10 @@ Autonomy: all three lanes are at rung **`advisory`**, `clean_publishes: 0`
 - **Not fixed here (other owners, already carded):** gate_loop_points false pass **t_bab8aa19**;
   instrument/tempo/key render gaps **t_25a6499c**; diverged checkout — now with a **third stranded
   ref**, see §10 — **t_8a715681**; scheduler units running the wrong checkout **t_41f354be**;
-  oracle card duplication + the 0.20 trend artifact **t_bf0e5edd**; missing architecture docs
+  oracle card duplication + the 0.20 trend artifact **t_bf0e5edd** — this pass added the
+  reproducibility evidence (the same genre returning 7.0 *and* 7.2 within one session from one
+  tree, and the stubbed check that proves it is the fetch branch, §11a) as a comment on that
+  card, since the card already owns the root cause; missing architecture docs
   **t_b0a4db92**; profile workdir + kanban env vars **t_75aacf8b**; `gate_loudness` RMS-vs-LUFS
   ruler **t_9546841b**; the game-assets pack failing its own gate **t_5ed495eb**; the
   `battle_energy` mis-scoping **t_426a82a3**.
@@ -535,3 +644,10 @@ Autonomy: all three lanes are at rung **`advisory`**, `clean_publishes: 0`
   this run alone. **`music/gates/check_gate_suite.sh` was edited by this brief while
   `elemental-fire` ran** — that sibling's brief named the collision. `music/stages.yaml`,
   `music/oracle.py` and `scripts/automation/*` are also being edited in the same tree.
+- **hotspot re-measured 2026-10-16 13:52 CDT (duplicate pass, `t_d8cc0a38`):** the directory is
+  still contested. HEAD moved `fa3163f` → `456d525` while this pass ran; **24 commits landed
+  between 13:10 and 13:51**; four `music-producer` workers held `running` music-oracle twins
+  simultaneously (`t_c92f566d`, `t_42a01e18`, `t_d8cc0a38`, `t_b7dd5655`). This pass adds one new
+  file (`music/scripts/check_oracle_determinism.py`) and edits only
+  `music/briefs/elemental-water.md` — both untouched by the siblings running beside it
+  (earth/fire each touch their own brief; activist touches `music/briefs/activist.md`).
