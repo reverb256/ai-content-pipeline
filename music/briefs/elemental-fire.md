@@ -574,12 +574,12 @@ window, `ffmpeg volumedetect` mean_volume, FAIL above 6.0 dB — `music/rubrics/
 its existing `gate_loop_points` call; the runner below stays as the standalone cross-check that
 prints both rulers in one report:
 
-**What the new ruler still cannot see (measured, card `t_8297d2c6`).** Its window is 1 s and its
-ceiling is the rubric's ~6 dB, so a fade SHORTER than ~1.15 s hides inside that budget: on a
-25.6 s 220 Hz tone a 1.0 s fade-to-silence measures a 4.7 dB tail/head delta and PASSES, a 1.2 s
-fade 6.3 dB (FAIL), a 1.6 s fade 8.8 dB (FAIL). The delta is a property of the fade length
-(a linear fade of length d ≥ the 1 s window measures `(1/d)/√3`), so the fix is a second
-property — an end-of-loop silence guard — not a lower ceiling.
+**What the level ruler could not see — CLOSED (card `t_8297d2c6`, commit `a664b4e`).** Its window
+is the rubric's 1 s, its ceiling the rubric's ~6 dB, so a fade shorter than ~1.15 s hid inside
+that budget (a 1.0 s fade measured 4.7 dB and PASSED). The fix landed as a THIRD ruler, not a
+lower ceiling: the same 1 s at the loop end split in half (FAIL past the same 6 dB; a fade reads
+8.5 dB, a 0.5 s fade 4.7 dB) plus the lane's −50 dB silence floor, because a window that is
+itself silence is no evidence of continuity — the boundary is 0.6 s (6.2 dB), measured.
 
 **The standalone second measurement (added 2026-10-16 by `t_42a01e18`, §13):**
 `music/scripts/loop_seam_check.py` runs BOTH rulers — it delegates the curvature check to the
@@ -755,13 +755,13 @@ function of the lane set, which is identical for all four. Consequences:
   **t_bf0e5edd** `done`; the missing architecture docs **t_b0a4db92** `done`; the
   `gate_loudness` ruler **t_9546841b** `done` (dialect kept, §10); `battle_energy` scoping
   **t_426a82a3** `done`; the queue entries for the sibling elementals `t_909069f0` /
-  `t_b8afb055` `done`. Still open, each already owned: **t_8297d2c6** (`ready`, the 1.0 s
-  short-fade hole in the level ruler — §9), **t_b75ccb4a** (`ready`, the 4-bar loop vs the
-  600 s video shape, §2/§4), **t_d6b0cb36** (`ready`, the render log undercounts the
-  delivered renders — §8), **t_d7f6d053** (`ready`, elemental-earth has no delivered loop —
-  not this genre), **t_75aacf8b** / **t_a14e5d52** / **t_41f354be** (profile workdir, kanban
-  env vars, scheduler units on the wrong checkout), and the defect this pass found,
-  **t_88879c37** (§9's tool). Nothing in that list needed a new card except `t_88879c37`.
+  `t_b8afb055` `done`. Still open, each already owned: **t_b75ccb4a** (`ready`, the 4-bar loop vs
+  the 600 s video shape, §2/§4), **t_d6b0cb36** (`ready`, the render log undercounts the delivered
+  renders — §8), **t_d7f6d053** (`ready`, elemental-earth has no delivered loop — not this genre),
+  **t_75aacf8b** / **t_a14e5d52** / **t_41f354be** (profile workdir, kanban env vars, scheduler
+  units on the wrong checkout), and the defect this pass found, **t_88879c37** (§9's tool). The
+  1.0 s short-fade hole **t_8297d2c6** is now `done` (end guard landed, commit `a664b4e`, §9);
+  nothing else needed a new card.
 - **hotspot:** `music/briefs/` — six concurrent workers write this directory and commit to one
   working tree (`ade6e87`, `1553da2`, `4bb1ea6`, `9ebf6af`, `d491663` landed inside ~20
   minutes, one of them a sibling elemental brief). `music/gates/check_gate_suite.sh` is being

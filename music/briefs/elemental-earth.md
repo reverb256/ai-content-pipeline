@@ -252,8 +252,12 @@ Decisions locked here so later stages do not re-litigate them:
 - **Stems: ≥ 4 files, each within ±0.5 s of the master duration** (ffprobe-measured, not file
   size). Export through Suno Studio, never the standard download button.
 - **Loop points are mandatory** for this lane, and `gate_loop_points` must pass on them. Since
-  `t_b21aeb51` the gate runs **two rulers**: junction curvature ≤ 3.0× and tail/head level delta
-  ≤ 6.0 dB (the level finding is `gate_loop_points.py:310`, quoted verbatim in the FAIL above). A
+  `t_b21aeb51` the gate runs **three rulers**: junction curvature ≤ 3.0×, tail/head level delta
+  ≤ 6.0 dB (the level finding is `gate_loop_points.py:310`, quoted verbatim in the FAIL above),
+  and — since `t_8297d2c6`, lane commit `a664b4e` — an **end guard** that measures the envelope
+  inside the loop's last 1 s (split in half; the second half must not sit more than the same
+  6.0 dB below the first) and refuses a loop whose first or last 1 s is at/below the lane's
+  −50 dB silence floor. A
   document must also declare **`"seamless": true`** (`:241`) and a span ≥ 2 s. Read a pack's index
   with `--pack-dir <pack>`; pass a single-track document with `--loop-points` — the two paths are
   not interchangeable (measured: a pack index passed as `--loop-points` is refused). The two seam
@@ -969,7 +973,7 @@ genre's only open one.
 | 1 | header | card `t_55e37b88`, score 7.5, supersession `0e9bf0de…` | surviving card `t_8fa97d4e`, true score **7.0** (live re-score), superseded blob `036395fe…` recorded |
 | 2 | §1 | registry transcript short of the stage-gate rule | live transcript + `gate-for-stage` resolution for this genre |
 | 3 | §3 | `gate_sync_ready` FAIL, 12 findings, lane "not passable" | **PASS `mode: pack`** (`t_5ed495eb` closed); pack loops **5.201270 s** not 1.3 s; 7 one-shots not 8 |
-| 4 | §3 | seam PASS on a 51.605 s stem (curvature only) | the gate now has **two** rulers; that stem FAILs the level ruler at 34.2 dB, `--pack-dir` PASSes all 5 loops |
+| 4 | §3 | seam PASS on a 51.605 s stem (curvature only) | the gate now has **three** rulers; that stem FAILs the level ruler at 34.2 dB, `--pack-dir` PASSes all 5 loops |
 | 5 | §4 | planner refuses > 420 s, so the queue cannot express `loop-10min` | cap is **600 s** (`planner.py:103-104`), raised because of this genre's own measurement; the entry exists |
 | 6 | §5, §7a | anchor reachable only via `styleWeight 0.2334`; `key` = the caption | engine **v0.1.3**: explicit `bpm`/`keyscale` win; variants A–G re-measured in-pod |
 | 7 | §7b | briefs ConfigMap = 1 entry; no `--lyrics-mode instrumental`; payload 38 keys | 11 entries including this genre; `instrumental` is a mode; payload 39 keys; earth plan exists, marker 0 B (rc=0) |

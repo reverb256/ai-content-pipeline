@@ -28,7 +28,7 @@ three things:
   RED      a synthesized silence-tailed loop claim (no committed bytes) must
            FAIL the same way.
   GREEN    close mode must build a loop artifact from a silence-tailed render
-           that PASSES the committed two-ruler gate_loop_points AND
+           that PASSES the committed three-ruler gate_loop_points AND
            loop_seam_check, with neither end silent.
 
 PARITY (the reason the port is allowed to exist)

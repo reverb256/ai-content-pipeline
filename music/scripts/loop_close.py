@@ -22,7 +22,7 @@ MEASURED, so the fix is not a guess
 The same render, run through this repo's own loop builder
 (`music/assets/pack.py`: `choose_loop_bars()` bar-aligns, `crossfade_into_preroll()`
 crossfades the tail into the material just before the loop start), yields loops
-that PASS the committed two-ruler `gate_loop_points` on the SAME audio:
+that PASS the committed three-ruler `gate_loop_points` on the SAME audio:
 
   loops/loop_01..05 (6.400 s each, 4 bars at 150 BPM)
     seam 0.00-0.06x (max 3.0x)   level delta 0.0-1.6 dB (max 6.0)   rc=0
