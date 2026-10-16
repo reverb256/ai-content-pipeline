@@ -1,49 +1,63 @@
 # Brief — elemental-water
 
 > **Stage:** brief (`music/stages.yaml`: `brief` → bot `producer`; on this board the cards are
-> assigned `music-producer` and claimed by the generic kanban dispatcher).
-> **Card:** t_d3b9e218 (`music-oracle: elemental-water (score 7.5)`)
-> **Duplicate card:** t_d8cc0a38 (`music-oracle: elemental-water (score 7.7)`) — same genre,
-> same three lanes. Both resolve to THIS brief; the brief is keyed by genre,
-> not by card (precedent: `music/briefs/commentary-beds.md`).
+> assigned `music-producer` and claimed by the generic kanban dispatcher). The stage prompt
+> advances this card to `genre-select`, and the driver reads the LAST `stage:` marker — so the
+> surviving chain resumes at the stage after brief.
+> **Card:** **t_354d5d25** (`music-oracle: elemental-water (score 7.2)`) — the SURVIVING card.
+> **Superseded twin cards (both `done`):** t_d3b9e218 (`… (score 7.5)`), t_d8cc0a38
+> (`… (score 7.7)`) — same genre, same three lanes. All three resolve to THIS brief: briefs are
+> keyed by **genre**, not by card (precedent: `music/briefs/commentary-beds.md`). No second
+> brief was written and no second chain was started.
 > **Written:** 2026-10-16T13:20-05:00 (CDT)
 > **Repo:** `/home/j_kro/ai-content-pipeline` @ `49d506b` (main — HEAD when this brief was
 > written; it moved 6 times during the run, to `89d6eb2` by the time of writing this line).
 > **6 cards were `running` on this board** while this brief was written (5 music briefs +
 > `t_aba9d2c3`), and 15 commits landed in the last 40 minutes.
 >
-> **Re-measured 2026-10-16 13:52 CDT by the duplicate-card pass (`t_d8cc0a38`).** Four
-> figures in the header above were true when written and have moved since — none of them
-> changes the brief:
+> **Surviving-card pass — every claim below re-measured 2026-10-16 16:10–16:45 CDT
+> (`t_354d5d25`).** The contradictions are resolved in place; §16 records what moved. Four
+> header figures were true when written and have moved. None of them changes the brief:
 >
-> | Header claim (at write time) | Re-measured 13:52 CDT |
+> | Header claim (at write time) | Re-measured 2026-10-16 16:1x–16:4x CDT |
 > |---|---|
-> | twin `t_d8cc0a38` status `ready` | **`running`** — this pass claims and closes it as a duplicate |
-> | local `main` @ `89d6eb2` | @ **`fa3163f`**, then `456d525`; **24 commits landed between 13:10 and 13:51** (the "15 in 40 minutes" line is now 24) |
-> | 6 cards `running` (5 music briefs + `t_aba9d2c3`) | **4 `running`**, all `music-oracle` twins: `t_c92f566d` earth, `t_42a01e18` fire, `t_d8cc0a38` water, `t_b7dd5655` activist. Board census: 56 done / 25 ready / 7 todo / 4 blocked / 4 running / 1 archived |
-> | 6 ahead / 15 behind `origin/main` (from the §5-era `git rev-list`) | **29 ahead / 15 behind** at `fa3163f` (13:48) — the local tip rises with every brief this lane commits to the shared tree; the 15-commit upstream deficit was cleared by the reconciliation merge `ab33ad1` (14:23), and the overall pair reads 0 behind / 61 ahead at `e40c7f9` (15:31) |
+> | twin `t_d8cc0a38` `running` | **`done`** — both twins closed; this card is the only open `elemental-water` card on the board (`check_oracle_board` rc=0 names it running) |
+> | local `main` @ `89d6eb2`; pair 0 behind / 61 ahead at `e40c7f9` (15:31) | @ **`e597bb6`**, **0 behind / 81 ahead** of `origin/main` (`ba28f55`) — 21 commits landed since 15:31 |
+> | 6 cards `running` (5 music briefs + `t_aba9d2c3`) | **7 `running`** — `t_97494e6a` (elemental-fire oracle twin), `t_354d5d25` (this card), `t_99e6d789` (ops), `t_eb648761` (oracle trend-signal), `t_e86c2110`/`t_e2375c5a`/`t_fa731c5b` (music-producer). Board census: **108 done / 36 ready / 8 blocked / 7 running / 4 todo / 1 archived** |
+> | the score is a frozen 7.5 or a 7.00–7.20 spread | **7.00/10, and reproducible**: `b2d11f7` removed the failed-fetch premium, so both fetch branches now score 7.0 (§2, §11a). The 7.2 in this card's title is the pre-fix broken-fetch number |
 >
-> Superseded revision of this file (before the duplicate pass of 2026-10-16 13:52 CDT):
-> `sha256 578e8dd10ab9bc6d45c034fa09b10b1880735b485e963a26eed376613137d26d`. The pass corrected
-> the §2 trend-fetch state (below) and re-measured the four header figures. **No second brief
-> was written and no stage chain was started** — the twin is closed as a duplicate of
-> `t_d3b9e218`, and this file remains the single artifact for `elemental-water`.
-> **Oracle (card):** 7.5/10. **Oracle (measured now):** 7.00–7.20/10 (the spread is the live
-> trend fetch; measured 13:51 the fetch failed, giving 7.20). See §2 — the difference is not
-> a re-scoring, it is a frozen number.
+> Superseded revisions of this file, each recorded in the commit that replaced it:
+> 1. `sha256 578e8dd10ab9bc6d45c034fa09b10b1880735b485e963a26eed376613137d26d` — the write-time
+>    revision; header figures + §2 trend state corrected by the duplicate pass (`t_d8cc0a38`, 13:52 CDT).
+> 2. `sha256 b3284178afd72ca29714abc2e743466d754da7539ee718b0b79c8738a07a0d0d` (653 lines /
+>    40590 B) — the aged divergence + blueprint-census counts corrected by `t_0f7aed63` (15:34).
+> 3. `sha256 6478e55ceee1267a299abf2ff0a95f6d4987ae826ba71e8eb8ff9a3ca27cf52a` (669 lines /
+>    41998 B) — census restated when `music/lyrics/blueprints/jungle-dnb.yaml` landed
+>    (`t_e6d422ec`, 15:56).
+> 4. `sha256 3f19591d395550df4778cd21bdf461690b8848bf6923b192f202efb578cceca4` (671 lines /
+>    42450 B) — **superseded by THIS pass** (`t_354d5d25`); §16 lists the classes it corrected.
+>
+> **Oracle (card title):** 7.2/10. **Oracle (measured now, live):** **7.00/10**, reproduced by
+> `music/oracle.py --dry-run` in this pass. 7.00 ≥ 5.0, so the routing verdict — produce — is
+> unchanged. The number was never demand evidence; §2 gives the root cause and the fix.
+
 
 ## 1. Genre resolution (live, not transcribed)
 
 ```
 $ /usr/bin/python3 music/registry.py validate
-registry OK: 14 genres, 10 lanes
-genres: activist, anime-ending, anime-opening, chill-lounge, chiptune-8bit, commentary-beds,
-        elemental-air, elemental-earth, elemental-fire, elemental-water,
-        epic-orchestral-boss, jungle-dnb, sentimental-piano, trance
-lanes: direct-fan, direct-license, game-assets, stock-ai-native, streaming, sync,
-       sync-documentary, youtube-gaming, youtube-longform, youtube-mix
+registry OK: 14 genres, 10 lanes, 1 stage gate rule(s)
+genres: activist, anime-ending, anime-opening, chill-lounge, chiptune-8bit, commentary-beds, elemental-air, elemental-earth, elemental-fire, elemental-water, epic-orchestral-boss, jungle-dnb, sentimental-piano, trance
+lanes: direct-fan, direct-license, game-assets, stock-ai-native, streaming, sync, sync-documentary, youtube-gaming, youtube-longform, youtube-mix
+stage gate visual: lane_gate -> gate_youtube_authentic (when_absent: none)
 quota ledger: period 2026-10, standard 0/60 (warn_at 55, hard_stop_at 58)
 ```
+
+*Re-measured 2026-10-16 16:2x CDT (surviving-card pass).* Two lines changed since the write-time
+transcript: the count line now ends **`, 1 stage gate rule(s)`**, and a new
+`stage gate visual:` line prints the lane→gate resolution the `visual` stage runs on
+(added with the genre-aware visual gate, card `t_d9983bb9`). The genre row is unchanged.
+
 
 | Field | Value | Source |
 |---|---|---|
@@ -61,13 +75,16 @@ worker shell with `ModuleNotFoundError: No module named 'yaml'`: `python3` resol
 `/home/j_kro/.hermes/tools/python-3.14.7+…/bin/python3` (3.14.7, no PyYAML). `/usr/bin/python3`
 (3.14.7) has PyYAML and validates cleanly. Always use `/usr/bin/python3` for `music/*.py`.
 
-## 2. The card's score is a frozen number — measured, with the root cause
+## 2. The card's score is 7.0 — fixed, and reproducible from the tree
 
-The card says 7.5. Re-scoring the same genre right now gives **7.00**:
+The card says 7.2. Re-scoring the same genre right now gives **7.00**, and the same command
+gave the same number before and after this pass:
 
 ```
 $ /usr/bin/python3 music/oracle.py --dry-run
+  warn: trend fetch failed for elemental-water (URLError(TimeoutError('timed out'))); scoring it as no signal (3.0)
   elemental-water: 7.0/10
+  [DRY RUN] Would create card: music-oracle: elemental-water (score 7.0)
 ```
 
 Per component, read from `score_genre()` live and compared with the card body:
@@ -77,20 +94,40 @@ Per component, read from `score_genre()` live and compared with the card body:
 | quota_headroom | 10.0 | **10.0** | `10·(1 − 0/58)` — ledger `0/60` (unchanged) |
 | lane_coverage | 6.0 | **6.0** | `min(3 viable × 2, 10)` — static |
 | revenue_potential | 8.0 | **8.0** | lane revenue bands — static |
-| cadence_fit | **6.7** | **3.3333** | **time-dependent** (see below) |
+| cadence_fit | 6.7 | **3.3333** | **time-dependent** (see below) |
 | policy_risk | 9.0 | **9.0** | `10 − 1` (one `youtube-gaming` lane penalty) |
-| trend_signal | 3.0 | **3.0** | DuckDuckGo scrape (see below) |
+| trend_signal | 5.0 (the failed fetch) | **3.0** | the failed-fetch premium was **removed** — `b2d11f7` |
 
-**`cadence_fit` decays as the quota period advances.** `oracle.py:221-253` computes
-`days_remaining = (last_day_of_period − now).days`, `expected_tracks = per_week × days/7`, then
-`(expected_tracks − 2)/6 × 10`. For `2/wk` on 2026-10-31: 14 days left → 4.0 expected → 3.3333.
-The card was created **2026-10-09 03:27 CDT** (epoch `1791534471`), when ~21 days remained and
-the same expression gave 6.7. Same genre, same registry, different period position.
+`10·0.25 + 6·0.20 + 8·0.20 + 3.3333·0.15 + 9·0.10 + 3.0·0.10 = **7.00**` — re-computed with
+`oracle.WEIGHTS` in this pass, and the card's title score is unreachable from the current code.
 
-**The 7.5 vs 7.7 duplicate is a failed web fetch, not more demand.** `trend_signal_score()`
-(oracle.py:272-289) scrapes `https://html.duckduckgo.com/html/?q=<genre> music trend 2026` and
-counts `class="result__snippet"` occurrences: `≥5 → 10.0`, `0 → 3.0`, `1-4 → 3.0 + n/5·7`, and
-**any exception → 5.0**. Measured directly:
+**`cadence_fit` decays as the quota period advances.** `oracle.py:221-254` computes
+`days_remaining = (last_day_of_period − now).days`, `weeks_remaining = max(days/7, 0.5)`,
+`expected_tracks = per_week × weeks_remaining`, then `(expected_tracks − 2)/6 × 10`. Measured
+2026-10-16 16:2x CDT: period `2026-10`, last day `2026-10-31`, **14 days remaining** → `2/wk ×
+2.0 = 4.0` expected → `(4.0 − 2)/6 × 10 = 3.3333`. The card was created **2026-10-09 03:27 CDT**
+(epoch `1791534471`), when ~21 days remained and the same expression gave 6.7. Same genre, same
+registry, different period position — this component is a calendar reading, not demand.
+
+**The 7.2 vs 7.0 difference was a failed web fetch, and it is fixed.** `trend_signal_score()`
+(`oracle.py:283-305`) scrapes `https://html.duckduckgo.com/html/?q=<genre> music trend 2026` and
+counts `class="result__snippet"` occurrences. `b2d11f7` made **both** non-answers score the same
+floor — a working fetch that finds nothing *and* a fetch that raises:
+
+```python
+TREND_NO_SIGNAL = 3.0                      # oracle.py:280
+        if count >= 5:  return 10.0
+        elif count == 0: return TREND_NO_SIGNAL      # 200 with no snippets
+        else: return TREND_NO_SIGNAL + (count / 5.0) * 7.0
+    except Exception as exc:
+        # A failed probe is degraded signal, not a bonus. Report it so the ...
+```
+
+The observable consequence is the `warn:` line in the transcript above: a timeout, a 403 or a
+DNS failure now *reports itself* and scores 3.0 instead of silently paying 5.0. The three
+network states this genre was measured in across the day — 200-with-zero-snippets, 403, socket
+timeout — now all score the same:
+
 
 ```
 $ /usr/bin/python3 trend_probe.py
@@ -100,12 +137,13 @@ trance               snippet_matches=  0  html_bytes=  14262  -> trend_signal_sc
 sentimental-piano    FETCH FAILED (HTTPError: HTTP Error 403: Forbidden) -> trend_signal_score=5.0
 ```
 
-*Re-measured 2026-10-16 13:51 CDT (duplicate pass, `t_d8cc0a38`) — **the network branch flipped
-between the two runs, and the score with it.*** The same probe against the same endpoint now
-returns **no HTTP status at all**: all five genres timed out.
+*History, kept because it is the evidence for the fix.* Re-measured 2026-10-16 13:51 CDT
+(duplicate pass, `t_d8cc0a38`) the same probe against the same endpoint returned **no HTTP
+status at all** — all five genres timed out, and under the pre-fix code that scored **5.0**
+each:
 
 ```
-$ /usr/bin/python3 trend_probe.py
+$ /usr/bin/python3 trend_probe.py                       # 2026-10-16 13:51 CDT, pre-fix behaviour
 elemental-water      FETCH FAILED (URLError: <urlopen error timed out>) -> trend_signal_score=5.0
 chill-lounge         FETCH FAILED (URLError: <urlopen error timed out>) -> trend_signal_score=5.0
 trance               FETCH FAILED (URLError: <urlopen error timed out>) -> trend_signal_score=5.0
@@ -113,56 +151,47 @@ sentimental-piano    FETCH FAILED (URLError: <urlopen error timed out>) -> trend
 elemental-fire       FETCH FAILED (URLError: <urlopen error timed out>) -> trend_signal_score=5.0
 ```
 
-So the sentence below — *"returns HTTP 200 with ~14.3 KB and zero matching snippets, so every
-genre in the registry scores 3.0"* — states **one of two observed states**, not a durable fact.
-The measured states so far are: 200-with-zero-snippets → **3.0**; 403 → **5.0**; socket timeout
-→ **5.0**. Two of the three score the broken fetch higher, which is the point.
-
-**The 0.20 twin delta is now reproducible without the network.** `score_genre()` called
-directly in this session, minutes after the `--dry-run` that printed 7.0, returned **7.2** for
-the same genre, same registry, same quota ledger — and the only component that moved was
-`trend_signal` (3.0 → 5.0). That is the whole difference:
+So the observation *"returns HTTP 200 with ~14.3 KB and zero matching snippets, so every genre
+in the registry scores 3.0"* described **one of three observed states**, and two of the three
+paid the broken fetch **more**. That was the defect. After `b2d11f7` the three states are
+indistinguishable in the score, and this pass measured that directly, with the fetch stubbed
+both ways so the measurement does not depend on the network:
 
 ```
-$ /usr/bin/python3 music/scripts/check_oracle_determinism.py      # network stubbed, deterministic
-trend 200/0-snippet: 3.0   trend fetch-fails: 5.0
-total 200/0-snippet: 7.0 (= 7.0)   total fetch-fails: 7.2
-WEIGHTS sum       : 1.0
-  - A1 VIOLATED: a FAILED trend fetch scores 5.0 but a SUCCESSFUL empty fetch scores 3.0 ...
-  - A2 VIOLATED: a failed trend fetch raises the total for elemental-water (7.2 > 7.0) ...
-FAIL check_oracle_determinism
-rc=1
+$ /usr/bin/python3 re-measure probe (fetch stubbed: 200-with-no-snippets vs urlopen raising)
+ genre                  200/0-snippet  fetch-fails  delta
+  activist               7.0            7.0          0.0
+  anime-ending           7.4            7.4          0.0
+  anime-opening          7.3            7.3          0.0
+  chill-lounge           8.4            8.4          0.0
+  chiptune-8bit          7.0            7.0          0.0
+  commentary-beds        8.1            8.1          0.0
+  elemental-air          7.0            7.0          0.0
+  elemental-earth        7.0            7.0          0.0
+  elemental-fire         7.0            7.0          0.0
+  elemental-water        7.0            7.0          0.0
+  epic-orchestral-boss   7.3            7.3          0.0
+  jungle-dnb             6.5            6.5          0.0
+  sentimental-piano      8.4            8.4          0.0
+  trance                 7.8            7.8          0.0
+max |delta|: 0.0   |  genres above the 6.0 produce line: 14 of 14  |  range 6.5 - 8.4
 ```
 
-This brief's §2 arithmetic is unchanged and verified: the "measured now" column
-(10/6/8/3.3333/9/3.0) sums to **7.00** under `WEIGHTS`, and 10/6/8/3.3333/9/**5.0** sums to
-**7.20** — `0.1 × (5.0 − 3.0) = 0.20`, exactly the twin-pair delta measured across all 14
-genres below. The check is new in this pass (§11a) and encodes the defect so it cannot drift
-silently again.
+**The 0.20 pair-delta no longer exists.** It was `WEIGHTS['trend_signal'] × (5.0 − 3.0)`, i.e.
+exactly the failed-fetch premium, and every one of the 14 duplicate pairs carried it. The board
+still shows the old numbers on the superseded cards — **43 oracle cards for 14 genres: 41 `done`,
+2 `running`** (this card and its `elemental-fire` twin) — because a card title is a record of the
+run that emitted it, not a live reading. `check_oracle_board` (rc=0, live) confirms every open
+genre carries exactly one open card, which is the invariant `t_bf0e5edd` (now `done`) asked for.
 
-The endpoint returns HTTP 200 with ~14.3 KB and **zero** matching snippets, so every genre in
-the registry scores 3.0; when DuckDuckGo rate-limits to 403, the `except` branch scores
-**higher (5.0)**. The board confirms the arithmetic across all 28 cards:
+**`trend_signal` still carries no usable signal**, and no stage should read it as demand: the
+search string is the registry's invented slug (`elemental-water music trend 2026`), which matches
+nothing in any corpus, and it floors at `TREND_NO_SIGNAL = 3.0` by construction for every genre.
 
-```
-$ /usr/bin/python3 oracle_deltas.py
-oracle cards on board: 28   distinct genres: 14
-activist        n=2  scores=[7.25, 7.45]  spread=0.20
-…
-elemental-water n=2  scores=[7.5,  7.7 ]  spread=0.20
-spread distribution across genres: {0.2: 14}
-0.2 == WEIGHTS['trend_signal'] * (5.0 - 3.0) = 0.2
-```
+**Consequence for this brief: none for the go/no-go.** 7.00 ≥ 5.0 → produce. Downstream stages
+must not read a card title as a live measurement, and must not treat the historical 0.20 as
+evidence that one run saw more demand than another.
 
-**Every one of the 14 duplicate pairs differs by exactly +0.20, and 0.20 is the 403 fallback.**
-A genre whose trend fetch *fails* outranks the same genre whose fetch succeeds. The higher-scoring
-card is the broken run. `trend_signal` is weight 0.10 and carries no signal at all: the search
-string is the registry's invented slug (`elemental-water music trend 2026`), which matches nothing
-in any corpus, and it floors at 3.0 by construction. Carded: **t_bf0e5edd** (oracle duplication).
-
-**Consequence for this brief: none for the go/no-go.** 7.00 ≥ 5.0 → produce, same verdict as
-7.5. Downstream stages must not read the card's 7.5 as a live measurement, and must not treat
-the 0.20 pair-delta as evidence that one run saw more demand.
 
 ## 3. What the genre IS
 
@@ -238,20 +267,36 @@ the only one whose requirements include a loop point. Measured against an empty 
 directory, this is the exact requirement list the package stage must satisfy:
 
 ```
-$ /usr/bin/python3 music/gates/gate_sync_ready.py --package-dir <empty> --lane game-assets
+$ /usr/bin/python3 music/gates/gate_sync_ready.py --package-dir <empty dir> --lane game-assets
 FAIL gate_sync_ready
-  - full_mix.wav is not a real audio file (ffprobe could not read a duration)
-  - no stems/ directory — a sync track without stems is not sync-ready (architecture HARD RULE 4)
-  - only 0 stem(s) found; 4 required (drums, bass, keys, vocals, ...)
-  - instrumental.wav is not a real audio file (sync needs an instrumental version)
   - no manifest.json
+  - manifest.json has no metadata object
+  - manifest metadata missing 'title'
+  - manifest metadata missing 'artist'
+  - manifest metadata missing 'bpm'
+  - manifest metadata missing 'key'
+  - manifest metadata missing 'mood'
+  - manifest metadata missing 'genre'
+  - manifest metadata missing 'sample_rate'
+  - manifest.json has no pack_manifest count object (loops/stems/one_shots/sfx) — a pack must declare its contents and the declaration must match the files
+  - pack_manifest has no 'loops' count — a game-assets pack ships loops and stems
+  - pack_manifest has no 'stems' count — a game-assets pack ships loops and stems
+  - no loop_points.json — the game-assets lane requires loop points (run gate_loop_points.py --pack-dir for the seam check)
   - no clearance_doc.pdf (or .txt) — sync requires a clearance document
   - no ai_disclosure.txt — the AI role must be declared for sync platforms
-  - game-assets lane requires loop_points.json (run gate_loop_points.py for the seam check)
+  - no LICENCE.txt — §13 requires a licence with explicit permitted use, distribution and derivative-work rules (music/licences/perpetual_game_asset_v1.txt)
 rc=1
 ```
 
-The full gate matrix is green on its own fixtures after this run's fix (§11):
+*Re-measured 2026-10-16 16:2x CDT (surviving-card pass).* Two classes were added since the
+write-time run: the `pack_manifest` declaration counts (`loops`, `stems`) and `LICENCE.txt`
+(the licence template now exists at `music/licences/perpetual_game_asset_v1.txt`). The write-time
+transcript's first four findings (`full_mix.wav`, `stems/`, `instrumental.wav`) are gone because
+the gate now reads the pack manifest instead of probing those filenames — the requirement list
+the package stage must satisfy is the one above, and `pack.py` is the generator the runbook names.
+
+The full gate matrix is green on its own fixtures — re-run in this pass:
+
 
 ```
 $ bash music/gates/check_gate_suite.sh
@@ -271,15 +316,30 @@ OK: every gate passed its good artifact and failed its broken one
   space pass without melody) and say which variation it is in the manifest. Same trap the
   commentary-beds kit hit.
 
-**`gate_loop_points` — already found defective by a sibling, not re-derived here.** The fire
-sibling (card t_6f0d261e) measured that `gate_loop_points` **PASSES a loop with a 1.6 s fade-out
-tail at 2.21× curvature** because it measures junction *curvature* (a derivative kink) and a
-linear fade introduces no kink. Its calibration — 1.6× clean, 6.0× half-period phase slip,
-ceiling 3.0× — reproduced exactly in this run's suite output. Carded: **t_bab8aa19** (nexus-core).
-For elemental-water this matters more than for most genres: the template asks for a
-reverb-heavy, blurred texture, the most likely correct-sounding ending is a tail that thins —
-which is precisely the shape the gate cannot see. **The seam must be verified by the reviewer's
-own tail/head RMS test, not by `gate_loop_points` alone.**
+**`gate_loop_points` — the curvature-only false pass was found by a sibling and has since been
+FIXED.** The fire sibling (card `t_6f0d261e`) measured that `gate_loop_points` **passed a loop
+with a 1.6 s fade-out tail at 2.21× curvature**, because it measured junction *curvature* (a
+derivative kink) and a linear fade introduces no kink. Card `t_bab8aa19` (nexus-core, now `done`)
+added the missing ruler. Re-run in this pass, the gate now measures both properties and the
+suite asserts each one:
+
+```
+## gate_loop_points
+PASS  seamless loop (1.6x curvature) passes
+FAILS phase-slip loop (6.0x curvature) fails (exit 1, as expected)
+FAILS faded loop tail fails on the LEVEL ruler, not the curvature one (exit 1, refused for "loop level drops", as expected)
+
+## gate_loop_points --pack-dir (checks EVERY loop)
+FAILS pack: a faded loop is not seamless (LEVEL ruler, not curvature) (exit 1, refused for "loop level drops", as expected)
+FAILS pack: no loop_points.json fails (exit 1, as expected)
+```
+
+That does not lower this genre's risk, it moves it: the template asks for a reverb-heavy,
+blurred texture, and the most likely correct-sounding ending is a tail that thins — exactly the
+shape that was invisible before. The seam must therefore be cut to a **level-neutral** tail
+(the gate's own reading), and the reviewer still owes the tail/head RMS comparison on top of
+`loop_points.json` at `0.0 → 120.0 s`.
+
 
 ## 6. Audio identity (locked for this genre)
 
@@ -326,21 +386,43 @@ Key/tempo metadata the package must state: **C minor, 82 BPM, 4/4.**
 Cover art (streaming/game-assets metadata) is not content: flat teal-with-caustic mark, the
 palette above.
 
-## 8. ⚠ The rubric as written cannot pass a correct water theme — decision + card
+## 8. ✓ The rubric was fixed — this genre's scored set is now explicit (was the blocking finding)
 
-`music/rubrics/gamer.json` (family `gamer`, pass threshold 7.0 on the geometric-median panel
-aggregate) defines five criteria; the review stage applies them per the criterion's declared
-scope:
+`music/rubrics/gamer.json` (family `gamer`, pass threshold **7.0** on the geometric-median panel
+aggregate) was rewritten on 2026-10-16 (commit `56dc465`, card `t_426a82a3`, now `done`) — and
+this section's original finding is what drove the fix. The review stage now resolves scope from
+**data**, not from prose:
 
-| Criterion | Weight | Declared scope | Applies to `elemental-water`? |
+```
+$ /usr/bin/python3 music/rubrics/panel.py applicable set, read live (music/rubrics/gamer.json v2)
+  elemental-water   Σw=8  need>=56.0  ['elemental_atmosphere', 'loop_safety', 'asset_packaging', 'loudness_target']
+```
+
+| Criterion | Weight | `applies_to` (live) | Scored for `elemental-water`? |
 |---|---|---|---|
-| `chip_timbre_authenticity` | 3 | "chiptune-8bit only" | no — scope says so |
-| `battle_energy` | 3 | "**elemental-***, epic-orchestral-boss" | scope says **yes** — but see below |
-| `loop_safety` | 3 | "all gamer genres" | yes |
-| `asset_packaging` | 1 | game-assets lane | yes |
-| `loudness_target` | 1 | streaming lane | yes |
+| `elemental_atmosphere` | 3 | elemental-air, elemental-water, elemental-earth | **yes** — the NEW exploration-craft criterion |
+| `loop_safety` | 3 | *(no field → whole family)* | **yes** |
+| `asset_packaging` | 1 | *(no field → whole family)* | **yes** |
+| `loudness_target` | 1 | *(no field → whole family)* | **yes** |
+| `battle_energy` | 3 | **elemental-fire, epic-orchestral-boss** | no — out of scope for this genre |
+| `chip_timbre_authenticity` | 3 | chiptune-8bit | no — out of scope for this genre |
 
-**The `battle_energy` scope is wrong for 3 of the 4 elementals.** Measured from each template:
+`applicable_criteria()` (`music/rubrics/panel.py`) drops an out-of-scope criterion and its weight;
+a correct `elemental-water` track must therefore earn **≥56 of the 80 weighted points available
+(7.0 × 8)** across the four criteria above. The `chip_timbre_authenticity` name-shadowing problem
+is gone as well: the criterion is named for its idiom, not for a string prefix.
+
+**Reject signals are scoped to the same data.** `boss_no_fast_tempo` ("boss/battle claim with no
+fast-tempo candidate (under 130 BPM)") now applies **only** to `elemental-fire` and
+`epic-orchestral-boss`, and a new `elemental_fight_material` signal rejects the opposite error —
+"elemental-air, elemental-water or elemental-earth delivered as a fight: drum-kit groove, bass
+drop, or a 130+ BPM battle claim on an exploration-theme label (= OUT of genre, the element is
+wrong)".
+
+**What the original §8 measured, kept as the record of why the rubric changed.** The pre-fix file
+scoped `battle_energy` to the string `elemental-*`, so a *correct* water theme was graded against
+a fight criterion whose own anchor demands 130–200 BPM (typical 140–180) and whose guide ends
+`"1 = slow ambient track with a battle label"`. Measured from the templates:
 
 | Genre | Stated tempo | Template's own words |
 |---|---|---|
@@ -349,47 +431,65 @@ scope:
 | `elemental-earth` | **88 BPM** | "ancient cavern earth theme" · "patient and heavy" |
 | `elemental-air` | **92 BPM** | "open sky heights theme" · "no percussion kit, no bass weight" |
 
-The criterion's own anchor demands **130–200 BPM** (typical 140–180) and its own guide ends
-`"1 = slow ambient track with a battle label"`. 82 BPM is 63 % of the anchor's lowest tempo.
-Worse, the rubric's `reject_signals` include *"boss/battle claim with no fast-tempo candidate
-(under 130 BPM)"* — applied to this genre that reject signal fires on a **correct** water theme.
+82 BPM is 63 % of the anchor's lowest tempo, so under the old scope the rubric's own
+`reject_signals` entry *"boss/battle claim with no fast-tempo candidate (under 130 BPM)"* fired
+on a **correct** water theme. The fixed rubric carries the 82/88/92 BPM split as its own
+justification: the new criterion's anchor cites the 70–100 BPM game-exploration/open-world pocket
+(tunee "Exploration & Open World" 70–100 against its own Boss Battle 130–170; Mubert exploration
+70–90 against action 120–140) and the 75 BPM / C minor `Aquatic Ambience` water-level benchmark —
+this genre's own reference point from §3.
 
-The rubric **contradicts itself**: its own `notes` field (line 70) says
+
+*History — the contradiction that produced the fix.* The v1 file's own `notes` said
 *"elemental-\* tracks choose per their prompt; chiptune-8bit MUST pass chip_timbre_authenticity;
-**battle tracks MUST pass battle_energy**"*. The name string is broader than the notes. Computed
-consequences, for the reviewer's benefit:
+**battle tracks MUST pass battle_energy**"*, while the criterion's `scope` string said the
+broader `elemental-*`. The computed consequences that were measured then, for the reviewer's
+benefit:
 
 ```
 Non-battle scope (loop 3 + packaging 1 + loudness 1 = weight 5, need 35 pts):
   a correct track scoring 7.0 or better on all three PASSES (35/5 = 7.0 exactly).
-Battle scope applied as the name reads (chip dropped, total weight 8, need 56 pts):
-  a track scoring 10/10/10 on loop/packaging/loudness still needs battle_energy >= 2.0.
-  battle_energy = 1 -> aggregate 6.625  FAIL   (and this is the score the guide prescribes
-                                               for an 82 BPM ambient track)
-If a judge scores the N/A chip criterion as 0 instead of dropping it (total weight 11):
-  only battle_energy = 10 can reach 7.0 (7.273); every correct water theme FAILS.
+Battle scope applied as the name read (chip dropped, total weight 8, need 56 pts):
+  a track scoring 10/10/10 on loop/packaging/loudness still needed battle_energy >= 2.0.
+  battle_energy = 1 -> aggregate 6.625  FAIL  (the score the guide prescribes for 82 BPM ambient)
+If a judge scored the N/A chip criterion as 0 instead of dropping it (total weight 11):
+  only battle_energy = 10 could reach 7.0 (7.273); every correct water theme FAILED.
 ```
 
-**DECISION LOCKED for this genre:** the reviewer scores **`loop_safety` (w3), `asset_packaging`
-(w1), `loudness_target` (w1)**; `battle_energy` and `chip_timbre_authenticity` are **N/A** and
-their weight is dropped, not zeroed. A correct `elemental-water` track must reach ≥7.0 on those
-three. The same three apply to `elemental-earth` and `elemental-air`.
+The v2 file resolves that arithmetic by construction: the scored set is now exactly the
+four-criterion set above, the out-of-scope criteria are dropped **with their weight**, and
+`music/rubrics/test_panel_math.py` enforces the invariants. The live `notes` field states the
+rule:
 
-**NOT fixed here — the rubric belongs to the review panel, and a producer editing its own grading
-sheet is the self-review failure mode this lane forbids (`t_16d011e6` was `editor`'s). Already
-filed as **t_426a82a3** (`editor`), from the elemental-air brief. What this brief adds is
-independent: the 82/88/92 BPM set for water/earth/air against fire's 150 BPM, the second failure
-mode (reject_signal #2 *"boss/battle claim with no fast-tempo candidate (under 130 BPM)"* firing
-on a correct water theme), and the three computed aggregate outcomes above. The fix is the scope
-string `(elemental-*, epic-orchestral-boss)` → `(elemental-fire, epic-orchestral-boss)`, mirroring
-the pattern the `chip` criterion already uses, plus narrowing reject_signal #2 to the same set.
-**No duplicate card filed.**
+> Sub-idiom scope is DATA, not prose: a criterion that carries `applies_to` is scored ONLY for
+> the genres it names; a criterion without the field is common to the whole family
+> (`music/rubrics/panel.py applicable_criteria(); music/rubrics/test_panel_math.py` enforces the
+> invariants). Three sub-idioms live in this family, each with one craft criterion at weight 3:
+> battle (elemental-fire, epic-orchestral-boss → `battle_energy`), chip (chiptune-8bit →
+> `chip_timbre_authenticity`), elemental exploration (elemental-air, elemental-water,
+> elemental-earth → `elemental_atmosphere`).
+
+**DECISION for this genre, restated against the fixed rubric:** the reviewer scores
+**`elemental_atmosphere` (w3), `loop_safety` (w3), `asset_packaging` (w1), `loudness_target`
+(w1)** — Σw 8, pass at ≥7.0 (≥56 weighted points) on the geometric-median panel aggregate.
+`battle_energy` and `chip_timbre_authenticity` are out of the genre's scope and are **not
+scored, zeroed, or judged** — that is now the file's own rule, not a producer-side exception.
+The same set applies to `elemental-earth` and `elemental-air`; `elemental-fire` and
+`epic-orchestral-boss` take `battle_energy` instead of `elemental_atmosphere`.
+
+**Ownership:** the fix landed through `editor` (card `t_426a82a3`) after this brief's finding was
+corroborated by the elemental-air and elemental-earth briefs. This section records the decision
+and the live measurement; it does not edit the grading sheet. The follow-up card about stale §8
+text in the sibling briefs is `t_1a5b018b` — this pass resolved its `elemental-water` leg here
+and leaves the `elemental-air` leg to that card.
+
 
 ## 9. Generation path — three blockers, measured on the live engine
 
-The lane's own generate prompt names `music/suno-gen.py`. **That file is not in this checkout.**
-This tree has diverged from `origin/main`: `git rev-list --count HEAD..origin/main` = **15**
-commits of this lane's own work are missing locally. Read from the git object (not from disk),
+The lane's own generate prompt names `music/suno-gen.py`. **That file is in this checkout now**
+(42 652 B, mtime 14:23 — the reconciliation of card `t_8a715681`); it was missing when §9 was
+written, and the lane's own work then sat **15** commits off `origin/main`. Read from the git
+object as well as from disk,
 `origin/main:music/suno-gen.py:141 is_instrumental_template(genre)` decides whether a track may
 render with no human lyric sheet, keying on the template's `## Lyrics guidance` section — and its
 docstring **names all four elementals**, `elemental-fire/water/earth/air`. `music/prompts/
@@ -472,7 +572,7 @@ sit on an unmerged WIP backup.
 | Runbook requirement | Measured on this host |
 |---|---|
 | `butler` (itch.io CLI) | **not installed** — not on PATH, not in `~/.local/bin`, `/usr/local/bin`, `/snap/bin`; referenced only by the runbook |
-| `~/.hermes/vault/itch_io_key` | **`~/.hermes/vault/` does not exist** — no vault at all |
+| `~/.hermes/vault/itch_io_key` | **`~/.hermes/vault/` is absent** — no vault at all |
 | adapters / licence / naming / checklist | present in `3882292` only (see above), on no branch this checkout runs |
 
 `music/docs/GLASS-BREAK.md` already contains the exact butler install and login procedure
@@ -617,10 +717,13 @@ Autonomy: all three lanes are at rung **`advisory`**, `clean_publishes: 0`
   (`is_instrumental_template`), `origin/main:music/sunolocal/translate.py`
 - Engine truth read from the running pod: `sunolocal-source-65fcc845d-fd5r6`,
   `/opt/sunolocal/music/sunolocal/translate.py` lines 33-59; `music-pipeline-briefs` ConfigMap
-- **Dangling reference (unchanged):** `brain/playbooks/music-lane-architecture.md` is cited as
-  "READ FIRST" by this lane's profile, `stages.yaml`, `genres.yaml`, `lanes.yaml`, `autonomy.yaml`
-  and `gates/*`, but no copy exists on this machine. `brain/research/music-monetization-2026.md`
-  likewise (`brain/research/` does not exist). Carded: **t_b0a4db92**.
+- **Dangling reference — RESOLVED (`t_b0a4db92`, done).** `brain/playbooks/music-lane-architecture.md`
+  is cited as "READ FIRST" by this lane's profile, `stages.yaml`, `genres.yaml`, `lanes.yaml`,
+  `autonomy.yaml` and `gates/*`, and it is in this tree and in `HEAD` now (34 328 B, rewritten at
+  `7411afa`, head touching it `6b24a52`). `brain/research/music-monetization-2026.md` (11 067 B)
+  is there too. The doc's §2 genre registry carries this genre's row, §3 its lanes and §13 its
+  pack lane; `music/scripts/check_doc_refs.py` resolves every `§` reference to a heading. Card
+  `t_fa731c5b` stripped this reading from the sibling briefs.
 - **Not fixed here (other owners, already carded):** gate_loop_points false pass **t_bab8aa19**;
   instrument/tempo/key render gaps **t_25a6499c**; diverged checkout — now with a **third stranded
   ref**, see §10 — **t_8a715681**; scheduler units running the wrong checkout **t_41f354be**;

@@ -862,15 +862,19 @@ a wrong citation: do not delete the reference, merge the refs.
 (42 652 B, mtime 14:23), `find` returns it, and `origin/main...HEAD` reads 0 behind. The
 reference stays; the absence does not.
 
-**8. §11 amendment (§12) — the "missing" architecture doc appeared mid-pass.** `7e54e03`
-recorded, correctly at measurement time, that
-`brain/playbooks/music-lane-architecture.md` "does not exist anywhere on this machine". At
-13:59:25 — between that commit and this amendment, in the same working tree — another worker
-wrote it: 21 696 B / 502 lines, plus `brain/research/music-monetization-2026.md` (11 067 B).
-Both are untracked and both are absent from `origin/main`, so the citation still dangles for
-anyone who clones, and the corrected §11 now says exactly that. Same drift class as
-corrections 1 and 2 — this time the artifact itself moved, not a count. It was caught only
-because the pass re-read the tree after committing instead of trusting its own earlier read.
+**8. §11 amendment (§12) — the architecture doc appeared mid-pass, and is now committed.**
+`7e54e03` recorded, correctly at measurement time, that
+`brain/playbooks/music-lane-architecture.md` was not on this machine. At 13:59:25 — between
+that commit and this amendment, in the same working tree — another worker wrote it: 21 696 B /
+502 lines, plus `brain/research/music-monetization-2026.md` (11 067 B). Both are in this tree
+and tracked in `HEAD` now — playbook 34 328 B, rewritten at `7411afa` (head touching it
+`6b24a52`), card `t_b0a4db92` done. The doc's §11 (self-run design) is the section that
+carries this brief's claim, and `music/scripts/check_doc_refs.py` resolves every `§` reference
+to it. Only the remote still lags: both files stay off `origin/main`, so a fresh clone of the
+remote has no copy. Card `t_fa731c5b` stripped this reading from the sibling briefs. Same
+drift class as corrections 1 and 2 — this time the artifact itself moved, not a count. It was
+caught only because the pass re-read the tree after committing instead of trusting its own
+earlier read.
 
 **Standing check added (the regression for corrections 2 and 5).**
 `music/scripts/check_brief_drift.py` — the check that would have caught two of the three
