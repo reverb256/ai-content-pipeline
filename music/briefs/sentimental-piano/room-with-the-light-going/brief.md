@@ -522,11 +522,10 @@ byte-identical.
 ### 11.4 Checks run on the committed content
 
 ```
-PASS check_brief_figures      4 recomputed figure(s), 7 skipped (not repo-provable)   rc=0
+PASS check_brief_figures      4 recomputed figure(s), 13 skipped (not repo-provable)  rc=0
 PASS check_brief_drift        0 live count(s)                                          rc=0
-PASS check_brief_line_refs    3 cited line range(s) resolve and hold                   rc=0
-PASS check_brief_paths        14 citations resolve (1 WARN: this brief should name the
-                              mining-k8s checkout root)                                rc=0
+PASS check_brief_line_refs    2 cited line range(s) resolve and hold in the worktree   rc=0
+PASS check_brief_paths        14 citations across 14 briefs resolve under /home/j_kro  rc=0
 PASS check_prompt_style_counts 15 declared lengths / 14 templates                      rc=0
 PASS check_brief_bpm_solutions 0 styleWeight claims buy the BPM they state             rc=0
 PASS check_stage_scripts      11 referenced script path(s) all present                 rc=0
@@ -535,6 +534,10 @@ PASS check_oracle_board       every one of the 12 open oracle genres carries exa
 PASS check_oracle_determinism trend fetch failure never outscores an empty success     rc=0
 PASS gate_quota               period 2026-10, 0/60, studio 0                           rc=0
 ```
+
+`check_brief_paths` reported a WARN on this brief when this pass began: it cites
+`mining-k8s/` without naming the checkout root, so a reader cannot tell which clone.
+§8 now names `/home/j_kro/mining-k8s`.
 
 ### 11.5 Still open — not this pass's to close
 
