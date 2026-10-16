@@ -399,7 +399,7 @@ that was wrong on the wrapper's semantics and miscounted three plans as two. `pl
 cannot enter this queue either. Covered by `t_25a6499c` (§12).
 
 The payload ConfigMap `music-pipeline-payload` mounts the data the jobs consume:
-`music__genres.yaml`, the three blueprints, `music__planner__planner.py`,
+`music__genres.yaml`, the six blueprints, `music__planner__planner.py`,
 `music__scripts__acestep_plan.py`, and all 14 `music__prompts__*.md` (including
 `elemental-earth.md`). It does **not** mount the gates or the asset-pack generator.
 
@@ -615,7 +615,7 @@ findings verbatim**; 5 loops / 12 stems / 8 one-shots / 6 SFX; `gate_loop_points
 quoted output. Live rail re-read: svc `sunolocal` ClusterIP `10.43.164.190:8123`, image
 `localhost/sunolocal:v0.1.2`, `/health` ok, `/api/v1/models` as quoted, CronJobs `17 */6 * * *` and
 `41 */4 * * *` both unsuspended, briefs ConfigMap still the one `smoke-chill-lounge` entry, payload
-ConfigMap still 14 prompts + 3 blueprints + planner + `acestep_plan.py` and **no** gates.
+ConfigMap still 14 prompts + 6 blueprints + planner + `acestep_plan.py` and **no** gates (blueprint count re-measured 2026-10-16 15:31 CDT: 38 keys, 6 of them blueprints).
 `openapi.json`: `/api/v1/generate` has **17 properties and no `bpm`, no `key`** — so `translate.py`
 owns the tempo, which is what makes §7a C matter. `/var/lib/music-plans/` as quoted. No
 `upload_index.json` anywhere in the repo; no `music/lyrics/**` and no pack for this genre.
@@ -642,7 +642,7 @@ owns the tempo, which is what makes §7a C matter. `/var/lib/music-plans/` as qu
    contradicts; a comment carries the measurement rather than an edit to another card's artefact.
 5. **§8 / §11 / §13 census.** The `elemental-earth` grep now returns 20 paths, the card statuses
    moved (this card and the air/fire twins `running`, water `ready`), HEAD is `940c210` and the
-   divergence is **15 behind / 26 ahead**.
+   divergence is **15 behind / 26 ahead** at `940c210` (13:43); the overall pair reads 0 behind / 61 ahead of `origin/main` at `e40c7f9` (15:31), because the reconciliation merge `ab33ad1` (14:23) cleared the 15-commit upstream deficit.
 6. **§7a D-note — the in-pod `translate.py` docstring lists nine templates while claiming eight.**
    It names `epic-orchestral-boss` among the instrumental eight; the measured census is 8 of 14
    and that genre is **not** in it. Same class as the note in the epic-orchestral-boss brief; the
@@ -677,3 +677,27 @@ PASS check_brief_bpm_solutions: 9 styleWeight claim(s) across 14 brief(s) buy th
 It deliberately does not check every `style_weight` in a brief: a brief may quote the template's
 own Style Influence as the counter-example it is (elemental-fire's `0.80 → 156 BPM`), and that
 number is supposed to miss the anchor.
+
+## 15. Aged live counts re-measured (card `t_0f7aed63`, 2026-10-16)
+
+`music/scripts/check_brief_drift.py` (added by card `t_b7dd5655`) flagged the §14 divergence as
+aged. The same pass re-measured the blueprint census this brief cites in §7b and §14, which had
+also moved, and read the deployed payload back from the cluster.
+
+- **Superseded revision of this file:** `sha256 b3a31d2a2bb46f6ab392f9005d5ac1787da559dc9c7c4cd3d81ebb9a5d3f0baf` (679 lines / 41686 B).
+- **Clone divergence:** the pair §14 records holds at `940c210` (13:43) — 15 behind / 26 ahead of
+  `origin/main`. At `e40c7f9` (15:31) the pair reads 0 behind / 61 ahead: the 15-commit upstream
+  deficit was cleared by the reconciliation merge `ab33ad1` (14:23). A divergence count is
+  stamped with the revision it was measured at, because it ages in minutes.
+- **Blueprint census, re-measured 2026-10-16 15:31 CDT:** 6 of the 14 genres carry a lyric
+  blueprint (`activist`, `anime-ending`, `anime-opening`, `chill-lounge`,
+  `epic-orchestral-boss`, `trance`); the other 8 do not. Measured through the registry loader
+  plus the `music/lyrics/blueprints/*.yaml` glob. It was 3 when this brief was written and 4 at
+  the 13:53 pass. `elemental-earth` still has none, so §8's "nothing exists for elemental-earth"
+  stands.
+- **Deployed payload, re-read 2026-10-16 15:31 CDT from `music-pipeline-payload`:** 38 keys —
+  6 blueprints, 15 prompt entries (the 14 genre templates plus `anisong-genre-blocks.yaml`),
+  14 visuals, `genres.yaml`, the planner and `acestep_plan.py`. Still no gates, still no
+  `music/lyrics/` sheets. §7b and §14 said "three blueprints", which was true when measured.
+- **Corrected in place:** §7b (the payload's blueprint count), §14 (correction 5's divergence and
+  the payload sentence).

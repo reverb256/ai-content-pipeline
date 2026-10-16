@@ -21,7 +21,7 @@
 > | twin `t_d8cc0a38` status `ready` | **`running`** — this pass claims and closes it as a duplicate |
 > | local `main` @ `89d6eb2` | @ **`fa3163f`**, then `456d525`; **24 commits landed between 13:10 and 13:51** (the "15 in 40 minutes" line is now 24) |
 > | 6 cards `running` (5 music briefs + `t_aba9d2c3`) | **4 `running`**, all `music-oracle` twins: `t_c92f566d` earth, `t_42a01e18` fire, `t_d8cc0a38` water, `t_b7dd5655` activist. Board census: 56 done / 25 ready / 7 todo / 4 blocked / 4 running / 1 archived |
-> | 6 ahead / 15 behind `origin/main` (from the §5-era `git rev-list`) | **29 ahead / 15 behind** — the local tip rises with every brief this lane commits to the shared tree; the 15-commit upstream deficit has not moved |
+> | 6 ahead / 15 behind `origin/main` (from the §5-era `git rev-list`) | **29 ahead / 15 behind** at `fa3163f` (13:48) — the local tip rises with every brief this lane commits to the shared tree; the 15-commit upstream deficit was cleared by the reconciliation merge `ab33ad1` (14:23), and the overall pair reads 0 behind / 61 ahead at `e40c7f9` (15:31) |
 >
 > Superseded revision of this file (before the duplicate pass of 2026-10-16 13:52 CDT):
 > `sha256 578e8dd10ab9bc6d45c034fa09b10b1880735b485e963a26eed376613137d26d`. The pass corrected
@@ -423,8 +423,8 @@ is queued anywhere.** The three blockers, all measured:
 2. **Tempo.** The **deployed** engine hardcodes it. Read from the running pod:
    `/opt/sunolocal/music/sunolocal/translate.py:42 bpm = 120`, overridden only by
    `bpm = int(60 + req.style_weight * 120)` (line 45). The local planner falls back to
-   `"bpm": ctx["blueprint"].get("bpm_anchor") or 100` (`planner.py:470`), and **only 3 of 14
-   genres have a blueprint** (`activist`, `chill-lounge`, `trance`). So this genre plans at 100
+   `"bpm": ctx["blueprint"].get("bpm_anchor") or 100` (`planner.py:470`), and **only 6 of the 14 genres have a blueprint**
+   (`activist`, `anime-ending`, `anime-opening`, `chill-lounge`, `epic-orchestral-boss`, `trance`). So this genre plans at 100
    and translates at 120 — both wrong. **Acceptance for this genre: the plan's `bpm` field must
    read 82.** At 100 BPM a bar is 2.40 s and the 41-bar/120.000 s loop unit in §4 is wrong.
 3. **Key cannot reach the engine.** `translate.py:49` is `key = req.style or "C major"` — the
@@ -559,8 +559,8 @@ pattern (`check_stage_scripts` fails the same way on `music/suno-gen.py`, cited 
 
 ## 12. Existing assets for this genre
 
-Measured: **none.** `music/lyrics/` holds `activist/`, `chill-lounge/`, `trance/` plus
-`blueprints/{activist,chill-lounge,trance}.yaml` — no `elemental-water` sheet or blueprint
+Measured: **none.** `music/lyrics/` holds `activist/`, `anime-opening/`, `chill-lounge/`, `trance/` plus
+`blueprints/{activist,anime-ending,anime-opening,chill-lounge,epic-orchestral-boss,trance}.yaml` — no `elemental-water` sheet or blueprint
 (expected: the genre is instrumental, so there is no lyric sheet to write, and no blueprint means
 §9's bpm blocker). `music/plans/` holds only `.gitignore`. No campaign directory, master, stem,
 loop point, cover or asset pack exists for this genre anywhere in the tree. Quota is untouched:
@@ -651,3 +651,19 @@ Autonomy: all three lanes are at rung **`advisory`**, `clean_publishes: 0`
   file (`music/scripts/check_oracle_determinism.py`) and edits only
   `music/briefs/elemental-water.md` — both untouched by the siblings running beside it
   (earth/fire each touch their own brief; activist touches `music/briefs/activist.md`).
+
+## 15. Aged live counts re-measured (card `t_0f7aed63`, 2026-10-16)
+
+`music/scripts/check_brief_drift.py` (added by card `t_b7dd5655`) flagged this brief on both
+families of live count: the clone divergence in the header table and the blueprint census in §9.
+Re-measured and corrected in place.
+
+- **Superseded revision of this file:** `sha256 b3284178afd72ca29714abc2e743466d754da7539ee718b0b79c8738a07a0d0d` (653 lines / 40590 B).
+- **Clone divergence:** the header pair (29 ahead / 15 behind) holds at `fa3163f` (13:48). At
+  `e40c7f9` (15:31) the pair reads 0 behind / 61 ahead: the 15-commit upstream deficit was
+  cleared by the reconciliation merge `ab33ad1` (14:23), not by anything this lane did.
+- **Blueprint census, re-measured 2026-10-16 15:31 CDT:** 6 of the 14 genres carry a lyric
+  blueprint (`activist`, `anime-ending`, `anime-opening`, `chill-lounge`,
+  `epic-orchestral-boss`, `trance`); the other 8 do not. This genre still has none, so §9
+  blocker 2 — the flat 100 fallback — stands exactly as written. Only the count changed.
+- **Corrected in place:** the header table row 4, §9 blocker 2 and §12's asset listing.

@@ -80,7 +80,7 @@ That is not trivia: it is the root cause of a live dispatch failure (§11.3).
 | Lanes | `streaming`, `youtube-mix`, `direct-license` |
 | Cadence | 2/wk |
 | Video shape | `mix-60min` |
-| Lyric blueprint | **none for this genre** — 4 of the 14 genres have one (activist, anime-ending, chill-lounge, trance; `anime-ending.yaml` landed mid-pass, §14) |
+| Lyric blueprint | **none for this genre** — 6 of the 14 genres have one (activist, anime-ending, anime-opening, chill-lounge, epic-orchestral-boss, trance; 4 at the §14 pass, when `anime-ending.yaml` landed) |
 | Registry note | `"Same Beatport ban applies. Amen-break / ragga vocal direction."` |
 
 Registry `defaults:` that bind every track (`music/genres.yaml` lines 20–25; line 19 is blank,
@@ -306,9 +306,9 @@ be written by j_kro. Plan the card around that, not as a blocker discovered late
 
 Two live counterexamples make the rule concrete rather than theoretical:
 
-1. There is **no blueprint for jungle-dnb**. Blueprints exist for 4 of 14 genres
-   (`music/lyrics/blueprints/{activist,anime-ending,chill-lounge,trance}.yaml` — the
-   `anime-ending` one landed at 14:03 during this pass, commit `1356e28`). The planner's
+1. There is **no blueprint for jungle-dnb**. Blueprints exist for 6 of the 14 genres
+   (`music/lyrics/blueprints/{activist,anime-ending,anime-opening,chill-lounge,epic-orchestral-boss,trance}.yaml` — four of them
+   at the §14 pass, when `anime-ending` landed at 14:03, commit `1356e28`). The planner's
    `load_blueprint()` returns `{}` for this genre, so `bpm_anchor_for()` falls through to
    the caption — which works (§6.3), but the `[theme]` and `title_candidates` a blueprint
    would supply are absent.
@@ -363,7 +363,7 @@ $ cd /home/j_kro/ai-content-pipeline && git status -sb | head -1
 ```
 
 The clone is ahead of its own origin by a count that moves every few minutes (sibling briefs
-commit to this one tree — 19 at write time, **30** at the §14 pass) and **15 behind**
+commit to this one tree — 19 at write time, **30** at the §14 pass) and **15 behind** until the reconciliation merge `ab33ad1` (14:23), after which the pair reads 0 behind / 61 ahead at `e40c7f9` (15:31)
 (`origin/main` carries the missing `suno-gen.py`; card t_8a715681 tracks the reconciliation;
 that deficit has not moved all day). Until it lands, the only rail a queued jungle-dnb brief
 can use is Rail A. A generate stage that plans around Suno CDP has planned around a file that
@@ -679,8 +679,8 @@ The genre's own 5-second stub is not a mix and cannot be stretched into one.
 | Prompt template | `music/prompts/jungle-dnb.md` | complete, 4 032 B, style field 653/1000 |
 | Visual style doc | `music/visuals/urban-grain.md` | complete, 1 157 B |
 | Visual render | `music/visuals/urban_grain.mp4` | 5 s stub — fails the gate (§7) |
-| Lyric blueprint | — | **does not exist for jungle-dnb** (4 of the 14 genres have one at the §14 re-read) |
-| Lyrics/track dir | — | none (`music/lyrics/` has activist, chill-lounge, trance only) |
+| Lyric blueprint | — | **does not exist for jungle-dnb** (6 of the 14 genres have one; 4 at the §14 re-read) |
+| Lyrics/track dir | — | none (`music/lyrics/` has activist, anime-opening, chill-lounge, trance only) |
 | Cluster payload | `music-pipeline-payload` ConfigMap | carries the template + registry, md5-verified (§1) |
 | Plans | `/var/lib/music-plans/` | **no jungle-dnb plan** |
 | Brief queue | `music-pipeline-briefs` ConfigMap | **no jungle-dnb entry** (only `smoke-chill-lounge`) |
@@ -987,7 +987,7 @@ object or campaign artifact was modified.
 | §1.2 | "will be 5.4 on 2026-10-26 … ages out of its own justification" | `cadence_fit` returns 0.0 once `expected_tracks < 2` (`days_left < 7`), and `weeks_remaining` floors at 0.5, so the total floors at **6.00 / 6.20** — it cannot cross 5.0 in this period | **corrected** |
 | §2 | every quoted template string (168 BPM, two speeds, 40–60 Hz, 12-bit crunch, exclude list, weirdness 55% / style influence 80%, instrumental fallback) | all present in `music/prompts/jungle-dnb.md`, verbatim | ok |
 | §2 | lyrics-guidance block is 473 chars | 474 chars raw, **473** under the lane's own `.strip()` rule (`music/prompts/validate_templates.py:67`, `extract_fenced_blocks` → `[m.strip() for m in re.findall(...)]`) — the same rule that gives 653 for the style field | ok |
-| §4 | `lyrics.py scaffold` / `claim`; schema `music/track-lyrics-manifest v1`; the activist manifest quote; 4 of 14 blueprints (was 3 — `anime-ending.yaml` landed 14:03, commit `1356e28`); `final-round.json` `authorship: AI-GENERATED` + `lyrics_mode: ai` | all read live and identical to the quoted text | **updated** |
+| §4 | `lyrics.py scaffold` / `claim`; schema `music/track-lyrics-manifest v1`; the activist manifest quote; 4 of 14 blueprints at the §14 pass (was 3 — `anime-ending.yaml` landed 14:03, commit `1356e28`; 6 at the 2026-10-16 15:31 re-measure); `final-round.json` `authorship: AI-GENERATED` + `lyrics_mode: ai` | all read live and identical to the quoted text | **updated** |
 | §5 | `gate_quota` PASS; 2/wk over 31 days ≈ 9 tracks; a 60-min mix is ≥6 renders | `gate_quota` PASS 0/60; 2 × 31/7 = 8.86; 3600 s ÷ 600 s = 6 | ok |
 | §6.1 | CronJob schedules; `music/suno-gen.py` absent; plans dir; the live briefs queue; clone divergence | `music-pipeline` is `17 */6 * * *` — **five** fields, the brief had six; `music-pipeline-render` `41 */4 * * *` exact; `suno-gen.py` still absent from the worktree; `/var/lib/music-plans/` holds the same three plans; `briefs.json` still the single `smoke-chill-lounge` entry; divergence measured on 2026-10-16 14:05 CDT at `456d525`: **30 ahead / 15 behind** (the pair read 38/15 at 14:25 — the local tip is the moving part; it was 19/15 at write time) | **corrected (2)** |
 | §6.2 | ComfyUI node schemas — `bpm` INT default 100 min 30 max 300, `duration` FLOAT default 160 max 600, `keyscale` default `B minor`, Loader default 4B, Artist `instrumental` BOOLEAN, empty queue, sunolocal `/health` ok | all re-read from `http://localhost:32188/object_info` and the service — identical | ok |
@@ -1018,7 +1018,7 @@ object or campaign artifact was modified.
 | 7 | §11.1 | driver log 1 564 983 B, last written 13:19 | 1 565 253 B, last written 13:50 |
 | 8 | §11.6 | the two cards `running` / `ready` | `done` 13:31:08 / `running` (this card); `t_97c92df2` added |
 | 9 | §13 | RAM available 17 GiB | 16 GiB (VRAM unchanged at 885/8 192 MiB) |
-| 10 | §1, §4, §8 | **3** of 14 genres have a lyric blueprint (activist, chill-lounge, trance) | **4** of 14 — `music/lyrics/blueprints/anime-ending.yaml` landed at 14:03 (commit `1356e28`) while this pass was running. Caught by the sibling `music/scripts/check_brief_drift.py` (`t_b7dd5655`), which recomputes this census live; the value is correct at the time of this commit |
+| 10 | §1, §4, §8 | **3** of 14 genres have a lyric blueprint (activist, chill-lounge, trance) | **4** of 14 at the §14 pass — `music/lyrics/blueprints/anime-ending.yaml` landed at 14:03 (commit `1356e28`) while that pass was running. Caught by the sibling `music/scripts/check_brief_drift.py` (`t_b7dd5655`), which recomputes this census live; **6** of 14 at the 2026-10-16 15:31 re-measure (card `t_0f7aed63`) |
 | 11 | header, §1.2 | this card's title score **7.2** (and the twin's 7.0) | **6.5 true** — the operator's oracle ruling, re-scored at `b2d11f7`; the 0.7 delta is the failed-fetch premium (0.20, now fixed) plus `cadence_fit` decay (0.505). Recorded in full below |
 
 Nothing else needed correcting. Both of the brief's counter-intuitive findings reproduced
@@ -1094,3 +1094,20 @@ duplicate, do not work it.** Everything else this brief raises already has an ow
 hotspot: `music/briefs/` — 14 briefs written and re-verified by ~8 concurrent `music-producer`
 workers on one shared working tree. Every write needs a path-scoped `git add` and a lock retry;
 this file now has two commits, both on this genre.
+
+## 15. Aged live counts re-measured (card `t_0f7aed63`, 2026-10-16)
+
+`music/scripts/check_brief_drift.py` (added by card `t_b7dd5655`) flagged this brief's blueprint
+census as stale — it moved from 4 to 6 during the afternoon — and the same class of aged live
+count sat in §1, §4, §6.1, §8 and §14. Re-measured and corrected in place.
+
+- **Superseded revision of this file:** `sha256 52891a79d8dde47744a00dd2ba1e8ca595b205c7fdfe91b9b8ebc129828e1800` (1096 lines / 69660 B).
+- **Blueprint census, re-measured 2026-10-16 15:31 CDT:** 6 of the 14 genres carry a lyric
+  blueprint (`activist`, `anime-ending`, `anime-opening`, `chill-lounge`,
+  `epic-orchestral-boss`, `trance`); the other 8 do not. `jungle-dnb` is still one of the 8, so
+  §4's counterexample is unchanged — only the count and the file list moved.
+- **Clone divergence:** the pair this brief records holds at `456d525` (30 ahead / 15 behind). At
+  `e40c7f9` (15:31) it reads 0 behind / 61 ahead: the reconciliation merge `ab33ad1` (14:23)
+  cleared the 15-commit upstream deficit that had "not moved all day".
+- **Corrected in place:** §1's table row, §4 counterexample 1, §6.1's divergence sentence, §8's
+  asset table, §14's re-measured row and §14's correction 10.

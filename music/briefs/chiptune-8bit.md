@@ -175,7 +175,7 @@ Why it matters beyond bookkeeping:
   lyrics; an instrumental has none to author, so there is nothing to fake and nothing to
   lose. The registry default `lyrics: human-original` is satisfied vacuously.
 - **No blueprint is required.** `music/lyrics/blueprints/` holds `activist.yaml`,
-  `chill-lounge.yaml`, `trance.yaml` only. The planner falls back to `bpm = 100` when a
+  `anime-ending.yaml`, `anime-opening.yaml`, `chill-lounge.yaml`, `epic-orchestral-boss.yaml`, `trance.yaml`. The planner falls back to `bpm = 100` when a
   blueprint is absent — for a 150 BPM genre that fallback is wrong, and it is one more reason
   the plan's `bpm` must be set explicitly rather than inherited (§6.3).
 - **`--lyrics-mode ai` is not a temptation here.** There are no lyrics to generate. The
@@ -317,8 +317,8 @@ stage rather than asking for one 10-minute render.
 
 Measured: **none.**
 
-- `music/lyrics/` holds `activist/`, `chill-lounge/`, `trance/` plus
-  `blueprints/{activist,chill-lounge,trance}.yaml`. No chiptune lyric dir or blueprint —
+- `music/lyrics/` holds `activist/`, `anime-opening/`, `chill-lounge/`, `trance/` plus
+  `blueprints/{activist,anime-ending,anime-opening,chill-lounge,epic-orchestral-boss,trance}.yaml`. No chiptune lyric dir or blueprint —
   expected, the genre is instrumental.
 - No campaign directory, no masters, no stems, no cover artwork, no `loop_points.json`.
 - `music/visuals/pixel_scene.mp4` is a **5.000 s**, 1280×720 reference render (14 244 bytes),
@@ -584,7 +584,7 @@ gates, the plans, the chart, or the cluster; no new card was created.
   `loop_safety` weight 3; both `reject_signals` quoted in §2 verbatim.
 - Template `music/prompts/chiptune-8bit.md`: instrumental ("leave the lyrics box empty"),
   150 BPM, weirdness 35%, Style Influence 85%, six exclude terms, loop-point ending. Blueprints
-  are still only `activist, chill-lounge, trance`; still no chiptune lyric dir, no
+  are `activist, anime-ending, anime-opening, chill-lounge, epic-orchestral-boss, trance` (6 of the 14); still no chiptune lyric dir, no
   `loop_points.json`, no master, no stems.
 - Bar arithmetic (1.600 s/bar), the planner cap `MAX_DURATION_S = 420`, and the fallback
   `bpm_anchor or 100` (`music/planner/planner.py:470`).
@@ -631,7 +631,7 @@ gates, the plans, the chart, or the cluster; no new card was created.
 |---|---|---|---|
 | 1 | §1, §8.4 | style block measures **844 chars**; the template header's "567/1000" is stale | **567** chars (568 bytes, 1 line) — the header is accurate. Claim withdrawn |
 | 2 | §8.3 | `BROKEN: 2 check(s) misbehaved`; suite interpreter unpinned | suite green — `OK: every gate passed its good artifact and failed its broken one`; interpreter pinned by `757f3ab` |
-| 3 | §6.1 | lineages diverged `6 ahead, 15 behind` | **22 ahead, 15 behind** — this wave's brief commits landed on local `main` |
+| 3 | §6.1 | lineages diverged `6 ahead, 15 behind` | **22 ahead, 15 behind** at `061b5dc` (13:34) — this wave's brief commits landed on local `main`; the pair reads 0 behind / 61 ahead at `e40c7f9` (15:31) |
 | 4 | §8.5 | residue 15 `ready` + 7 `running` oracle cards; the pair was running/ready | **6 `ready` + 3 `running`**; the pair is `t_9cc9b48f` done / `t_05b640f6` this pass |
 
 ### Not changed, not re-filed
@@ -670,3 +670,21 @@ FAIL check_prompt_style_counts: 1 false or unsafe style-field claim(s) across 15
 It is stdlib-only, so both `/usr/bin/python3` and the bundled interpreter run it. Incident
 cited in the script docstring: this card, plus the sibling unit mislabel in the anime-opening
 brief (`t_abaa7e2d`, commit `afa242e`).
+
+## 13. Aged live counts re-measured (card `t_0f7aed63`, 2026-10-16)
+
+`music/scripts/check_brief_drift.py` (added by card `t_b7dd5655`) flagged this brief: the clone
+divergence its §12 correction row records has aged, and the blueprint lists it prints were down
+to three files while the directory had grown to six. Re-measured and corrected in place.
+
+- **Superseded revision of this file:** `sha256 12c6e2cf9883379b35988e6715c652e2a0612573511dbd8911baf38b484fadc9` (672 lines / 37365 B).
+- **Blueprint census, re-measured 2026-10-16 15:31 CDT:** 6 of the 14 genres have a lyric
+  blueprint (`activist`, `anime-ending`, `anime-opening`, `chill-lounge`,
+  `epic-orchestral-boss`, `trance`); the other 8 do not. This genre still has none, and none is
+  wanted — §4's decision is unchanged.
+- **Clone divergence, re-measured 2026-10-16 15:31 CDT:** the pair §12's correction row records
+  holds at `061b5dc` (13:34). At `e40c7f9` (15:31) it reads 0 behind / 61 ahead, because the
+  reconciliation merge `ab33ad1` (14:23) cleared the 15-commit upstream deficit. The local tip
+  is the part that moves.
+- **Corrected in place:** §4 (the blueprint-list bullet), §7 (the `music/lyrics/` asset listing),
+  §12's "Held as written" bullet and §12's corrections row 3.
