@@ -8,6 +8,7 @@
     {
       "id": "tempo_pocket",
       "name": "Tempo sits in the genre pocket",
+      "applies_to": "all",
       "weight": 3,
       "type": "measured",
       "anchor": "Trance: uplifting pocket 136-142 BPM, 138 is the standard DJs mix at; progressive 128-134; outside 128-145 it is a different genre wearing trance's clothes (classictrance.com production playbook; BeatKey substyle table). Jungle: 160-175 BPM, classic jungle 160-170, modern DnB 170-176 with 174 the centre (EDMProd jungle guide; Veena DnB table; tunaryinstruments DnB guide).",
@@ -17,6 +18,7 @@
     {
       "id": "dance_structure",
       "name": "DJ-usable phrase structure",
+      "applies_to": "all",
       "weight": 2,
       "type": "craft",
       "anchor": "Sections are multiples of 8 bars, usually 32. Trance: DJ intro/outro 16-64 bars drums-only for beatmixing; breakdown 32-96 bars with no kick where the melody reveals; drop capped 32-64 bars; two beats of near-silence before the drop (myloops 8-minute blueprint; Veena trance arrangement). Jungle: 32-bar intro, drop 32, breakdown 16, build 8, drop 32, outro 32 (Veena DnB arrangement).",
@@ -26,6 +28,7 @@
     {
       "id": "genre_engine",
       "name": "The load-bearing genre element is present",
+      "applies_to": "all",
       "weight": 3,
       "type": "craft",
       "anchor": "Trance engine = four-on-floor kick + rolling 16th offbeat bass on chord roots + detuned supersaw lead; harmony i-VI-III-VII (Am-F-C-G class); dotted-8th delay ~326 ms at 138 BPM; hall reverb on the lead; classic-era trance has almost no energy below 40 Hz. Jungle engine = chopped sampled break (amen lineage) with snare on 2 and 4, ghost notes, reese bass = two detuned saws (~ +/-30 cents) or deep reggae-style sub, half-time bass feel against fast drums, 12-bit-era crunch, ragga vocal lifts.",
@@ -35,6 +38,7 @@
     {
       "id": "low_end_discipline",
       "name": "Low end behaves like the substyle",
+      "applies_to": "all",
       "weight": 2,
       "type": "measured",
       "anchor": "Trance: kick around 60 Hz, high-pass the master below 40 Hz before mastering, bass gated below 60 Hz (classictrance playbook; beatkey drum table). Jungle/DnB: pure sine sub carries the low, reese/mid-bass filtered above it, sub mono, kick and sub never fight (transmissionsamples reese guide; veena DnB).",
@@ -44,6 +48,7 @@
     {
       "id": "loudness_target",
       "name": "Master hits the lane loudness target",
+      "applies_to": "all",
       "weight": 1,
       "type": "measured",
       "anchor": "Streaming lanes: -14 LUFS integrated (pipeline gate_loudness spec, music-lane-architecture.md S5; Spotify/Apple normalization era). Sync lanes: -16 LUFS. Tolerance +/-1 dB (measured as volumedetect mean_volume, the pipeline's loudness dialect).",
@@ -53,6 +58,7 @@
     {
       "id": "arrangement_development",
       "name": "The track earns its length",
+      "applies_to": "all",
       "weight": 1,
       "type": "craft",
       "anchor": "Change something small every 8 bars, bigger every 16, sections every 32; the breakdown is the emotional centre with its own three-act arc (myloops). One 64-bar loop twice is not development.",

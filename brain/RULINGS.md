@@ -85,4 +85,16 @@ in full 2026-10-08):
 When the editor or a bot proposes a new ruling from a performance lesson, it is
 listed here. It becomes a permanent ruling ONLY after j_kro approves it.
 
-- (none yet)
+- **A rubric criterion's scope is DATA, never prose.** A criterion that
+  applies to one sub-idiom must carry `applies_to` in `music/rubrics/*.json`;
+  the panel scores only the applicable criteria, and `test_panel_math.py`
+  fails any criterion whose NAME declares a scope the data does not carry.
+  Incident: `music/rubrics/gamer.json` scored `battle_energy` and
+  `chip_timbre_authenticity` on every gamer genre although the file's own
+  notes said the sub-idiom is per-prompt — its maths put a correct 92 BPM
+  `elemental-air` exploration theme at 3.73 against a 7.0 threshold, for a
+  genre the oracle scores 7.5 (card t_426a82a3, 2026-10-16).
+- **Do not let a producer edit its own grading sheet.** The elemental-water
+  brief locked the correct scope for itself (t_426a82a3 body §8) but left the
+  rubric to the review panel — that is the right direction and it should stay
+  a rule.

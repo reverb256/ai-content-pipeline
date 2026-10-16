@@ -50,6 +50,43 @@ key change) and links its source. `test_panel_math.py` fails any
 criterion whose anchor contains no number. Sources for each family are
 listed in the rubric JSON's `sources` array.
 
+## Sub-idiom scoping (`applies_to`) — scope is DATA, never prose
+
+A family can hold more than one sub-idiom: `gamer` carries orchestral
+battle, chip and elemental exploration; `anisong` carries openings and
+endings. A criterion therefore declares the genres it scores:
+
+```json
+{"id": "battle_energy",  "applies_to": ["elemental-fire", "epic-orchestral-boss"]}
+{"id": "loop_safety",    "applies_to": "all"}
+```
+
+- `applies_to: [<genre ids>]` — scored only for those genres.
+- `applies_to: "all"` — every genre in the family. A multi-genre rubric
+  must say this explicitly, so an omission cannot pass as "everything".
+- (field absent) — family-common; only tolerated in a single-genre rubric.
+
+`panel.py` scores the APPLICABLE SUBSET only: the judge prompt lists those
+criteria and names the excluded ones, the geometric-median vector and the
+weighted mean are taken over them, and `review.json` records the scope the
+verdict was computed under (key `rubric_scope`) so the human review queue
+need not reconstruct it. A reject signal can be scoped the same way
+(`{"id", "signal", "applies_to"}`); a bare string is family-common.
+
+`test_panel_math.py` enforces the invariants via `panel.rubric_scope_defects()`:
+a criterion NAME may not declare a scope the data does not carry, a
+multi-genre rubric must declare a scope on every criterion, and every genre
+must keep at least one applicable criterion.
+
+Incident this encodes — card `t_426a82a3` (2026-10-16): the `gamer` rubric
+kept its sub-idiom scope in criterion NAMES only, and `panel.py` had no code
+path for it. All five criteria were scored on all six genres, so an 82-92 BPM
+exploration theme took the guide's prescribed 1 on `battle_energy` and every
+`elemental-*` took 1 on `chip_timbre_authenticity` — 41/11 = 3.73 against the
+7.0 threshold for a correct `elemental-air` track the oracle scores 7.5. The
+fix scopes the data AND gives the third sub-idiom its own craft criterion,
+`elemental_atmosphere`; every gamer genre now scores 4 criteria, Σw = 8.
+
 ## How a review runs
 
 1. `measure.py` EXECUTES the artifact (the panel never trusts a filename):
@@ -117,6 +154,15 @@ Exit code 0 = the panel ran (verdict is in review.json); 1 = hard error
 (including zero reachable judges — an honest fail verdict is written).
 
 Notes:
+- Run the panel with an interpreter that has numpy + PyYAML:
+
+  ```
+  /usr/bin/python3 music/rubrics/panel.py --audio <track> --genre <id>
+  ```
+
+  Measured 2026-10-16: the Hermes-managed `python3` on zephyr has neither, so
+  the bare documented command dies on `ModuleNotFoundError`. `test_panel_math.py`
+  now prints that instruction instead of a traceback.
 - `max_tokens` is set high (16k): reasoning models burn tokens before
   emitting the JSON; a low cap silently truncates to empty content
   (observed with dots-3-note-preview).

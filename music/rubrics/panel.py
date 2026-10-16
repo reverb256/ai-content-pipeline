@@ -206,6 +206,10 @@ HARD HONESTY RULES:
    measured evidence or the producer's claim actually shows it.
 5. Score every criterion 1-10 per its guide. Be strict: 7 = solid
    professional work, 10 = exemplary, 4 = flawed, 1 = absent/broken.
+6. Score EXACTLY the criteria listed for this genre, once each. A
+   rubric criterion whose scope does not cover this genre is NOT shown
+   here — it must not appear in your criteria_scores and must not
+   influence your overall. Flag only the reject signals listed above.
 
 Respond with ONE JSON object and nothing else:
 {
@@ -217,25 +221,151 @@ Respond with ONE JSON object and nothing else:
 }"""
 
 
+def _in_scope(scope, genre: str) -> bool:
+    """Scope rule, one place. `scope` is None/absent (family-common,
+    legacy shape), the string "all" (family-common), or a list of genre
+    ids from the rubric's own `genres`."""
+    if scope is None or scope == "all":
+        return True
+    if isinstance(scope, str):
+        return scope == genre
+    return genre in scope
+
+
+def applicable_criteria(rubric: dict, genre: str) -> list:
+    """The criteria that apply to ONE genre.
+
+    Scope is DATA (card t_426a82a3). Before this, sub-idiom scope lived
+    only inside the criterion NAME, so panel.py scored all five gamer
+    criteria on every gamer genre: an 82-92 BPM exploration theme took
+    the guide's prescribed 1 on battle_energy and every elemental-* took
+    1 on chip_timbre_authenticity — up to 6 of 11 weighted points lost on
+    criteria the rubric's own notes said did not apply.
+    """
+    return [c for c in rubric["criteria"]
+            if _in_scope(c.get("applies_to"), genre)]
+
+
+def signal_text(signal) -> str:
+    """A reject signal is either a bare string (family-common) or
+    {'id', 'signal', 'applies_to'} (scoped). Return the judge-facing
+    text, verbatim."""
+    if isinstance(signal, dict):
+        return str(signal.get("signal", ""))
+    return str(signal)
+
+
+def applicable_signals(rubric: dict, genre: str) -> list:
+    """The reject-signal strings that apply to ONE genre."""
+    out = []
+    for s in rubric.get("reject_signals") or []:
+        scope = s.get("applies_to") if isinstance(s, dict) else None
+        if _in_scope(scope, genre):
+            out.append(signal_text(s))
+    return out
+
+
+def rubric_scope_defects(rubric: dict) -> list:
+    """Integrity check for applicability DATA. Returns human-readable
+    defects ([] = clean). test_panel_math.py runs it for every rubric.
+
+    Incident this encodes (card t_426a82a3): `battle_energy` named its
+    scope "(elemental-*, epic-orchestral-boss)" in the NAME while the
+    panel scored it for all six gamer genres, so a registry genre the
+    oracle scores 7.5 was failed by its own ruler. Two rules prevent
+    the return: (1) a criterion NAME may not declare a scope that the
+    data does not carry, and (2) a multi-genre rubric must declare a
+    scope on EVERY criterion, so an omission fails loudly.
+    """
+    defects = []
+    family = rubric.get("family", "?")
+    genres = list(rubric.get("genres") or [])
+    if not genres:
+        defects.append(f"{family}: no 'genres' list — applicability "
+                       f"cannot be verified")
+        return defects
+    for c in rubric["criteria"]:
+        cid = c.get("id", "?")
+        scope = c.get("applies_to")
+        if scope is None and len(genres) > 1:
+            defects.append(
+                f"{family}/{cid}: no applies_to in a {len(genres)}-genre "
+                f"rubric — scope is ambiguous (use a genre list, or \"all\")")
+        if isinstance(scope, list):
+            if not scope:
+                defects.append(f"{family}/{cid}: applies_to is an empty list")
+            unknown = [g for g in scope if g not in genres]
+            if unknown:
+                defects.append(f"{family}/{cid}: applies_to names genres this "
+                               f"rubric does not cover: {unknown}")
+        elif isinstance(scope, str) and scope != "all":
+            defects.append(f"{family}/{cid}: applies_to string must be \"all\", "
+                           f"got {scope!r}")
+        # a genre id printed in the NAME is a declared scope: the data
+        # must agree, or the name is a lie to every reader AND judge
+        named = [g for g in genres if g in str(c.get("name", ""))]
+        if named:
+            if scope is None or scope == "all":
+                defects.append(
+                    f"{family}/{cid}: name declares a scope "
+                    f"({', '.join(named)}) but applies_to does not carry it")
+            elif isinstance(scope, list):
+                missing = [g for g in named if g not in scope]
+                if missing:
+                    defects.append(f"{family}/{cid}: name declares {missing} "
+                                   f"but applies_to omits them")
+    for s in rubric.get("reject_signals") or []:
+        if not isinstance(s, dict):
+            continue          # bare string = family-common by definition
+        sid = s.get("id", "?")
+        if not str(s.get("signal", "")).strip():
+            defects.append(f"{family}/signal {sid}: empty signal text")
+        scope = s.get("applies_to")
+        if isinstance(scope, list):
+            unknown = [g for g in scope if g not in genres]
+            if unknown:
+                defects.append(f"{family}/signal {sid}: applies_to names genres "
+                               f"this rubric does not cover: {unknown}")
+    # A genre must never be left with NO criterion at all. The stronger
+    # "must have a non-delivery craft criterion" property is real but not
+    # decidable here — a single-genre family (acoustic, ambient, utility,
+    # vocal) has no sub-idiom to scope, and edm's trance/jungle share
+    # every criterion. test_panel_math.py asserts that property for the
+    # family that has sub-idioms (gamer, section [5c]).
+    for g in genres:
+        if not applicable_criteria(rubric, g):
+            defects.append(f"{family}/{g}: no criterion applies to this "
+                           f"genre at all")
+    return defects
+
+
 def build_prompt(rubric: dict, genre: str, evidence: dict,
                  style_claim: str, lyrics: str) -> str:
+    crits = applicable_criteria(rubric, genre)
+    signals = applicable_signals(rubric, genre)
     crit_lines = []
-    for c in rubric["criteria"]:
+    for c in crits:
         crit_lines.append(
             f"- id: {c['id']}\n  name: {c['name']}\n  weight: {c['weight']}\n"
             f"  type: {c['type']}\n  anchor: {c['anchor']}\n"
             f"  evidence to use: {c['evidence']}\n  scoring guide: {c['guide']}")
+    excluded = [c["id"] for c in rubric["criteria"] if c not in crits]
+    total_w = sum(float(c["weight"]) for c in crits)
     return "\n".join([
         RULES,
         "",
         f"GENRE (registry id): {genre}",
         f"GENRE FAMILY: {rubric['family']}",
-        "",
-        "RUBRIC (criteria, anchors, guides):",
+        f"SUBSET OF THE FAMILY SUB-IDIOMS — score these {len(crits)} criteria "
+        f"(weights sum to {total_w:g}); they are the sub-idiom that matches "
+        f"this genre:",
         "\n".join(crit_lines),
         "",
-        "REJECT SIGNALS (fatal if the evidence shows them):",
-        "\n".join(f"- {s}" for s in rubric["reject_signals"]),
+        f"CRITERIA THAT DO NOT APPLY TO {genre} (do NOT score these, do not "
+        f"put them in criteria_scores): {', '.join(excluded) if excluded else '(none)'}",
+        "",
+        f"REJECT SIGNALS for {genre} (fatal if the evidence shows them):",
+        "\n".join(f"- {s}" for s in signals),
         "",
         "MEASURED EVIDENCE (ffmpeg + numpy signal analysis of the actual file):",
         json.dumps(evidence, indent=2),
@@ -361,11 +491,19 @@ def geometric_median(points: list) -> np.ndarray:
     return x
 
 
-def aggregate(rubric: dict, judge_scores: list) -> dict:
+def aggregate(rubric: dict, judge_scores: list, criteria=None) -> dict:
     """Geometric median across the panel over the criterion-score vectors.
-    Returns aggregate per-criterion scores, weighted overall, spread info."""
-    crit_ids = [c["id"] for c in rubric["criteria"]]
-    weights = {c["id"]: float(c["weight"]) for c in rubric["criteria"]}
+    Returns aggregate per-criterion scores, weighted overall, spread info.
+
+    `criteria` is the applicable subset for the reviewed genre
+    (applicable_criteria()); None means "every criterion in the rubric".
+    The weighted mean is taken over the APPLICABLE criteria only, so a
+    sub-idiom criterion a genre cannot satisfy never drags the aggregate
+    (card t_426a82a3: the weights used to be summed over the whole file).
+    """
+    crit_list = rubric["criteria"] if criteria is None else criteria
+    crit_ids = [c["id"] for c in crit_list]
+    weights = {c["id"]: float(c["weight"]) for c in crit_list}
     # Sanitize: a judge may emit null/string scores (parser drift). A
     # missing/null criterion is scored 1 (absent) and flagged — it must
     # not crash the aggregation, and it must be visible in the detail.
@@ -383,8 +521,11 @@ def aggregate(rubric: dict, judge_scores: list) -> dict:
         if defect_ids:
             defects.append({"judge": js.get("judge"),
                             "bad_scores": defect_ids})
-            js["criteria_scores"] = {cid: vec[i]
-                                     for i, cid in enumerate(crit_ids)}
+        # always write the sanitized APPLICABLE-ONLY vector back: the
+        # rest of the aggregation must never see a string/null score, or
+        # a criterion that does not apply to this genre
+        js["criteria_scores"] = {cid: vec[i]
+                                 for i, cid in enumerate(crit_ids)}
         sanitized.append(vec)
     vectors = sanitized
     gm = geometric_median(vectors)
@@ -442,6 +583,22 @@ def main(argv=None) -> int:
         return 1
     family = genre_family(args.genre)
     rubric = load_rubric(family)
+    # Sub-idiom scope is DATA (card t_426a82a3): score only the criteria
+    # that apply to THIS genre, and only its reject signals.
+    crits = applicable_criteria(rubric, args.genre)
+    signals = applicable_signals(rubric, args.genre)
+    crit_ids_applied = [c["id"] for c in crits]
+    crit_ids_all = [c["id"] for c in rubric["criteria"]]
+    crit_ids_excluded = [i for i in crit_ids_all if i not in crit_ids_applied]
+    if not crits:
+        print(f"ERROR: {family}.json has no criterion applicable to "
+              f"{args.genre} — every genre needs at least one scoped "
+              f"criterion", file=sys.stderr)
+        return 1
+    scope_defects = rubric_scope_defects(rubric)
+    if scope_defects:
+        print("[panel] RUBRIC SCOPE DEFECTS — scoring may be wrong: "
+              + "; ".join(scope_defects), file=sys.stderr)
 
     # 1. measure the artifact (gates execute, never trust names)
     evidence = measure_track(audio)
@@ -460,6 +617,8 @@ def main(argv=None) -> int:
         members = members[:args.limit]
     print(f"[panel] genre={args.genre} family={family} "
           f"rubric={family}.json "
+          f"criteria_applied={crit_ids_applied} "
+          f"criteria_excluded={crit_ids_excluded} "
           f"members={members}", flush=True)
     judge_scores, failures = [], []
     for name in members:
@@ -476,7 +635,7 @@ def main(argv=None) -> int:
         score["judge"] = name
         score["model"] = judge["model"]
         score["elapsed_s"] = round(time.time() - t0, 1)
-        missing = [c["id"] for c in rubric["criteria"]
+        missing = [c["id"] for c in crits
                    if c["id"] not in (score.get("criteria_scores") or {})]
         if missing:
             failures.append({"judge": name, "model": judge["model"],
@@ -511,6 +670,14 @@ def main(argv=None) -> int:
             "reviewer": "reviewer-panel",
             "aggregate_overall": 0.0,
             "pass_threshold": rubric["pass_threshold"],
+            "rubric_scope": {
+                "family": family,
+                "family_criteria": crit_ids_all,
+                "criteria_applied": {c["id"]: float(c["weight"]) for c in crits},
+                "criteria_excluded": crit_ids_excluded,
+                "weights_summed": sum(float(c["weight"]) for c in crits),
+                "reject_signals_applied": signals,
+            },
         }
         out = Path(args.out_dir)
         out.mkdir(parents=True, exist_ok=True)
@@ -521,16 +688,20 @@ def main(argv=None) -> int:
               f"{out / 'review.json'}", flush=True)
         return 1
 
-    agg = aggregate(rubric, judge_scores)
+    agg = aggregate(rubric, judge_scores, crits)
 
     # 4. reject signals: majority-hit = fatal (robust to one contaminated
-    #    judge; geometric median alone cannot encode categorical rules)
+    #    judge; geometric median alone cannot encode categorical rules).
+    #    Only signals that APPLY to this genre can be fatal; a vote for
+    #    an out-of-scope signal (judge drift) is recorded, never fatal.
     signal_votes: dict = {}
     for js in judge_scores:
         for s in (js.get("reject_signals_hit") or []):
             signal_votes[s] = signal_votes.get(s, 0) + 1
     majority = max(1, len(judge_scores) // 2 + 1)
-    fatal_signals = [s for s, n in signal_votes.items() if n >= majority]
+    fatal_signals = [s for s, n in signal_votes.items()
+                     if n >= majority and s in signals]
+    off_scope_votes = sorted(s for s in signal_votes if s not in signals)
 
     # 5. verdict
     findings = []
@@ -553,6 +724,14 @@ def main(argv=None) -> int:
     # 6. write review.json (gate_quality.py contract) + panel-detail.json
     digest = hashlib.sha256(audio.read_bytes()).hexdigest()
     models = "+".join(js["model"] for js in judge_scores)
+    scope_record = {
+        "family": family,
+        "family_criteria": crit_ids_all,
+        "criteria_applied": {c["id"]: float(c["weight"]) for c in crits},
+        "criteria_excluded": crit_ids_excluded,
+        "weights_summed": sum(float(c["weight"]) for c in crits),
+        "reject_signals_applied": signals,
+    }
     review = {
         "master": {"sha256": digest, "path": str(audio)},
         "reviewer_model": f"panel[{models}]",
@@ -563,6 +742,9 @@ def main(argv=None) -> int:
         "reviewer": "reviewer-panel",
         "aggregate_overall": agg["aggregate_overall"],
         "pass_threshold": rubric["pass_threshold"],
+        # The scope the verdict was computed under. The human review queue
+        # must not have to reconstruct it (card t_426a82a3).
+        "rubric_scope": scope_record,
     }
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -579,9 +761,12 @@ def main(argv=None) -> int:
             **agg,
             "reject_signal_votes": signal_votes,
             "fatal_signals": fatal_signals,
+            "off_scope_signal_votes": off_scope_votes,
             "majority_needed": majority,
             "triage": triage,
         },
+        "rubric_scope": scope_record,
+        "rubric_scope_defects": scope_defects,
         "review": review,
     }
     (out / "panel-detail.json").write_text(
@@ -591,10 +776,15 @@ def main(argv=None) -> int:
 
     print(f"[panel] aggregate overall = {agg['aggregate_overall']} "
           f"(threshold {rubric['pass_threshold']}) "
+          f"criteria_applied = {crit_ids_applied} "
+          f"criteria_excluded = {crit_ids_excluded} "
           f"judge overalls = {agg['judge_overalls']} "
           f"spread = {agg['overall_spread']}")
     print(f"[panel] fatal signals = {fatal_signals} triage = {triage} "
           f"-> VERDICT {verdict}")
+    if off_scope_votes:
+        print(f"[panel] ignored reject votes outside this genre's scope: "
+              f"{off_scope_votes}")
     print(f"[panel] wrote {out / 'review.json'} and {out / 'panel-detail.json'}")
     if args.json:
         print(json.dumps(review, indent=2))
