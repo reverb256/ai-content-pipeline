@@ -2,8 +2,9 @@
 """measure.py — MEASURED evidence extraction for the music review panel.
 
 The panel judges cannot listen. This module EXECUTES the artifact with
-ffmpeg/numpy and returns measured facts: duration, loudness (volumedetect
-mean/max), sample rate, channels, silence map, onset-based BPM estimate,
+ffmpeg/numpy and returns measured facts: duration, loudness (ebur128 integrated
+LUFS + true peak, and volumedetect mean/max RMS), sample rate,
+channels, silence map, onset-based BPM estimate,
 spectral centroid, and dynamic range (RMS in 1s windows).
 
 Research basis: Evaluation-Illusion (arXiv:2603.11027) — judges anchor on
@@ -31,6 +32,11 @@ import numpy as np
 
 MEAN_RE = re.compile(r"mean_volume:\s*(-?[\d.]+)\s*dB")
 MAX_RE = re.compile(r"max_volume:\s*(-?[\d.]+)\s*dB")
+# EBU R128 integrated loudness — the ruler the gate and the campaign
+# manifests use (card t_9546841b). ebur128 repeats the `I:` line in its
+# summary block, so the LAST match is the file value.
+INTEGRATED_RE = re.compile(r"\bI:\s*(-?[\d.]+|-inf)\s*LUFS", re.IGNORECASE)
+TRUE_PEAK_RE = re.compile(r"\bPeak:\s*(-?[\d.]+|-inf)\s*dBFS", re.IGNORECASE)
 SIL_RE = re.compile(
     r"silence_(start|end):\s*(-?[\d.]+)")
 
@@ -65,6 +71,32 @@ def _volumedetect(path: Path) -> dict:
     return {
         "mean_volume_db": float(mean.group(1)) if mean else None,
         "max_volume_db": float(peak.group(1)) if peak else None,
+    }
+
+
+def _ebur128(path: Path) -> dict:
+    """EBU R128 / ITU-R BS.1770 integrated loudness — the pipeline's ruler.
+
+    `gate_loudness` and the campaign manifests (`master_loudness_lufs`) both
+    speak this unit, so the panel must grade loudness in it too (card
+    t_9546841b). Digital silence floors at -70.0 LUFS on ffmpeg 9.x rather
+    than -inf; both are reported as-is/None, never as a near-target value.
+    """
+    proc = subprocess.run(
+        ["ffmpeg", "-i", str(path), "-af", "ebur128=peak=true",
+         "-f", "null", "-"],
+        capture_output=True, text=True, timeout=900)
+    err = proc.stderr or ""
+    hits = INTEGRATED_RE.findall(err)
+    if not hits:
+        return {"integrated_lufs": None, "true_peak_dbfs": None}
+    raw = hits[-1]
+    peaks = TRUE_PEAK_RE.findall(err)
+    peak_raw = peaks[-1] if peaks else None
+    return {
+        "integrated_lufs": None if raw.lower() == "-inf" else float(raw),
+        "true_peak_dbfs": (None if not peak_raw or peak_raw.lower() == "-inf"
+                           else float(peak_raw)),
     }
 
 
@@ -198,13 +230,15 @@ def measure_track(path: Path) -> dict:
         raise ValueError(f"{path}: not decodable audio "
                          f"(duration={info['duration_s']})")
     vol = _volumedetect(path)
+    lufs = _ebur128(path)
     x = _load_mono(path)
     sr = 22050
     ev = {
         "file": str(path),
-        "measured_at_version": "measure.py v1",
+        "measured_at_version": "measure.py v2 (ebur128 loudness ruler, t_9546841b)",
         **info,
         **vol,
+        **lufs,
         "silences_ge_1s": _silence_map(path),
         **_bpm(x, sr),
         "pct_energy_above_8khz": _spectral_centroid_db(x, sr),

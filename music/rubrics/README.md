@@ -53,7 +53,7 @@ listed in the rubric JSON's `sources` array.
 ## How a review runs
 
 1. `measure.py` EXECUTES the artifact (the panel never trusts a filename):
-   ffprobe, volumedetect, silencedetect, and a numpy onset-envelope
+   ffprobe, ebur128, volumedetect, silencedetect, and a numpy onset-envelope
    autocorrelation BPM estimate (candidates reported honestly, including
    half/double ambiguity).
 2. Each judge receives the rubric + measured evidence + the producer's

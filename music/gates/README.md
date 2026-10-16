@@ -3,7 +3,7 @@
 Every gate EXERCISES the artifact it guards. A gate that
 greps a file for a feature name is a defect — it passes
 while the artifact is broken. These gates parse, measure,
-and render (ffprobe / ffmpeg volumedetect / PCM analysis).
+and render (ffprobe / ffmpeg ebur128 + volumedetect / PCM analysis).
 
 Architecture: `brain/playbooks/music-lane-architecture.md`
 §5 (gates) and §3 (lane requirements).
@@ -15,7 +15,7 @@ Architecture: `brain/playbooks/music-lane-architecture.md`
 | `gate_quota.py` | Reads `music/quota-ledger.json`; blocks at `hard_stop_at` (58/60), warns at `warn_at` (55) | 0 / 1 / 2 |
 | `gate_lyrics_original.py` | Parses the lyric sheet, measures sections + unique words, scans Suno-generator markers, hash-binds the manifest claim (sha256) | 0 / 1 / 2 |
 | `gate_stems_present.py` | ffprobes every stem: >= 4 stems, non-zero bytes, durations within +/-0.5 s of the master | 0 / 1 / 2 |
-| `gate_loudness.py` | Runs `ffmpeg -af volumedetect`; -14 LUFS streaming / -16 sync, +/-1 dB. Fails honestly on a loud master | 0 / 1 / 2 |
+| `gate_loudness.py` | Runs `ffmpeg -af ebur128=peak=true`; integrated loudness: -14 LUFS streaming / -16 sync, +/-1 LUFS. Fails honestly on a loud master | 0 / 1 / 2 |
 | `gate_quality.py` | Verifies the review record: verdict present, reviewer model DIFFERENT from producer model, sha256-bound to the master | 0 / 1 / 2 |
 | `gate_sync_ready.py` | ffprobes stems + master + instrumental; instrumental must differ from the master; manifest metadata; real PDF clearance doc; AI disclosure | 0 / 1 / 2 |
 | `gate_release_ready.py` | ffprobes the master, PIL-verifies the artwork, ISO 3901 ISRC syntax, manifest metadata + ai_disclosure | 0 / 1 / 2 |
@@ -56,12 +56,17 @@ python3 music/gates/gate_loop_points.py \
 
 ## Honest limits
 
-- `gate_loudness` measures volumedetect's mean_volume
-  (RMS dB), per the architecture spec. That is not a
-  gated BS.1770 LUFS reading — mastering-grade LUFS
-  needs ebur128 / pyloudnorm (see FinalPass,
-  sacrifunk-loudness patterns). The gate measures what
-  the spec pins.
+- `gate_loudness` measures EBU R128 integrated loudness with
+  `ffmpeg -af ebur128=peak=true` — the unit the streaming targets
+  are written in, the unit the campaign manifests record
+  (`master_loudness_lufs`) and the unit the pipeline's own
+  `loudnorm=I=-14:TP=-1.0:LRA=11` normalization aims at. Before
+  2026-10-16 it measured volumedetect's mean_volume — a plain RMS
+  mean with no K-weighting and no gating, so not a LUFS reading.
+  That ruler failed three of the five Virtual Reflections masters
+  whose integrated loudness sat in window (card t_9546841b). The
+  suite fixtures pin both directions, so a reversion to RMS fails
+  the acceptance matrix rather than passing quietly.
 - `gate_lyrics_original` marker scanning cannot prove a
   lyric is human-authored; it is a tripwire against
   pasted Suno output. The authorship claim in the

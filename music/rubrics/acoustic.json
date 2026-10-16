@@ -47,7 +47,7 @@
       "weight": 1,
       "type": "measured",
       "anchor": "Streaming -14 LUFS, sync -16 LUFS, tolerance +/-1 dB (pipeline gate_loudness spec; Apple Podcasts ~-16 LUFS for spoken-word adjacents). Sentimental piano benefits from crest >= 12 dB (dynamics are the emotion).",
-      "evidence": "mean_volume_db vs the lane target for this track's declared lanes.",
+      "evidence": "integrated_lufs vs the lane target for this track's declared lanes.",
       "guide": "10 = within +/-1 dB and crest >= 12. 7 = within +/-3 dB, crest >= 9. 4 = 3-6 dB off or crest 5-9. 1 = far off or crushed."
     }
   ],
