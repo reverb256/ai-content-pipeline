@@ -1,0 +1,43 @@
+# music/scheduler/music-gate-matrix.service
+# systemd service unit — runs the music gate ACCEPTANCE MATRIX on a schedule.
+#
+# Card t_b16b9046: music/gates/check_gate_suite.sh is the acceptance matrix for
+# all 10 music gates (one PASS on a good artifact, one FAIL on a deliberately
+# broken one, exit 0 only when every gate behaves) and TWO documents told
+# operators to run it by hand (music/gates/README.md, brain/runbooks/
+# music-game-assets.md) — while nothing ran it. A gate regression was therefore
+# found only by accident.
+#
+# This unit is the scheduled home. It runs music/scripts/run_gate_matrix.sh,
+# which prunes + rebuilds the fixtures in $GATE_SCRATCH, runs the suite, writes
+# performance/music-gate-matrix.log + .status.json (the music weekly digest
+# reads them), posts to the fleet alert feed on failure, files the failure card
+# on the music board, and exits with the suite's own status.
+#
+# Timer: music-gate-matrix.timer (daily 06:20)
+# Host: nexus (always-on; the fixtures are synthesized locally — no network, no
+#       secrets, no GPU, so this unit does not wait for network-online.target)
+
+[Unit]
+Description=Music Gate Matrix — acceptance matrix for the 10 music gates (check_gate_suite.sh)
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /home/j_kro/ai-content-pipeline/music/scripts/run_gate_matrix.sh
+WorkingDirectory=/home/j_kro/ai-content-pipeline
+# PY is pinned deliberately. A bare `python3` in a worker shell resolves to the
+# Hermes bundled interpreter, which has no PyYAML, which made two healthy gates
+# report BAD and the suite report BROKEN: 2 (t_d3b9e218). Pin the interpreter
+# that can `import yaml`, so the timer cannot inherit that trap.
+Environment=PY=/usr/bin/python3
+# Durable fixture dir, pruned + rebuilt by the runner on every run (61 s).
+Environment=GATE_SCRATCH=/home/j_kro/.cache/music-gate-fixtures
+Environment=HOME=/home/j_kro
+Nice=10
+IOSchedulingClass=idle
+# Deliberately NO SuccessExitStatus: a gate that misbehaves must make this unit
+# FAIL, so `systemctl --user status` and verify-fleet.sh section 12 (installed
+# music units, last-run Result) both surface it. "Finished" while the matrix is
+# red is the defect this unit exists to end.
+# Timeout: 30 minutes — the suite measures ~61 s; this only bounds a hang.
+TimeoutStartSec=1800

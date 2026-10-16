@@ -269,6 +269,15 @@ bash music/gates/check_gate_suite.sh
 # and failed its broken one"
 ```
 
+The matrix is scheduled, not only documented (card t_b16b9046): the
+`music-gate-matrix.timer` systemd user unit runs
+`music/scripts/run_gate_matrix.sh` daily at 06:20 on nexus, which prunes +
+rebuilds `$GATE_SCRATCH`, runs the suite with a pinned yaml-capable interpreter,
+writes `performance/music-gate-matrix.log` + `.status.json`, and on a non-zero
+run posts to the fleet alert feed and files a card on the music board. Before
+that unit existed, NOTHING ran the matrix — a gate regression surfaced only when
+a human happened to run the suite (the PyYAML false-BAD, t_d3b9e218).
+
 ### 5.1 The loudness ruler — one ruler, one unit
 
 The ruler is **EBU R128 integrated loudness** (ITU-R BS.1770), target −14 LUFS streaming /

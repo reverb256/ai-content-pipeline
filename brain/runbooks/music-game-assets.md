@@ -81,4 +81,8 @@ then run the two gates above. Loops are cut bar-aligned at the source tempo and
 never shorter than the 2 s musical floor (`MIN_LOOP_SPAN_S`, one definition in
 `music/gates/gate_loop_points.py`, imported by the gate and the generator).
 
-Run the full gate matrix: `bash music/gates/check_gate_suite.sh`
+Run the full gate matrix: `bash music/gates/check_gate_suite.sh` — and read the
+scheduled run's result first: `music-gate-matrix.timer` runs that same suite
+daily at 06:20 on nexus and appends to `performance/music-gate-matrix.log`
+(status JSON: `performance/music-gate-matrix.status.json`). A non-zero line
+there means a gate in this checklist does not behave (card t_b16b9046).
