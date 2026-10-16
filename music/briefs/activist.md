@@ -51,9 +51,9 @@ that says `python3 music/…` inherits the trap; the systemd units use `/usr/bin
 | Style caption | 585 chars (template states 585/1000; measured 585) |
 | Registry note | "Ad-suitability risk — audience-funded > ad-funded. Sync for doc/film is the pro outlet." |
 
-**Activist is one of only three genres with a lyric blueprint** — `music/lyrics/blueprints/`
-holds exactly `activist.yaml`, `chill-lounge.yaml`, `trance.yaml`. So this genre does not
-inherit the planner's flat `bpm = 100` fallback: the draft path reads the 96 anchor.
+**Activist is one of only six genres with a lyric blueprint** — `music/lyrics/blueprints/`
+holds exactly `activist.yaml`, `anime-ending.yaml`, `anime-opening.yaml`, `chill-lounge.yaml`,
+`epic-orchestral-boss.yaml`, `trance.yaml`. So this genre does not inherit the planner's flat `bpm = 100` fallback: the draft path reads the 96 anchor.
 
 ## 2. Score audit — the filed 7.25 is stale, and cadence fit is a clock, not a signal
 
@@ -299,8 +299,8 @@ live reads agree, §12: `music/planner/planner.py show --genre activist` prints
 `blueprint["bpm_anchor"] == 96` (a `dict`, not the flat keys `show` prints); and a live
 `plan --lyrics-mode draft` writes `"bpm": 96` because `:470` reads
 `ctx["blueprint"].get("bpm_anchor") or 100`. So this genre never takes the flat 100
-fallback that the **eleven** blueprint-less genres take (`load_blueprint()` returns `{}`
-when `music/lyrics/blueprints/<genre>.yaml` is absent, and only 3 of the 14 exist — its own
+fallback that the **eight blueprint-less genres** take (`load_blueprint()` returns `{}`
+when `music/lyrics/blueprints/<genre>.yaml` is absent, and only 6 of the 14 genres have one — its own
 docstring still quotes an old genre total). At 96 BPM, 4/4:
 
 ```
@@ -428,7 +428,7 @@ Against that route, three measured gaps:
    rc=1 `FATAL: 7 section(s) have no lyrics: ...`; and `ai` writes model lyrics that void
    the human authorship claim the whole copyright path rests on. Harder than either: the
    render payload (`ConfigMap mining/music-pipeline-payload`, mounted at `/payload`)
-   carries `music/genres.yaml`, the three blueprints, `music/planner/planner.py`, the 14
+   carries `music/genres.yaml`, the six blueprints, `music/planner/planner.py`, the 14
    prompt templates and `music/scripts/acestep_plan.py` — and **no `music/lyrics/` at all**
    (and no `music/suno-gen.py`). The claimed sheet is not in the pod. This is a **third**
    case alongside the instrumental gap: not "no lyrics", not "AI lyrics", but "load the
@@ -579,7 +579,7 @@ four file sizes (1399/1009/1013/18 B); `gate_lyrics_original --strict` PASS (7 s
 FAIL rc=1 (4 items); `gate_sync_ready --lane sync` FAIL rc=1 (7 items);
 `gate_human_approval` FAIL rc=1; `--lane sync-documentary` rc=2 at `gate_sync_ready.py:47`;
 `music/lanes.yaml:66`; `music/stages.yaml:74`; the `video_shape` table (4 of 5 shapes have a
-template, `lyric_video.mp4` does not); 3 blueprints only; autonomy all `advisory`;
+template, `lyric_video.mp4` does not); 6 blueprints now (3 when this pass ran); autonomy all `advisory`;
 `campaigns/` nine campaigns and none for this genre; `~/Music` empty; no `music/generated/`;
 `~/Music` and `find /home/j_kro -name suno-gen.py` both empty; the rubric's 3/3/2/2/1/1
 weights at `pass_threshold` 7.0. **§8.1 reproduced exactly** by re-running
@@ -602,8 +602,8 @@ weights at `pass_threshold` 7.0. **§8.1 reproduced exactly** by re-running
 4. §6 — `bpm_anchor: 96` as a flat pair of keys is `planner.py show`'s output;
    `context_for()` returns a `blueprint` dict, and the draft path reads
    `blueprint["bpm_anchor"] or 100` (`:470`).
-5. §6 — **eleven** genres take the 100 fallback, not seven: 14 registered genres, 3
-   blueprints. (`load_blueprint()`'s own docstring still quotes an old genre total.)
+5. §6 — **eleven** genres took the 100 fallback, not seven: 14 registered genres, 3
+   blueprints at 13:54; six at 15:31, so **eight** genres take it. (`load_blueprint()`'s own docstring still quotes an old genre total.)
 6. §5 — the concrete-image claim is **18 named terms, all present verbatim**; the earlier
    "(23 distinct hits)" cannot be reproduced from the list the brief prints. The title is
    verbatim in the chorus; the outro repeats it in lower case.
@@ -663,3 +663,26 @@ in a table cell, so a checker that only reads body prose misses them; and three 
 counts that aged between the write and the read, not mistakes at write time. Re-measure,
 then either correct the number or anchor it to the revision you measured — do not copy it
 forward.
+
+## 13. Aged live counts re-measured (card `t_0f7aed63`, 2026-10-16)
+
+`music/scripts/check_brief_drift.py` (added by card `t_b7dd5655`) recomputes the two families of
+live count a brief cites and FAILs on any that has aged. It flagged this brief on both: the
+blueprint census and the clone divergence. Re-measured and corrected in place; no other claim in
+this brief was touched.
+
+- **Superseded revision of this file:** `sha256 7e9a1cc897a09f4e5fa6126cc765e9fdf10ff9a74fdb68d4e95ee8a15584967c` (665 lines / 41631 B).
+- **Blueprint census, re-measured 2026-10-16 15:31 CDT:** 6 of the 14 genres carry a lyric
+  blueprint — `activist`, `anime-ending`, `anime-opening`, `chill-lounge`,
+  `epic-orchestral-boss`, `trance`. The other 8 take the planner's flat `bpm = 100` fallback.
+  It was 3 when this brief was written (13:35) and 3 at the 13:54 pass; two anisong blueprints
+  and one gamer blueprint landed later the same afternoon.
+- **Clone divergence, re-measured 2026-10-16 15:31 CDT:** the pair reads 0 behind / 61 ahead of
+  `origin/main` at `e40c7f9`. The 15-commit upstream deficit this brief recorded at 13:35 to
+  13:58 was cleared by the reconciliation merge `ab33ad1` (14:23); the local tip still rises
+  with every brief this lane commits to the shared tree. Every divergence claim in this brief is
+  stamped with the revision it was measured at, because such a count ages in minutes.
+- **Corrected in place:** §1 (the census sentence and its file list), §6 (the 100-fallback
+  census), §8 (the deployed payload's blueprint count, re-read from the live
+  `music-pipeline-payload` ConfigMap: 38 keys, 6 of them blueprints), §11 (the "3 blueprints
+  only" line) and §12 correction 5.

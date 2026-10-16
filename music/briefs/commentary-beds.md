@@ -234,8 +234,8 @@ cited here so the stages after this one do not rediscover them):
    correct here and must not be "fixed" into a different value for this genre. The local
    planner, by contrast, falls back to `bpm = 100` when
    `music/lyrics/blueprints/<genre>.yaml` is absent (`music/planner/planner.py` ~line 470,
-   `"blueprint": false`), and only 3 of 14 genres have a blueprint (`activist`,
-   `chill-lounge`, `trance`). **Acceptance for this genre: the plan's `bpm` field must read
+   `"blueprint": false`), and only 6 of the 14 genres have a blueprint (`activist`,
+   `anime-ending`, `anime-opening`, `chill-lounge`, `epic-orchestral-boss`, `trance`). **Acceptance for this genre: the plan's `bpm` field must read
    120, never 100.** At 100 BPM a bar is 2.40 s and every bar-aligned cutdown in the kit is
    wrong.
 
@@ -250,8 +250,8 @@ measured 2026-10-16); sibling cards have requested the first additions for tranc
 
 ## 8. Existing assets for this genre
 
-Measured: **none.** `music/lyrics/` holds `activist/`, `chill-lounge/`, `trance/` and
-`blueprints/{activist,chill-lounge,trance}.yaml` — no commentary-beds sheet or blueprint
+Measured: **none.** `music/lyrics/` holds `activist/`, `anime-opening/`, `chill-lounge/`, `trance/` and
+`blueprints/{activist,anime-ending,anime-opening,chill-lounge,epic-orchestral-boss,trance}.yaml` — no commentary-beds sheet or blueprint
 (expected: the genre is instrumental, so there is no lyric sheet to write). No campaign
 directory, no masters, no stems, no cover exist for this genre. The first render is genuine
 work, not a re-run. Quota is untouched:
@@ -305,3 +305,16 @@ carry weight 3 each) → `package` (`gate_sync_ready` per lane, `loop_points.jso
   working tree (`4daf132`, `9c2d2d3`, `132a781`, `4bb1ea6`, `ade6e87` landed inside 15
   minutes). `music/stages.yaml`, `music/oracle.py` and `scripts/automation/*` are also being
   edited in the same tree while this brief runs.
+
+## 11. Aged live counts re-measured (card `t_0f7aed63`, 2026-10-16)
+
+`music/scripts/check_brief_drift.py` (added by card `t_b7dd5655`) flagged this brief's blueprint
+census as stale. Re-measured and corrected in place. The §1 and §10 unit labels corrected by card
+`t_e504b516` are untouched.
+
+- **Superseded revision of this file:** `sha256 293c7cfe781d6f90c46357e39121a83fc739724148fa581e5b09cac4b3254aac` (307 lines / 18366 B).
+- **Blueprint census, re-measured 2026-10-16 15:31 CDT:** 6 of the 14 genres carry a lyric
+  blueprint (`activist`, `anime-ending`, `anime-opening`, `chill-lounge`,
+  `epic-orchestral-boss`, `trance`); the other 8 do not. `commentary-beds` has none, so §7's
+  100-fallback blocker stands — 120 BPM is still this genre's correct plan value.
+- **Corrected in place:** §7 (the census sentence) and §8 (the `music/lyrics/` listing).
