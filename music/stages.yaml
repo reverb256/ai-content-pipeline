@@ -35,15 +35,50 @@
 # defaults to faceless-youtube, and before t_38e84953 every music advance was
 # written to the wrong board (the marker never moved).
 #
-# The marker must be the LAST `stage:` match in the card's `hermes kanban show`
-# output (the driver takes the last match: body, then run summary, then
-# comments). A stage whose gate FAILS must
+# THE MARKER (t_669bb02b): a marker is a LINE that IS `stage: <next-stage>` —
+# nothing before it and nothing after it on that line — written in the card body
+# or in a comment body. The driver reads markers through
+# scripts/automation/stage_marker.py, which never reads a run summary, a result
+# or an event: `hermes kanban show` prints the run summary AFTER the comments, so
+# before t_669bb02b a summary reading "...the stage: advance-stage.sh was
+# refused..." captured the read and the card stalled on an undeclared stage.
+# Post the marker as its own line, and never write a lone `stage: <word>` line
+# anywhere else in the card. music/scripts/check_stage_markers.py FAILs any card
+# the driver would dispatch when the card's text and the convention disagree.
+# A stage whose gate FAILS must
 # NOT advance — it stays put and the maker reworks it.
 #
 # Stage list: brain/playbooks/music-lane-architecture.md §4.
 # Bots are existing hermes profiles (verified `hermes profile list`):
 #   producer, writer, reviewer-deepseek, videobot, publishbot,
 #   distributor, analyst.
+# RENDER OUTPUT CONTRACT (added 2026-10-16 t_320bae4c)
+# -----------------------------------------
+# The render rail (`music-pipeline-render` in mining-k8s, which runs
+# music/scripts/acestep_plan.py) lands a finished render at ONE path, and every
+# stage below that consumes a master reads it THERE:
+#
+#   host (nexus) : /var/lib/music-plans/<plan-stem>.<ext>
+#   pod          : /plans/<plan-stem>.<ext>   (the same directory, mounted)
+#
+# <plan-stem> is the plan JSON's own file name (/var/lib/music-plans/<stem>.json);
+# <ext> is the container the engine produced (ace -> .flac, fixture -> .wav).
+# The rail asserts this file exists after EVERY render, before it writes a
+# success `<stem>.rendered` marker, with
+# music/scripts/check_render_landed.py — so a change to the rail cannot move a
+# render away from this path silently:
+#
+#   python3 music/scripts/check_render_landed.py --check \
+#       --plans /var/lib/music-plans --stem <plan-stem> \
+#       --host-path /var/lib/music-plans          # rc 0 landed, 1 missing,
+#                                                 # 3 the rail was MOVED
+#   python3 music/scripts/check_render_landed.py --print-contract
+#
+# These are NOT the pack stage's input (both are the engine's own copies, not
+# the rail's output): /var/lib/sunolocal/artifacts/suno-<job-key>.<ext> (named by
+# the job key, not the plan stem; reachable through the task's `audio_url`) and
+# zephyr's ~/Music/acestep/suno-<...>.flac (ComfyUI's own output directory).
+#
 version: 1
 
 stages:
@@ -73,7 +108,7 @@ stages:
 
   - stage: master
     bot: producer
-    prompt: "Run the master stage for kanban task {card} (board music). Loudness-normalize the master (-14 LUFS streaming / -16 sync, +/-1 dB). Save the master, then run the loudness gate: python3 music/gates/gate_loudness.py --master <master> --target streaming. Comment the result. Then advance the card to gate: post the marker 'stage: gate' on {card} with the kanban_comment tool (the hermes kanban CLI is REFUSED for dispatcher-spawned workers — t_5a93164a). Without a kanban tool, run bash scripts/automation/advance-stage.sh {card} gate --board music and check the exit status: 1 means the marker was NOT written and the card did NOT advance."
+    prompt: "Run the master stage for kanban task {card} (board music). The finished render is at the DOCUMENTED render path — /var/lib/music-plans/<plan-stem>.<ext> on nexus — per the RENDER OUTPUT CONTRACT at the top of this file; <plan-stem> is the plan JSON's own file name, and <ext> is what the engine produced. Prove it is there before you touch it: python3 music/scripts/check_render_landed.py --check --plans /var/lib/music-plans --stem <plan-stem> --host-path /var/lib/music-plans (rc 0 = landed, 1 = it is NOT there, 3 = the rail has been MOVED off the documented path). On rc 1 or 3, do NOT substitute the engine's own copy (/var/lib/sunolocal/artifacts/suno-<job-key>.<ext> or zephyr ~/Music/acestep/): comment the measured path and the rc on {card} and stop. Loudness-normalize THAT master (-14 LUFS streaming / -16 sync, +/-1 dB). Save the master, then run the loudness gate: python3 music/gates/gate_loudness.py --master <master> --target streaming. Comment the result. Then advance the card to gate: post the marker 'stage: gate' on {card} with the kanban_comment tool (the hermes kanban CLI is REFUSED for dispatcher-spawned workers — t_5a93164a). Without a kanban tool, run bash scripts/automation/advance-stage.sh {card} gate --board music and check the exit status: 1 means the marker was NOT written and the card did NOT advance."
 
   - stage: gate
     bot: reviewer-deepseek

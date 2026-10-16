@@ -206,11 +206,26 @@ to the wrong board.
 **Design of record: `scripts/automation/pipeline-driver.sh --board music` owns stage
 dispatch on the music board.** The card's `assignee` field is not the route.
 
-The driver walks every card in `ready`, reads the LAST `stage:` marker in the card, and
-routes that stage to the bot named in `music/stages.yaml`. It ignores the assignee. Unknown
-stages are logged and skipped. A card with no stage marker defaults to `brief`. The default
-concurrency cap is 1 bot at a time (`MAX_CONCURRENT_BOTS`, default 1). Raise it only for
-CPU-only bots.
+The driver walks every card in `ready`, resolves that card's stage marker under the ONE
+convention, and routes the stage to the bot named in `music/stages.yaml`. It ignores the
+assignee. Unknown stages are logged and skipped. A card with no marker defaults to `brief`.
+The default concurrency cap is 1 bot at a time (`MAX_CONCURRENT_BOTS`, default 1). Raise it
+only for CPU-only bots.
+
+**The marker convention (card `t_669bb02b`, 2026-10-16).** A marker is a LINE that IS
+`stage: <token>` — nothing before it and nothing after it on that line — and it is read
+from the card BODY and from COMMENT bodies only, never from a run summary, a result or an
+event. The implementation is `scripts/automation/stage_marker.py`; the driver and
+`music/scripts/check_stage_markers.py` both call it, so one rule decides every route.
+
+Why the read is not "the last `stage:` marker anywhere": `hermes kanban show` prints the
+body, then `Result:`/`Latest summary:`, then `Comments`, then `Events` (whose `completed`
+payload carries the FULL run summary) and `Runs`. The run summary is therefore rendered
+AFTER the comments, and prose in it wins. Measured on the live music board — card
+`t_92a09bdc` resolved to the undeclared stage `advance-stage` (from "...Did not advance the
+stage: advance-stage.sh is refused..."), which makes the driver log `unknown stage` and SKIP
+the card: a silent stall instead of a route. Writer rule, therefore: post the marker as its
+own line, and never write a lone `stage: <word>` line anywhere else in the card.
 
 **The conflict.** A second mechanism also claims the board: the generic kanban dispatcher
 claims whatever card is `ready` and matches an assignee profile. Every oracle card is
@@ -291,6 +306,42 @@ Guards: `music/test_stage_state.py` (the rule, 16 cases), `music/test_oracle_ded
 (B1–B4 on known-bad boards). Measured 2026-10-16: the check's read-only DB reader
 reproduces the driver's last-marker token for 42/42 oracle cards, so the check
 judges the same position the driver routes on.
+
+---
+
+### 4.3 Where a finished render lands — the render output contract
+
+Added 2026-10-16 (card `t_320bae4c`). Before it, the answer to "where does a render
+land?" was whatever `SUNOLOCAL_WRAPPER_OUT` happened to be, and the wrapper's default
+was `/tmp` — inside the render pod that is pod-local storage, so the rail's own copy
+was unreachable minutes later (`kubectl cp <pod>:/tmp/...flac .` → `NotFound`, pod GC'd
+with `successfulJobsHistoryLimit 3`). The bytes survived in two other places, both
+measured byte-identical (`sha256 d909ad91…`: `/var/lib/sunolocal/artifacts/suno-9d35527ba64645ccab967fc654681d4b.flac`
+and zephyr `~/Music/acestep/suno-1792179221760-1_00001.flac`), but nothing stated which
+of them the next stage reads.
+
+The contract is ONE path, and every consuming stage reads it THERE:
+
+| Where | Path | Notes |
+|---|---|---|
+| host (nexus) | `/var/lib/music-plans/<plan-stem>.<ext>` | the chart's `outHostPath`; what a bot on the host reads |
+| render pod | `/plans/<plan-stem>.<ext>` | the same directory, mounted by the render CronJob |
+
+`<plan-stem>` is the plan JSON's own file name (`/var/lib/music-plans/<stem>.json`);
+`<ext>` is the container the engine produced (ace → `.flac`, fixture → `.wav`). The rail
+sets `SUNOLOCAL_WRAPPER_OUT` to that mount (mining-k8s `8533861`, card `t_b21aeb51`), so
+the wrapper's copy IS the deliverable.
+
+The engine's own copies are NOT that input: `/var/lib/sunolocal/artifacts/suno-<job-key>.<ext>`
+is named by the job key, not by the plan stem (it is reachable through the task's
+`audio_url`), and the ComfyUI output directory on zephyr belongs to the engine.
+
+`music/scripts/check_render_landed.py` is the executable definition: the rail runs it
+after EVERY render, before it writes a success `<stem>.rendered` marker, and it exits 3
+when the rail's own mount is no longer the documented host path — so a chart change
+cannot move a render silently. `music/stages.yaml` carries the same contract for the
+stage prompts, and the `master` stage prompt proves the file with this script before it
+normalizes it.
 
 ---
 
