@@ -96,6 +96,10 @@ def run_pack(master: pathlib.Path, out: pathlib.Path, *extra: str):
 
 
 VALID = set(pack.NOTE_NAMES)
+# The analyser's window: read from the module under test, but tolerantly, so the
+# NEGATIVE CONTROL run (this file against the pre-fix code) reports every failed
+# section instead of dying on the missing constant.
+WINDOW = getattr(pack, "KEY_NPERSEG", 4096)
 
 
 def is_key(value) -> bool:
@@ -106,6 +110,9 @@ def is_key(value) -> bool:
 
 # ---------------------------------------------------------------------------
 print("1. estimate_key has no key to report below its own window")
+
+check("the module declares the analyser's window (KEY_NPERSEG)",
+      hasattr(pack, "KEY_NPERSEG"), "no KEY_NPERSEG: the floor is unnamed")
 
 # REGRESSION (2026-10-16, card t_4906bc6e). Every clip under the analyser's
 # window must yield NO key. The pre-fix code answered "C minor" below 2048
@@ -121,9 +128,9 @@ for n in (64, 1024, 2047, 2048, 2049, 4095):
           got is None, err or f"returned {got!r}, expected None")
 
 # ...and it must still measure a real clip: the fix is a floor, not a mute.
-x = tone(pack.KEY_NPERSEG, 44100)
+x = tone(WINDOW, 44100)
 got = pack.estimate_key(x, 44100)
-check(f"a clip at the window ({pack.KEY_NPERSEG} samples) is measured",
+check(f"a clip at the window ({WINDOW} samples) is measured",
       is_key(got), f"returned {got!r}")
 
 # ---------------------------------------------------------------------------

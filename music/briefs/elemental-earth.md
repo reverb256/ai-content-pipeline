@@ -816,10 +816,10 @@ card**: the two live follow-ups that touch the genre already exist (§11).
 - **Repo state at this pass:** HEAD `c296db6` (2026-10-16 15:56:54 CDT), divergence
   **72 ahead / 0 behind** `origin/main` (`ba28f55`). The 72-commit publish gap is the lane's
   standing pattern (local `main` only). Every path the brief stage recorded as missing —
-  `music/suno-gen.py` (42652 B), `music/sunolocal/`, `music/assets/pack.py` (52690 B),
+  `music/suno-gen.py` (42652 B), `music/sunolocal/`, `music/assets/pack.py` (54971 B),
   `packages/welcome-asset-pack` — is now in the worktree.
 - **The dangling-reference bullet is closed.** `brain/playbooks/music-lane-architecture.md`
-  (34328 B) and `brain/research/music-monetization-2026.md` (11067 B) both exist in this worktree
+  and `brain/research/music-monetization-2026.md` (11067 B) both exist in this worktree
   now (card `t_b0a4db92`, done). The architecture playbook documents `music-lane-architecture.md`
   §5/§13 as a rubric source, so the section numbers this brief quotes from it are checkable at
   last — but a full re-read of that playbook is not this pass's job and is not claimed here.
@@ -1028,4 +1028,18 @@ that named `music/suno-gen.py`.
 Hotspot note for the orchestrator: `music/briefs/*.md` is being edited by many concurrent workers
 (this pass touched `music/briefs/elemental-earth.md` only; `t_1a5b018b` also plans to touch
 `elemental-water.md` and `elemental-air/above-the-weather/brief.md`).
+
+---
+
+## 17. Supersession record — the pack-key pass (card `t_4906bc6e`, 2026-10-16 17:57 CDT)
+
+§13's "Repo state at this pass" bullet stated the generator's size as a LIVE figure (52690 B).
+Card `t_4906bc6e` — the pack's key is measured or explicitly unknown, never fabricated — grew
+`music/assets/pack.py` to **54971 B** (measured 2026-10-16 17:57 CDT), and `check_brief_figures`
+recomputes that figure, so the bullet is corrected above. The 14:50 `ls -l` transcript in the same
+section is left alone: it records what the file measured at that instant, and history is not a
+live claim.
+
+Superseded revision of this file: `sha256
+e26c416b407862d63c52d94e743c462df3647862d2ad615dfeb6945ae74f3776` (1031 lines / 67737 B).
 

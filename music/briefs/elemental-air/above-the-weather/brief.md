@@ -158,7 +158,7 @@ lane's shape are both `loop-10min`. One render satisfies both.
 
 ### A fourth surface also exists in this checkout now
 
-`music/assets/pack.py` (52690 B) and its executable gate `scripts/gates/gate_asset_pack.py`
+`music/assets/pack.py` (54971 B, re-measured 2026-10-16 17:57 CDT, card `t_4906bc6e`) and its executable gate `scripts/gates/gate_asset_pack.py`
 (2981 B) are both present in this checkout at 2026-10-16 16:07 CDT — the "upstream-only" reading the first two
 revisions of this brief carried is stale (card `t_5ed495eb`, `done`). The sample pack is here
 too: `packages/welcome-asset-pack/` (manifest.json, loops/, one_shots/, LICENCE.txt,
@@ -433,7 +433,7 @@ and will send a human looking for a check digit that the standard does not defin
 | `lyrics` | **Not applicable.** The stage prompt already anticipates this: "an instrumental genre … skips this stage — advance it with a comment saying the genre is instrumental." No sheet, no `gate_lyrics_original` run, no authorship claim to register with SOCAN for this track. |
 | `generate` | Requires a **track dir with `title.txt`** and, because `--instrumental` is passed, a marker: `"instrumental": true` in the track dir's `manifest.json`, or an empty file named `instrumental`. Code-enforced, with a FATAL message that says exactly this. The lyrics box is sent **empty**; the caption gets `, instrumental, no vocals` appended by the translator. |
 | `curate` | Critical for this genre, because D1 (120 BPM default) and out-of-genre drift into percussion are both audible. Reject on: any drum kit, any bass weight, a resolved cadence, a hard/faded ending. |
-| `stems` | Export through **Suno Studio** (unlimited) — never the standard download button (60/month cap). The local service's `/api/v1/stems` is a deferred stub. `music/assets/pack.py` (52690 B, now in this checkout) derives 12 time-aligned stems by HPSS (scipy) as the asset-pack path (card `t_5ed495eb`, `done`). |
+| `stems` | Export through **Suno Studio** (unlimited) — never the standard download button (60/month cap). The local service's `/api/v1/stems` is a deferred stub. `music/assets/pack.py` (54971 B, now in this checkout) derives 12 time-aligned stems by HPSS (scipy) as the asset-pack path (card `t_5ed495eb`, `done`). |
 | `master` | −14 LUFS ±1 for streaming. **Careful:** the `gate_loudness` in THIS checkout still measures `ffmpeg volumedetect` mean_volume (plain RMS), not LUFS. Card `t_9546841b` is `done` and its decision was to move the ruler to EBU R128 integrated loudness, but that commit (`e783a96`) sits on `origin/publish/audio-lane-2026-10-16` and is not on `main`; `music/mix/master.py` (card `t_568c67d2`) is on that branch only and is not in this checkout at all. So a gate FAIL here is not by itself evidence of a bad master. Measure both. |
 | `gate` | `gate_quality` requires a `review.json` whose `reviewer_model` differs from the producer model and which is sha256-bound to this master. The panel rubric for this family is `music/rubrics/gamer.json` (pass threshold 7.0). |
 | `package` | `loop_points.json` + `clearance_doc.pdf` + `ai_disclosure.txt` are required for game-assets; `gate_release_ready` adds an ISRC, artwork (PIL-openable), and manifest `{title, artist, isrc, genre, ai_disclosure}` for streaming. Artwork is j_kro's creative gate — do not fabricate a cover. |
@@ -558,7 +558,7 @@ states the live measurement, the card that closed it, and what remains.
   `clearance_doc.pdf` now exists for the sample pack
   (`packages/welcome-asset-pack/clearance_doc.pdf`, 2061 B); none exists for this track yet.
 - **O5 — Asset pack machinery. CLOSED** (card `t_5ed495eb`, `done`). `music/assets/pack.py`
-  (52690 B) and `scripts/gates/gate_asset_pack.py` (2981 B) are in this checkout (§3). The open
+  (54971 B) and `scripts/gates/gate_asset_pack.py` (2981 B) are in this checkout (§3). The open
   residue is a different one: no stage builds a pack (card `t_eb079b91`, `ready`).
 - **O6 — Brief cards never advance. CLOSED** (card `t_5a93164a`, `done`). `music/stages.yaml`
   now tells the stage to post the marker with the `kanban_comment` tool and to treat
@@ -641,7 +641,7 @@ states the live measurement, the card that closed it, and what remains.
   `brain/research/music-monetization-2026.md` are cited as authoritative by `stages.yaml`,
   `genres.yaml`, `lanes.yaml`, `autonomy.yaml`, `gates/README.md` and every gate script. The
   earlier revisions of this brief recorded that neither existed on this machine. Both are on
-  disk and in `HEAD` now: `brain/playbooks/music-lane-architecture.md` (34328 B) and
+  disk and in `HEAD` now: `brain/playbooks/music-lane-architecture.md` and
   `brain/research/music-monetization-2026.md` (11067 B). Card `t_b0a4db92` is `done`, and card
   `t_fa731c5b` stripped the same old reading from the sibling briefs; the playbook was rewritten
   at `7411afa` (head touching it `6b24a52`). Every §-number this brief quotes is still quoted
@@ -760,7 +760,7 @@ Checks after the edits (real runs, 2026-10-16 16:47 CDT):
 | `check_prompt_style_counts` | 0 | PASS (15 lengths) |
 | `check_oracle_board` | 0 | PASS (0 open oracle genres) |
 | `music/rubrics/test_panel_math.py` | 0 | ALL CHECKS PASSED |
-| `check_brief_figures` | 1 | no finding in this file from this pass — its remaining one is §13's `34,328 B`, owned by `t_f7889dd6` / `t_fa731c5b` |
+| `check_brief_figures` | 1 | no finding in this file from this pass — its remaining one was §13's `34,328 B` (`6b24a52`), owned by `t_f7889dd6` / `t_fa731c5b` |
 | `check_brief_absences` | 1 | no finding in this file — its two name `elemental-water.md` §14 and the closing pass note, owned by `t_bdb94fb7` |
 
 This pass did NOT edit the rubric (`music/rubrics/*` belongs to the review panel, `editor`) and did
@@ -773,5 +773,27 @@ edits at that moment (card `t_eb079b91`, the asset-pack stage). And `check_brief
 from rc 0 to rc 1, on three ranges in OTHER briefs (`activist.md`, `commentary-beds.md`,
 `elemental-fire.md`) — the class card `t_6dd13d76` owns. Nothing in this file regressed; re-run
 `check_brief_line_refs` and the count of findings in this file is still zero.
+
+---
+
+## 16. Supersession record — the pack-key pass (card `t_4906bc6e`, 2026-10-16 17:57 CDT)
+
+This pass changed three LIVE figures in this file and nothing else. `music/assets/pack.py` moved
+from **52690 B** to **54971 B** when card `t_4906bc6e` removed the fabricated short-input key from
+`estimate_key()`: the analyser now declares its own window, returns no key below it, and the
+generator records an explicit `unknown` instead of `"C minor"`. `check_brief_figures` recomputes
+this size, and it flagged three present-tense claims — §3's "A fourth surface" note, §8's `stems`
+row and §11's O5 entry. All three are corrected above.
+
+Two sites were left ALONE on purpose, because they are history rather than live claims: §15's
+corrections-table row 5, which records what that pass measured at 16:07 CDT, and the 14:50 `ls -l`
+transcript in `elemental-earth.md` (the file WAS 52690 B at that instant).
+
+The header's "Superseded revisions of this file" list was deliberately NOT extended: every
+citation into this file (`activist.md` and `music/scripts/check_brief_absence.py` both cite the
+line at :404) points at a line number, and the correction above was made without moving one.
+
+Superseded revision of this file: `sha256
+97ad6977c8ff4637536a4a653934c0357fc071933f098ef5e82a6c12c2174581` (777 lines / 50366 B).
 
 

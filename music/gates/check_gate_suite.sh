@@ -896,6 +896,33 @@ else
 fi
 
 # ------------------------------------------------------------------
+# 18. the asset-pack key (card t_4906bc6e)
+# ------------------------------------------------------------------
+# `music/assets/pack.py`'s `estimate_key()` opened with a short-input early
+# return that answered "C minor" for audio it had not analysed, and the
+# generator wrote that value into the manifest `key`, into `metadata.key` (the
+# object this suite's own pack cases read), into every loop record, into
+# loop_points.json, into the README and into the clearance document — the
+# record a pack's licence rests on. Card t_f65b0f4c fixed the same shape in the
+# planner's plan; this is the asset-pack half.
+#
+# Measured on nexus 2026-10-16 (numpy 2.5.3 / scipy, /usr/bin/python3) the
+# pre-fix branch held TWO defects: under 2048 samples it returned the
+# fabricated "C minor", and 2048..4095 samples — above that guard — made
+# `sps.stft` shrink nperseg to the input length and raise
+# `ValueError: noverlap must be less than nperseg`. The analyser's real usable
+# length is its own window (4096 samples); below it there is no estimate.
+#
+# These cases are what makes it a check rather than a claim: the test file is
+# RED against the pre-fix code (15 checks failed there, measured), it builds a
+# pack whose ONLY loop can exist but whose audio cannot be measured and asserts
+# every artifact says the explicit unknown, and section 4 fails if the floor
+# was implemented by making the analyser answer nothing for everything.
+say "the asset-pack key is measured or explicitly unknown (music/tests/test_pack_key.py)"
+pass "pack key: no fabricated key below the analyser's window, and --key still wins (t_4906bc6e)" \
+  "$PY" "$REPO/music/tests/test_pack_key.py"
+
+# ------------------------------------------------------------------
 rm -f /tmp/gate_out.$$
 if [ "$fails" -eq 0 ]; then
   echo
