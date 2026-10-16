@@ -318,10 +318,14 @@ their weight is dropped, not zeroed. A correct `elemental-water` track must reac
 three. The same three apply to `elemental-earth` and `elemental-air`.
 
 **NOT fixed here — the rubric belongs to the review panel, and a producer editing its own grading
-sheet is the self-review failure mode this lane forbids (`t_16d011e6` was `editor`'s).**
-Filed as a new card for `editor` with the arithmetic above: the fix is the scope string
-`(elemental-*, epic-orchestral-boss)` → `(elemental-fire, epic-orchestral-boss)`, mirroring the
-pattern the `chip` criterion already uses, plus narrowing reject_signal #2 to the same set.
+sheet is the self-review failure mode this lane forbids (`t_16d011e6` was `editor`'s). Already
+filed as **t_426a82a3** (`editor`), from the elemental-air brief. What this brief adds is
+independent: the 82/88/92 BPM set for water/earth/air against fire's 150 BPM, the second failure
+mode (reject_signal #2 *"boss/battle claim with no fast-tempo candidate (under 130 BPM)"* firing
+on a correct water theme), and the three computed aggregate outcomes above. The fix is the scope
+string `(elemental-*, epic-orchestral-boss)` → `(elemental-fire, epic-orchestral-boss)`, mirroring
+the pattern the `chip` criterion already uses, plus narrowing reject_signal #2 to the same set.
+**No duplicate card filed.**
 
 ## 9. Generation path — three blockers, measured on the live engine
 
@@ -374,23 +378,54 @@ is queued anywhere.** The three blockers, all measured:
 All three are the same family as **t_25a6499c** (instrument/tempo/key render gaps, nexus-core) —
 cited here so §§10-12 do not rediscover them, and extended with the three measured line numbers.
 
-## 10. The game-assets publish path does not exist yet — measured
+## 10. ⚠ The game-assets publish path is built — and stranded on an unmerged ref
 
 `brain/runbooks/music-game-assets.md` is the package stage's contract for this genre's primary
-lane. Every executable it names is missing on this host:
+lane. Every artifact it names **exists in the repository — but in exactly one commit, reachable
+from no branch this checkout runs.** Measured:
 
-| Runbook requirement | Measured |
+```
+$ git log --all --oneline -- music/publish music/docs/GLASS-BREAK.md music/licences
+3882292 WIP backup 2026-10-14 (atlas)
+$ git log -1 --format="%h %ad %an %s" --date=short 3882292
+3882292 2026-10-14 Reverb WIP backup 2026-10-14 (atlas)
+$ git branch -a --contains 3882292
+  remotes/origin/wip/atlas-backup-20261014
+$ git ls-tree -r --name-only 3882292 | grep -E 'music/(publish|lanes|licences)|GLASS-BREAK'
+music/cards/glass-break-checklist.md
+music/docs/GLASS-BREAK.md          ← the provisioning runbook (has the butler steps, item 3)
+music/lanes/game-assets.py         ← the stem-naming convention the runbook names
+music/licences/perpetual_game_asset_v1.txt
+music/publish/gumroad.py
+music/publish/itchio.py
+music/publish/playwright/*.py      (distrokid, fab, splice, unity, session, _check_env)
+```
+
+None of those paths exist on local `main` **or** on `origin/main`
+(`git ls-tree -r --name-only origin/main` lists `music/assets/pack.py` and
+`music/docs/{fusion-system-design,pro-registration}.md`, and no `music/publish/`). The local
+`wip/atlas-backup-20261014` branch tip (`abcf169`) does **not** contain them either — only the
+remote ref does. So the itch.io/Gumroad adapters (card `t_ce063b87`) and the glass-break
+provisioning checklist (card `t_14d438ea`) are both `done` on the board while their deliverables
+sit on an unmerged WIP backup.
+
+**On this host the only genuinely absent pieces are the human-provisioned ones:**
+
+| Runbook requirement | Measured on this host |
 |---|---|
-| `butler` (itch.io CLI) | **not found** — not on PATH, not in `~/.local/bin`, `/usr/local/bin`, `/snap/bin` |
-| `~/.hermes/vault/itch_io_key` (API key) | **`~/.hermes/vault/` does not exist** |
-| `perpetual_game_asset_v1.txt` (licence) | **not in the repo** (`find . -name 'perpetual_game_asset_v1*'` → no hits) |
-| `game-assets.py` stem-naming convention | **not in the repo** (`music/scripts/` holds only `acestep_brief.py`, `acestep_plan.py`, `acestep_qa.py`, `probe_create_form.py`) |
+| `butler` (itch.io CLI) | **not installed** — not on PATH, not in `~/.local/bin`, `/usr/local/bin`, `/snap/bin`; referenced only by the runbook |
+| `~/.hermes/vault/itch_io_key` | **`~/.hermes/vault/` does not exist** — no vault at all |
+| adapters / licence / naming / checklist | present in `3882292` only (see above), on no branch this checkout runs |
 
-The runbook's own checklist — `gate_loop_points` PASS, `gate_sync_ready --lane game-assets` PASS,
-butler push with `AI-Generated` + `Loopable` + `WAV` + `Stem-Pack` tags, `metadata.json` stating
-sample rate — cannot execute today. Filed as a new card for `nexus-core`. **This does not block
-the brief or the render; it blocks `publish` for the genre's primary lane, and the package stage
-should not discover it.**
+`music/docs/GLASS-BREAK.md` already contains the exact butler install and login procedure
+(`curl -L -o ~/.local/bin/butler https://broth.itch.ovh/butler/linux-amd64/LATEST/default/butler`,
+then `butler login`, key from the `wharf` source) — so provisioning is **documented and blocked
+only on j_kro**, not unbuilt.
+
+**This does not block the brief or the render; it blocks `publish` for the genre's primary lane.**
+It is new evidence for the existing reconciliation card **t_8a715681** (diverged checkout) rather
+than a new defect: a third ref — `origin/wip/atlas-backup-20261014` — carries lane work that
+neither `main` nor `origin/main` has. Left as a comment on that card.
 
 ## 11. Defect fixed in this run (regression check included)
 
@@ -481,13 +516,17 @@ Autonomy: all three lanes are at rung **`advisory`**, `clean_publishes: 0`
   and `gates/*`, but no copy exists on this machine. `brain/research/music-monetization-2026.md`
   likewise (`brain/research/` does not exist). Carded: **t_b0a4db92**.
 - **Not fixed here (other owners, already carded):** gate_loop_points false pass **t_bab8aa19**;
-  instrument/tempo/key render gaps **t_25a6499c**; diverged checkout **t_8a715681**; scheduler
-  units running the wrong checkout **t_41f354be**; oracle card duplication + the 0.20 trend
-  artifact **t_bf0e5edd**; missing architecture docs **t_b0a4db92**; profile workdir + kanban env
-  vars **t_75aacf8b**; `gate_loudness` RMS-vs-LUFS ruler **t_9546841b**.
-- **New cards filed by this brief:** rubric `battle_energy` mis-scoping → `editor`; game-assets
-  publish path (butler / vault key / licence / naming) → `nexus-core`; the unautomated gate
-  matrix → `nexus-core`.
+  instrument/tempo/key render gaps **t_25a6499c**; diverged checkout — now with a **third stranded
+  ref**, see §10 — **t_8a715681**; scheduler units running the wrong checkout **t_41f354be**;
+  oracle card duplication + the 0.20 trend artifact **t_bf0e5edd**; missing architecture docs
+  **t_b0a4db92**; profile workdir + kanban env vars **t_75aacf8b**; `gate_loudness` RMS-vs-LUFS
+  ruler **t_9546841b**; the game-assets pack failing its own gate **t_5ed495eb**; the
+  `battle_energy` mis-scoping **t_426a82a3**.
+- **Filed by this brief (one card, after checking the board for duplicates):** the gate matrix is
+  never run by anything (§11) → `nexus-core`. The §8 rubric finding and the §10 publish-path
+  finding were **already carded** (`t_426a82a3`, `t_5ed495eb` / `t_ce063b87`), so they are
+  referenced, not duplicated; §10's stranded-ref measurement is left as a comment on
+  **t_8a715681**.
 - **hotspot:** `music/briefs/` — concurrent workers write this directory and commit to one
   working tree. Measured while this brief was written: **6 cards `running` on the board** (5
   music briefs + `t_aba9d2c3`) and **13 brief-stage commits plus 2 lane fixes (15 commits) inside
