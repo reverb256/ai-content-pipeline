@@ -5,13 +5,13 @@
   "title": "Room With The Light Going",
   "duration": 180,
   "instrumental": true,
-  "lyricsMode": null,
+  "lyricsMode": "instrumental",
   "language": null,
 
-  "_genre_is_instrumental": "prompts/sentimental-piano.md: 'This genre is instrumental. Leave the lyrics box empty.' No lyric sheet exists and none is wanted. lyricsMode is null because neither 'draft' (scaffold, refused by the renderer) nor 'ai' (out of genre, voids the authorship claim) applies.",
+  "_genre_is_instrumental": "prompts/sentimental-piano.md: 'This genre is instrumental. Leave the lyrics box empty.' No lyric sheet exists and none is wanted. This pass set lyricsMode to 'instrumental' -- the queue mode that card t_25a6499c added -- instead of the original null: the live ConfigMap entry for this track uses 'instrumental', and it is the only spelling the planner accepts that neither scaffolds (draft, refused by the renderer) nor invents words (ai, out of genre, voids the authorship claim).",
 
   "_registry": {
-    "source": "music/genres.yaml (validated: /usr/bin/python3 music/registry.py validate -> registry OK: 14 genres, 10 lanes, rc=0)",
+    "source": "music/genres.yaml (validated: /usr/bin/python3 music/registry.py validate -> 'registry OK: 14 genres, 10 lanes, 1 stage gate rule(s)', rc=0)",
     "family": "acoustic",
     "prompt_template": "music/prompts/sentimental-piano.md",
     "visual_style": "music/visuals/soft-window-light.md",
@@ -21,79 +21,126 @@
     "bpm_anchor": 72,
     "timesignature": "4",
     "caption_chars": 674,
-    "style_exclusions": "drums, percussion, EDM, synths, pop vocals, dramatic trailer crescendo, virtuosity"
+    "style_exclusions": "drums, percussion, EDM, synths, pop vocals, dramatic trailer crescendo, virtuosity",
+    "stage_gate_visual": "lane_gate -> gate_youtube_authentic (when_absent: none); this genre HAS a youtube-longform lane, so the gate applies"
   },
 
   "_queue": {
-    "note": "CANONICAL FIELDS ONLY for the music-pipeline queue. That schema has no 'instrumental' field and planner.py has no instrumental mode, so queueing this genre there yields a draft scaffold or AI lyrics - both wrong (see _engine_defects D3).",
-    "target": "mining-k8s/helm/charts/music-pipeline/values.yaml -> briefs:",
-    "configmap": "mining/music-pipeline-briefs key briefs.json (currently: 1 entry, smoke-chill-lounge)",
+    "note": "QUEUED AND RENDERED. Corrected in the t_fe2e10da pass: this block said the hand-off was not done and that the schema had no instrumental field. Both are false now -- lyricsMode: instrumental exists (card t_25a6499c), and the entry is in the chart AND the live ConfigMap.",
+    "target": "/home/j_kro/mining-k8s/helm/charts/music-pipeline/values.yaml -> briefs: (11 entries; check-queue-sync.sh keeps chart and ConfigMap in step)",
+    "configmap": "mining/music-pipeline-briefs key briefs.json (live: 10 entries; this track's entry is among them, verbatim name sentimental-piano-room-with-the-light-going)",
     "planner_job": "mining/music-pipeline (17 */6 * * *)",
     "plan_out": "/var/lib/music-plans/sentimental-piano-room-with-the-light-going.json",
-    "render_job": "mining/music-pipeline-render (41 */4 * * *)",
-    "drift": "chart values.yaml briefs: [] is EMPTY while the live ConfigMap holds smoke-chill-lounge"
+    "render_job": "mining/music-pipeline-render (41 */4 * * *; also runs loop_close.py over loop claims, card t_b21aeb51)",
+    "drift": "CLOSED. The chart's briefs: [] vs live ConfigMap smoke-chill-lounge drift the original pass reported no longer exists: the chart carries 11 entries, the ConfigMap 10, and check-queue-sync.sh FAILS when they disagree."
   },
 
   "_route": {
-    "live_engine": "mining/sunolocal (deployment sunolocal-source, image tag v0.1.2, ClusterIP 10.43.164.190:8123)",
-    "why_not_the_planner_queue": "D3 - the planner queue cannot express an instrumental track; its draft scaffold is refused by acestep_plan.py (exit 1). Observed as the 'refused' content of smoke-chill-lounge.rendered and testplan.rendered.",
+    "live_engine": "mining/sunolocal (deployment sunolocal-source, image tag v0.1.3, ClusterIP 10.43.164.190:8123)",
+    "why_the_planner_queue_now_works": "D3 closed (t_25a6499c): lyricsMode: instrumental is a first-class queue mode and planner.py refuses it only on a vocal genre.",
     "call": "POST http://sunolocal.mining.svc.cluster.local:8123/api/v1/generate",
     "status_of_task": "GET http://sunolocal.mining.svc.cluster.local:8123/api/v1/task/{id}",
-    "renderer": "adapters/ace_comfy.py -> /opt/sunolocal/music/scripts/acestep_plan_direct.py --allow-empty (verified present in the running pod)"
+    "renderer": "sunolocal/adapters/ace_comfy.py -> /opt/sunolocal/music/scripts/acestep_plan_direct.py --allow-empty (9190 bytes, verified present in the running pod)",
+    "required_body_extensions": "bpm and keyscale. Without them the engine defaults to 120 BPM / 'C major', which is out of genre on tempo alone. acestep_plan.py passes plan['bpm'] and plan['key'] through verbatim (t_25a6499c D1/D2).",
+    "engine_source_divergence": "The pod runs v0.1.3. This repo's mirror music/sunolocal/translate.py (86 lines) is pre-v0.1.3 and still carries 'bpm = 120' (line 42) and 'key = req.style or \"C major\"' (line 49). Card t_42bc85ba, not resolved here."
   },
 
   "_generation_request": {
-    "style": "<674-char caption from music/prompts/sentimental-piano.md, with ', instrumental, no vocals' appended>",
+    "style": "<674-char caption from music/prompts/sentimental-piano.md; the pod appends ', instrumental, no vocals' itself>",
     "instrumental": true,
     "lyrics": "",
     "duration": 180,
     "title": "Room With The Light Going",
+    "bpm": 72,
+    "keyscale": "C minor",
     "engine": "ace",
     "customMode": true,
-    "_variant_b_if_structure_steering_is_wanted": "send the template tag sheet (7 tags: Intro, Verse, Verse, Bridge, Chorus, Verse, Outro) as 'lyrics' AND append ', instrumental, no vocals' to 'style' yourself - measured: translate.py only appends that cue when lyrics is empty"
+    "_variant_b_if_structure_steering_is_wanted": "Send the template tag sheet (7 tags: Intro, Verse, Verse, Bridge, Chorus, Verse, Outro) as 'lyrics'. CORRECTED in the t_fe2e10da pass: the old note said the cue is lost unless you append ', instrumental, no vocals' to 'style' yourself. Since card t_909069f0 the pod appends the cue for EVERY instrumental request, empty lyrics or not. Measured against the deployed code: variant A 699 chars with cue, variant B 699 chars with cue. This track's plan on disk takes variant B and its engine-side caption carried the cue."
+  },
+
+  "_rendered_artifact": {
+    "note": "The genre rendered. This block is new in the t_fe2e10da pass -- the original file asserted no plan and no render existed.",
+    "plan": "/var/lib/music-plans/sentimental-piano-room-with-the-light-going.json (written 2026-10-16T14:33:41)",
+    "marker": "/var/lib/music-plans/sentimental-piano-room-with-the-light-going.rendered (0 bytes = rendered, not refused)",
+    "job": "9d35527ba64645ccab967fc654681d4b in /var/lib/sunolocal/jobs.sqlite3 (status completed)",
+    "request": "instrumental true, bpm 72, keyscale 'C minor', duration 180, lyrics = the 7-tag sheet",
+    "artifact": "/var/lib/sunolocal/artifacts/suno-9d35527ba64645ccab967fc654681d4b.flac",
+    "bytes": 11798965,
+    "duration_s_measured": 180.000000,
+    "format": "flac, 48000 Hz, 2 channels",
+    "sha256": "d909ad910a0cf8476bd210f671d09ef699e60fe993d42c79704b9c9318135eb9",
+    "not_recorded_in": "music/quota-ledger.json renders: list (one entry, elemental-air) -- the ledger undercounts delivered renders",
+    "not_pipeline_durable": "the render rail writes the master to the render pod's /tmp and discards it (card t_320bae4c); the engine's artifact store is the surviving copy"
   },
 
   "_engine_defects": [
     {
       "id": "D1",
-      "what": "BPM is not expressible; the 72 BPM genre anchor cannot be honoured",
-      "evidence": "deployed sunolocal/translate.py:42 'bpm = 120'; :45 'bpm = int(60 + req.style_weight * 120)'. Executed against the deployed code: plan.bpm = 120, i.e. 1.67x the genre anchor. Reaching 72 requires style_weight = 0.1, which is Suno's style-adherence dial.",
-      "impact": "any sentimental-piano render on the current route is out of genre on tempo alone"
+      "status": "CLOSED (card t_25a6499c)",
+      "what": "BPM was not expressible; the 72 BPM genre anchor could not be honoured",
+      "was": "deployed sunolocal/translate.py:42 'bpm = 120'; :45 'bpm = int(60 + req.style_weight * 120)'. Measured against the then-deployed code: plan.bpm = 120, 1.67x the anchor.",
+      "now": "bpm is a sunolocal body extension and an explicit value wins; acestep_plan.py passes plan['bpm'] verbatim.",
+      "proof_on_the_artifact": "render job 9d35527ba64645ccab967fc654681d4b recorded request bpm 72 and the engine plan reads bpm 72"
     },
     {
       "id": "D2",
-      "what": "The key field receives the whole style caption",
-      "evidence": "deployed translate.py:49 'key = req.style or \"C major\"'; acestep_plan.py passes plan['key'] as the ACE 'keyscale'. Measured: key = the full 674-character caption.",
-      "impact": "the engine is handed a paragraph where a key signature belongs"
+      "status": "CLOSED (card t_25a6499c)",
+      "what": "The key field received the whole style caption",
+      "was": "deployed translate.py:49 'key = req.style or \"C major\"'; acestep_plan.py passes plan['key'] as the ACE keyscale, so the node received the 674-char caption.",
+      "now": "'key = req.keyscale or \"C major\"' -- never the style caption.",
+      "proof_on_the_artifact": "the same job's request carries keyscale 'C minor' and the engine plan reads key 'C minor'"
     },
     {
       "id": "D3",
-      "what": "The planner queue cannot express an instrumental track",
-      "evidence": "mining-k8s/helm/charts/music-pipeline/values.yaml brief schema = {name, genre, brief, lyricsMode?, language?, title?, duration?}; planner.py --lyrics-mode accepts only draft|ai. Draft plans are refused by acestep_plan.py (exit 1); the two live 'refused' markers record exactly that.",
-      "impact": "8 of 14 genres cannot be queued through music-pipeline. Measured list (grep -li 'is instrumental|leave the lyrics box empty' music/prompts/*.md): chill-lounge, chiptune-8bit, commentary-beds, elemental-air, elemental-earth, elemental-fire, elemental-water, sentimental-piano. NOTE: the deployed translate.py inline comment claims 8 but lists 9, wrongly including epic-orchestral-boss (0 marker matches in its template)."
+      "status": "CLOSED (card t_25a6499c; entry queued)",
+      "what": "The planner queue could not express an instrumental track",
+      "was": "brief schema {name, genre, brief, lyricsMode?, language?, title?, duration?} had no instrumental field; planner.py --lyrics-mode accepted only draft|ai; a draft was refused by acestep_plan.py (exit 1, the 'refused' markers).",
+      "now": "lyricsMode: instrumental (or instrumental: true) is first-class; planner.py refuses it on a vocal genre, so it cannot strip a choir genre's defining element. The live ConfigMap entry for this track uses it and rendered.",
+      "scope": "affects 8 of the 14 templates (chill-lounge, chiptune-8bit, commentary-beds, elemental-air, elemental-earth, elemental-fire, elemental-water, sentimental-piano) -- measured, grep -liE 'is instrumental|leave the .*lyrics box empty' music/prompts/*.md"
     },
     {
       "id": "D4",
-      "corrected_by": "card t_d706d0a3 (2026-10-16)",
-      "what": "The generate-stage script is absent from THIS checkout, but it is not missing from the repo",
-      "evidence": "music/stages.yaml generate stage -> 'music/suno-gen.py'. Measured: 'git ls-tree -r --name-only origin/main | grep -i suno-gen' -> music/suno-gen.py; 'git ls-tree -r --name-only main | grep -i suno-gen' -> the fixture only. The file was added by ba28f55 ('music: instrumental mode in generation path'), which 'git branch -a --contains' places on origin/main and origin/wip/atlas-backup-20261014.",
-      "impact": "the generate stage names a file this checkout does not carry - checkout divergence, NOT a missing script. Fix: merge origin/main into main (see t_8a715681). The earlier reading of this defect ('no suno-gen* file exists under /home/j_kro') was wrong."
+      "status": "CLOSED (card t_8a715681)",
+      "what": "The generate-stage script was absent from THIS checkout, though not from the repo",
+      "was": "music/stages.yaml generate stage -> 'music/suno-gen.py'; present on origin/main, absent from the worktree.",
+      "now": "music/suno-gen.py exists in the worktree (42652 bytes) and on HEAD; check_stage_scripts.py PASSes 11 of 11."
     },
     {
       "id": "D5",
-      "what": "The scheduled render rail cannot render an instrumental, for two independent reasons",
-      "evidence": "Live cluster read this pass. (a) 'kubectl -n mining get cm music-pipeline-payload -o json' -> key music__scripts__acestep_plan.py, 9020 B, line 87 hardcodes '\"instrumental\": False'. (b) 'kubectl -n mining get cronjob music-pipeline-render' -> the job runs [python3, /payload/music/scripts/acestep_plan.py, <plan>, --name, <stem>] with NO --allow-empty, so an empty-section plan exits 1 and the job writes the marker 'refused' (live proof: /var/lib/music-plans/smoke-chill-lounge.rendered and testplan.rendered are both the 8-byte string 'refused\\n').",
-      "impact": "no instrumental genre can traverse the scheduler rail. Filed as t_8c5a6b91 (nexus-core) - do not re-file. The sunolocal service route in 'route' remains the only path that can render this genre.",
-      "configmap_matches_d3": "The 'kubectl -n mining get cronjob music-pipeline' args read only name, brief, genre, lyricsMode, language, title, duration from each brief - no instrumental field, and --lyrics-mode defaults to 'draft'. D3 stands as written."
+      "status": "CLOSED (card t_8c5a6b91)",
+      "what": "The scheduled render rail could not render an instrumental",
+      "was": "two independent causes: the payload's acestep_plan.py hardcoded '\"instrumental\": False' (9020 B payload, line 87), and the render CronJob passed no --allow-empty, so an empty-section plan exited 1 and the job wrote 'refused'.",
+      "now": "the payload carries the plan's own instrumental value and a plan that declares itself instrumental is exempt from the draft refusal by design. Proof: this genre's marker is 0 bytes, and the job's engine plan reads instrumental true."
+    },
+    {
+      "id": "D6",
+      "status": "OPEN",
+      "what": "The plan's key is a placeholder, not a decision",
+      "evidence": "the plan on disk carries \"key\": \"C minor\", which is planner.py's documented default; this genre carries no researched key. Release key remains j_kro's creative call.",
+      "card": "t_f65b0f4c"
+    },
+    {
+      "id": "D7",
+      "status": "OPEN",
+      "what": "The render ledger is incomplete",
+      "evidence": "music/quota-ledger.json renders: holds one entry (elemental-air); this genre's render is absent, so the ledger undercounts delivered renders. A local ACE render consumes no Suno quota (0 downloads, 0 studio exports, 0 credits)."
     }
   ],
 
-  "_duration_basis": "72 BPM, 4/4 -> one bar = 4*60/72 = 3.3333 s. 54 bars = 180.0 s, inside the planner guard rail (planner.py MIN_DURATION_S=30, MAX_DURATION_S=420).",
+  "_duration_basis": "72 BPM, 4/4 -> one bar = 4*60/72 = 3.333333 s. 54 bars = 180.0 s, inside the planner guard rail (planner.py MIN_DURATION_S=30, MAX_DURATION_S=420). Measured on the delivered artifact: ffprobe duration 180.000000 s.",
   "_lyrics": "none - instrumental genre by design (music/prompts/sentimental-piano.md)",
   "_resolves_cards": [
-    "t_9f7d6889 (score 8.9, done at stage brief)",
-    "t_d706d0a3 (score 9.1) - duplicate oracle card for the same genre, advanced to genre-select by this pass"
+    "t_9f7d6889 (score 8.9, done) - wrote this brief",
+    "t_d706d0a3 (score 9.1, done) - duplicate oracle card",
+    "t_fe2e10da (title score 8.6, the surviving open card) - the t_fe2e10da pass is the one that recorded this file's current digest"
   ],
-  "_addendum": "2026-10-16, card t_d706d0a3: verification pass. All §1-§6 figures re-measured and unchanged (caption 674 chars, 7 section tags, 54 bars = 180.0 s, quota 0/60, registry 14 genres / 10 lanes, /health 200). D4 corrected (divergence, not absence). D5 added (the render rail drops the instrumental flag and never passes --allow-empty). See brief.md section 10.",
-  "_written_by": "music-producer, card t_9f7d6889, 2026-10-16; verified + corrected by card t_d706d0a3, 2026-10-16"
+  "_oracle": "true score 8.4/10 (oracle dedupe ruling 2026-10-16, music/oracle.py @ b2d11f7): quota_headroom 10.0, lane_coverage 8.0, revenue_potential 10.0, cadence_fit 6.6667, policy_risk 10.0, trend_signal 3.0. Reachable totals by fetch outcome: 8.4, 8.54, 8.68, 8.82, 8.96, 9.1. The title's 8.6 and the twin's 8.9 are unreachable from the fixed scorer.",
+  "_revision": {
+    "superseded_sha256": "1010965f2d911039f32c98c1eb6958692c0b1072bb54f0ef3167ee335572fa9d",
+    "superseded_bytes": 21918,
+    "superseded_lines": 460,
+    "current_digest": "re-read with `sha256sum music/briefs/sentimental-piano/room-with-the-light-going/brief.md`"
+  },
+  "_addendum": "2026-10-16, cards t_d706d0a3 then t_fe2e10da: two verification passes. The first corrected D4 (checkout divergence, not a missing script) and added D5. The second (t_fe2e10da) re-measured every checkable claim and found the genre had moved on: the entry is queued in chart and ConfigMap, the plan and render exist, and D1-D5 are all closed. See brief.md sections 10, 11 and 12.",
+  "_written_by": "music-producer, card t_9f7d6889, 2026-10-16; verified + corrected by card t_d706d0a3 and card t_fe2e10da, 2026-10-16"
 }
