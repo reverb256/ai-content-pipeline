@@ -212,6 +212,58 @@ def bpm_anchor_for(ctx: dict):
     return ctx["blueprint"].get("bpm_anchor") or ctx.get("template_bpm")
 
 
+# The key a caption states, and NOT the words that merely sound like one. This
+# pattern is deliberately case-SENSITIVE on the note name: an uppercase pitch
+# class followed by major|minor. elemental-water's caption says "a minor key
+# with add9 color" AND ends ", C minor"; a case-insensitive version matches the
+# lowercase "a minor" first and reports the WRONG key for the one genre whose
+# caption names two. The uppercase form is the one these templates use when they
+# mean a signature ("hall reverb, A minor,"), and the words that are not keys
+# ("one key", "key lift", "key change", "key mechanism", "key-triggered",
+# "minor key", "happy major key") carry no uppercase pitch class, so none match.
+KEY_IN_CAPTION_RE = re.compile(
+    r"\b([A-G](?:\s*(?:#|b|\u266f|\u266d|flat|sharp))?)\s*(Minor|Major|minor|major)\b")
+
+
+def key_in_caption(caption: str):
+    """The key signature the genre's own caption states, e.g. "A minor".
+
+    The sibling of `bpm_in_caption`, and it exists for the same reason: the
+    caption is the ONLY key claim backed by an artifact. Measured over the 14
+    live templates (2026-10-16), exactly 3 state a key -
+    elemental-water ("C minor"), epic-orchestral-boss ("150 BPM in C minor")
+    and trance ("A minor") - and the other 11 state none at all. A genre that
+    states no key must yield None, not a default: see `key_anchor_for`.
+    """
+    m = KEY_IN_CAPTION_RE.search(caption or "")
+    if not m:
+        return None
+    return " ".join(f"{m.group(1)} {m.group(2)}".split())
+
+
+def key_anchor_for(ctx: dict):
+    """One resolution order for the plan's `key`, mirroring `bpm_anchor_for`.
+
+    Blueprint first (`key_anchor`, else `key`): a genre may pin its key as a
+    deliberate decision rather than a caption fact. Caption second. NOTHING
+    third - and that is the point of this function.
+
+    REGRESSION (card t_f65b0f4c, found while verifying the trance queue entry
+    on card t_791b48f7). The draft and instrumental paths resolved the key as
+    `args.key or "C minor"`. The scheduled CronJob passes no --key, so EVERY
+    plan the pipeline ever produced claimed "C minor" regardless of genre: four
+    live plans (chill-lounge 72, anime-ending 92, epic-orchestral-boss 150,
+    trance 138) all said C minor, and for trance that contradicts the file's own
+    caption ("hall reverb, A minor, extended club arrangement") and the queued
+    brief ("Uplifting trance at 138 BPM in A minor"). A fabricated key is not a
+    neutral default - it is a wrong answer that reads as a fact, and since card
+    t_25a6499c D2 it is also carried to the engine as `keyscale`. `bpm` was
+    fixed against the caption the same way; `key` was left behind.
+    """
+    bp = ctx["blueprint"]
+    return bp.get("key_anchor") or bp.get("key") or ctx.get("template_key")
+
+
 def is_instrumental_template(genre: str) -> bool:
     """True when the genre's own prompt template declares no vocals.
 
@@ -277,6 +329,7 @@ def context_for(genre: str) -> dict:
     bp = load_blueprint(genre)
     return {"genre": genre, "registry": entry, "template": tmpl, "blueprint": bp,
             "template_bpm": bpm_in_caption(tmpl.get("caption") or ""),
+            "template_key": key_in_caption(tmpl.get("caption") or ""),
             "instrumental": is_instrumental_template(genre)}
 
 
@@ -317,7 +370,7 @@ def load_element_index() -> dict:
             entry["craft"] = tmpl["craft"]
         bp = load_blueprint(gkey)
         for field in ("structure", "voice_notes", "rhyme", "line_length",
-                      "bpm_anchor", "mood_words", "avoid", "theme"):
+                      "bpm_anchor", "key_anchor", "mood_words", "avoid", "theme"):
             if bp.get(field):
                 entry[field] = bp[field]
         elements[gkey] = entry
@@ -809,7 +862,10 @@ def cmd_plan(args) -> int:
             "title": args.title or (ctx["blueprint"].get("title_candidates") or ["Untitled"])[0],
             "caption": ctx["template"]["caption"],
             "bpm": args.bpm or bpm_anchor_for(ctx) or 100,
-            "key": args.keyscale or args.key or "C minor",
+            # NOT `or "C minor"` (card t_f65b0f4c). The key is whatever an
+            # artifact states - an explicit request, the blueprint's key_anchor,
+            # else the genre's own caption - and null when none of them does.
+            "key": args.keyscale or args.key or key_anchor_for(ctx),
             "duration": args.duration or 180,
             "timesignature": "4",
             "language": args.language,
@@ -828,7 +884,8 @@ def cmd_plan(args) -> int:
             "title": args.title or (ctx["blueprint"].get("title_candidates") or ["Untitled"])[0],
             "caption": ctx["template"]["caption"],
             "bpm": args.bpm or bpm_anchor_for(ctx) or 100,
-            "key": args.keyscale or args.key or "C minor",
+            # NOT `or "C minor"` (card t_f65b0f4c) - see key_anchor_for().
+            "key": args.keyscale or args.key or key_anchor_for(ctx),
             "duration": args.duration or 180,
             "timesignature": "4",
             "language": args.language,
@@ -849,6 +906,13 @@ def cmd_plan(args) -> int:
             plan["bpm"] = args.bpm
         if args.keyscale or args.key:
             plan["key"] = args.keyscale or args.key
+        elif not plan.get("key"):
+            # In `ai` mode the model writes the caption it keys against, so the
+            # key it emits is its own claim about its own artifact - keep it.
+            # Only a model that omitted the field falls back, and then to an
+            # artifact (blueprint or caption), never to a default. An explicit
+            # request already won above. Card t_f65b0f4c.
+            plan["key"] = key_anchor_for(ctx)
         if args.duration:
             plan["duration"] = args.duration
         plan["instrumental"] = False
@@ -877,7 +941,7 @@ def cmd_plan(args) -> int:
         print(f"mode     : INSTRUMENTAL — no lyrics; the template declares an empty "
               f"lyrics box. The renderer's draft refusal does not apply.")
     print(f"structure: {' -> '.join(re.findall(r'^\[([^]]+)\]', plan['lyrics'], re.M))}")
-    print(f"bpm/key  : {plan.get('bpm')} BPM · {plan.get('key')} · {plan.get('timesignature')}/4")
+    print(f"bpm/key  : {plan.get('bpm')} BPM · {plan.get('key') or 'key=unknown'} · {plan.get('timesignature')}/4")
     print(f"duration : {plan.get('duration')}s   language: {plan.get('language')}")
     if problems:
         print(f"\nVALIDATION FAILED ({len(problems)}):")
@@ -910,7 +974,10 @@ def main(argv=None) -> int:
     pp.add_argument("--language", default="en")
     pp.add_argument("--title", default=None)
     pp.add_argument("--key", default=None,
-                    help="explicit key signature for the plan (e.g. 'D Phrygian')")
+                    help="explicit key signature for the plan (e.g. 'D Phrygian'); "
+                         "wins over everything. Without it the blueprint's "
+                         "key_anchor is used, else the key the genre's own caption "
+                         "states, else null - never a default (card t_f65b0f4c)")
     pp.add_argument("--keyscale", default=None,
                     help="same as --key; the name the queue schema and the engine use")
     pp.add_argument("--bpm", type=int, default=None,
