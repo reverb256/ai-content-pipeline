@@ -65,6 +65,22 @@
 #      nothing else notices when a clone, a `git config --unset` or a lost exec
 #      bit disarms it. It exits 6, so a disarmed fence is never read as a gate,
 #      panel, render-log or media defect.
+#   2f. CHECK THE SHARED-TREE STALE-WRITE GUARD (card t_8dadd6cb): the fence
+#      above judges the SCOPE of a commit and cannot see CONTENT, so it allows
+#      the commit that dropped a shipped hunk — measured, commit edeef61 named
+#      its paths (private index, fence ALLOW) and lost section 13 of
+#      music/gates/check_gate_suite.sh that 9082ce3 had shipped, re-landed as
+#      a31deb2. music/scripts/check_stale_write.py --staged refuses a whole-file
+#      write whose content is OLDER than the branch's own bytes for that path,
+#      naming the commit and the card that own the dropped bytes; it is armed in
+#      .githooks/pre-commit and .githooks/pre-push. This leg is the detector for
+#      two states a hook cannot report on its own: the guard DISARMED, and a
+#      stale write that LANDED anyway (a rebase/cherry-pick/stash bypasses
+#      pre-commit, and an override can bypass it deliberately). It reads
+#      COMMITS, not the working tree, so a sibling mid-edit cannot move its
+#      verdict — the residual leg 2e cannot say for itself. It exits 7, so a
+#      stale write is never read as a gate, panel, render-log, media or fence
+#      defect.
 #   3. RECORD one summary line in performance/music-gate-matrix.log and a
 #      machine-readable performance/music-gate-matrix.status.json. Those are the
 #      files music-weekly-digest.service reads, so the result reaches the weekly
@@ -110,6 +126,12 @@
 #                               = run it). For a host with no ~/mining-k8s checkout, where
 #                               the fence's copy cannot be measured - never to silence a
 #                               fence that has been disarmed.
+#   STALE_WRITE_CHECKS          "0" = skip the shared-tree stale-write phase (default 1
+#                               = run it). For a checkout with no history to audit -
+#                               never to silence a guard that has been disarmed or a
+#                               stale write that landed.
+#   STALE_WRITE_WINDOW          how far back the stale-write audit reads (default
+#                               "24 hours ago"; any `git log --since` date works).
 set -uo pipefail
 
 REPO="${GATE_MATRIX_REPO:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
@@ -283,6 +305,63 @@ if [ "${COMMIT_FENCE_CHECKS:-1}" != "0" ]; then
   fi
 fi
 
+# --- 2f. the shared-tree stale-write guard (card t_8dadd6cb) -----------------
+# The fence in 2e judges the SCOPE of a commit (which paths its index carries).
+# It cannot judge CONTENT, so on 2026-10-16 it allowed the commit that dropped a
+# shipped hunk: edeef61 named its paths, used a private index, and lost section 13
+# of music/gates/check_gate_suite.sh that 9082ce3 had shipped (re-landed as
+# a31deb2). That is a stale whole-file write - a card read the file, edited it,
+# and wrote it back whole after a sibling had committed to it.
+#
+# music/scripts/check_stale_write.py refuses that write: it names the origin
+# commit and the card whose bytes the change drops, and it accepts a DECLARED
+# drop ("Stale-write-dropped: <sha>" in the commit message). It is armed in
+# .githooks/pre-commit (--staged) and .githooks/pre-push (--push).
+#
+# This leg is the detector for the two states a hook cannot report on its own:
+#   * the guard is DISARMED (a hook is file state plus one local config key, and
+#     neither travels with the tree), and
+#   * a stale write LANDED anyway - `git rebase`, `git cherry-pick` and
+#     `git stash pop` do not run pre-commit, and an override can bypass it.
+# It reads COMMITS (`git rev-list`), never the working tree, so a sibling card
+# mid-edit cannot move its verdict. That is deliberate: leg 2e's own doc records
+# that reading the live tree made the same drill green at 18:21 and red at 18:24
+# while another card had 122 uncommitted lines in play.
+unset stale_verdict
+stale_rc=0
+if [ "${STALE_WRITE_CHECKS:-1}" != "0" ]; then
+  window="${STALE_WRITE_WINDOW:-24 hours ago}"
+  since="$(git -C "$REPO" rev-list -1 --before="$window" HEAD 2>/dev/null || true)"
+  if [ -z "$since" ]; then
+    since="$(git -C "$REPO" rev-list --max-parents=0 HEAD 2>/dev/null | tail -1 || true)"
+  fi
+  {
+    echo
+    echo "---- the shared-tree stale-write guard is armed (card t_8dadd6cb) ----"
+    "$PY" "$REPO/music/scripts/check_stale_write.py" --armed --repo "$REPO" --skip-selftest
+  } >> "$OUT" 2>&1
+  stale_armed_rc=$?
+  {
+    echo
+    echo "---- stale writes among the commits landed in the window ----"
+    echo "     window: everything since $window (base ${since:-none})"
+    "$PY" "$REPO/music/scripts/check_stale_write.py" --since "${since:-HEAD}" \
+      --repo "$REPO"
+  } >> "$OUT" 2>&1
+  stale_audit_rc=$?
+  stale_rc=0
+  [ "$stale_armed_rc" -eq 0 ] || stale_rc="$stale_armed_rc"
+  [ "$stale_audit_rc" -eq 0 ] || stale_rc="$stale_audit_rc"
+  say "$TS - stale-write guard: armed_rc=$stale_armed_rc audit_rc=$stale_audit_rc (window: $window)"
+  stale_verdict="$(tail -n 1 "$OUT" 2>/dev/null || echo '(no stale-write output)')"
+  # rc=1 is a stale write that landed in the window (someone bypassed the guard,
+  # or the guard was disarmed while it happened); rc=3 is a guard that is not
+  # armed. Both are reported: an unanswerable check is not a pass.
+  if [ "$stale_rc" -ne 0 ] && [ "$rc" -eq 0 ]; then
+    rc=7
+  fi
+fi
+
 DURATION=$(( $(date +%s) - START ))
 passed="$(grep -cE '^PASS ' "$OUT" || true)"
 expected="$(grep -cE '^FAILS ' "$OUT" || true)"
@@ -302,6 +381,7 @@ case "$rc" in
   4) state="RENDER LOG: the log is not in step with the delivered renders ($ledger_fails render-log check(s) failed) — the gates and the panel are not implicated" ;;
   5) state="MEDIA: the campaign record names media the repo does not hold ($media_fails media check(s) failed) - the gates, the panel and the render log are not implicated" ;;
   6) state="FENCE: the shared-tree commit fence is not armed ($(printf '%s' "$fence_verdict" | cut -c1-120)) - the gates, the panel, the render log and the media corpus are not implicated" ;;
+  7) state="STALE WRITE: the shared-tree guard is disarmed, or a stale write landed ($(printf '%s' "$stale_verdict" | cut -c1-120)) - the gates, the panel, the render log, the media corpus and the fence are not implicated" ;;
   *) state="ERROR: unexpected exit $rc" ;;
 esac
 
@@ -310,7 +390,7 @@ say "$TS — gate matrix: rc=$rc $state pass=$passed expected_failures=$expected
 if [ "$rc" -ne 0 ]; then
   {
     echo "--- failing checks (run $TS, rc=$rc); full output: $OUT"
-    grep -E '^(BAD|FATAL|FAIL (check_panel_membership|probe_judges|check_render_ledger|check_commit_fence))' -A 2 "$OUT" | head -60
+    grep -E '^(BAD|FATAL|REFUSE|FAIL (check_panel_membership|probe_judges|check_render_ledger|check_commit_fence))' -A 2 "$OUT" | head -60
   } | tee -a "$LOG"
 fi
 
@@ -340,6 +420,8 @@ cat > "$STATUS" <<JSON
   "ledger_verdict": "$(j "${ledger_verdict:-(not run)}")",
   "fence_rc": ${fence_rc:-0},
   "fence_verdict": "$(j "${fence_verdict:-(not run)}")",
+  "stale_write_rc": ${stale_rc:-0},
+  "stale_write_verdict": "$(j "${stale_verdict:-(not run)}")",
   "duration_s": $DURATION,
   "drill": $([ "$DRILL" = "1" ] && echo true || echo false),
   "output_file": "$OUT",
@@ -366,7 +448,7 @@ wired \`music/gates/check_gate_suite.sh\` into \`music-gate-matrix.timer\`
 Failing checks:
 
 \`\`\`
-$(grep -E '^(BAD|FATAL|FAIL (check_panel_membership|probe_judges|check_render_ledger|check_media_corpus_tracked|check_commit_fence))' -A 2 "$OUT" | head -60)
+$(grep -E '^(BAD|FATAL|REFUSE|FAIL (check_panel_membership|probe_judges|check_render_ledger|check_media_corpus_tracked|check_commit_fence))' -A 2 "$OUT" | head -60)
 \`\`\`
 
 Reproduce: \`bash music/gates/check_gate_suite.sh\` must exit 0 with
@@ -399,6 +481,19 @@ source of record over the mining-k8s copy
 (\`cp music/scripts/git_commit_fence.sh ~/mining-k8s/scripts/git_commit_fence.sh\`).
 Reproduce: \`/usr/bin/python3 music/scripts/check_commit_fence_armed.py\` must exit 0;
 \`bash music/scripts/test_git_commit_fence.sh\` must print 15 PASS lines.
+For rc=7 (the shared-tree stale-write guard, not a gate failure): a card wrote a
+WHOLE file from a snapshot it read earlier, so commits landed that put back bytes
+older than the branch's own — commit edeef61 dropped section 13 of
+\`music/gates/check_gate_suite.sh\` that 9082ce3 had shipped (re-landed as
+a31deb2). Two states produce rc=7: the guard is not armed, or a stale write
+landed in the window (a rebase/cherry-pick/stash does not run pre-commit, and an
+override can bypass it on purpose). Re-arm it: \`git config core.hooksPath
+.githooks\` and \`chmod +x .githooks/pre-commit .githooks/pre-push\`. Each landed
+stale write is named in the log with the origin commit and its card; a DELIBERATE
+drop is declared in the commit message with \`Stale-write-dropped: <sha>\`, which
+the audit reads as declared rather than as a stale write. Reproduce:
+\`/usr/bin/python3 music/scripts/check_stale_write.py --armed\` must exit 0 and
+\`bash music/scripts/test_check_stale_write.py\` must print 37 PASS lines.
 
 Fix the gate (or its fixture) or re-point the judges, do not weaken the check.
 BODY

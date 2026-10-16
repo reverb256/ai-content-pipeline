@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# pre-push — the PUBLISH-time arm of the shared-tree stale-write guard
+# (kanban t_8dadd6cb). This file is ONLY a dispatcher; the decision lives in
+# music/scripts/check_stale_write.py --push, and the reasoning, evidence and
+# escape hatches are in music/docs/STALE-WRITE.md.
+#
+# Why a second arm when .githooks/pre-commit already runs the same rule:
+#
+#   * BOTH recorded incidents crossed THIS boundary. The harm in each was that
+#     the regression reached origin/main: 9082ce3 added section 13 of
+#     music/gates/check_gate_suite.sh, edeef61 dropped it, and a31deb2 had to
+#     re-land it (measured with `git show <rev>:<path> | grep -c`).
+#   * `git rebase`, `git cherry-pick` and `git stash pop` do NOT run pre-commit,
+#     so a stale copy can enter history without the commit-time arm seeing it.
+#     Its own doc (music/docs/SHARED-TREE.md, "Known residuals") lists that gap
+#     for the fence; this arm closes it for the content rule.
+#
+# The refs git hands a pre-push hook on stdin are the commits being PUBLISHED
+# (<local ref> <local sha> <remote ref> <remote sha>), so this checks exactly
+# what leaves the host — never the live working tree.
+#
+# Input:  git's ref lines on stdin (do not read stdin yourself before this).
+# Exit:   0 publish | 1 refuse (exit 1 on a push aborts the push) | 3 cannot measure.
+set -uo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+guard="$root/music/scripts/check_stale_write.py"
+if [ ! -f "$guard" ]; then
+  echo "check_stale_write: NOTE no guard at music/scripts/check_stale_write.py — the commits being pushed were not measured (check_stale_write.py --armed is the detector for that)." >&2
+  exit 0
+fi
+
+py=""
+for cand in "${PY:-}" /usr/bin/python3 python3; do
+  [ -n "$cand" ] || continue
+  if command -v "$cand" >/dev/null 2>&1; then py="$cand"; break; fi
+done
+if [ -z "$py" ]; then
+  echo "check_stale_write: NOTE no usable python3 — the commits being pushed were not measured (run_gate_matrix.sh leg 2f is the detector for that)." >&2
+  exit 0
+fi
+
+# The ref lines must be buffered first: the guard reads them from stdin, and a
+# push with several refs must be judged as a whole.
+refs="$(cat)"
+printf '%s\n' "$refs" | "$py" "$guard" --push
+rc=$?
+if [ "$rc" -eq 1 ]; then
+  echo "check_stale_write: REFUSED this push — the commits above are not published." >&2
+fi
+exit "$rc"
