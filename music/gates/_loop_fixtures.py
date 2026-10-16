@@ -5,6 +5,11 @@ loop_seamless.wav — 220 Hz, 5 s loop region => 1100 whole
 periods => clean wrap (junction curvature ~1.6x).
 loop_broken.wav  — 220.5 Hz in the loop region => half-period
 phase slip per loop => click at the wrap (~6.0x).
+loop_faded.wav   — 220 Hz with a 1.6 s fade-out at the end. The
+fade is SMOOTH, so the curvature ruler cannot see it (measured
+2.21x with the loop points below, under the 3.0x ceiling), while
+its last 1 s sits 8.8 dB below its first 1 s. Card t_bab8aa19:
+the level ruler is the only one that refuses it.
 """
 
 import math
@@ -15,6 +20,7 @@ import wave
 SR = 44100
 DUR = 10.0
 N = int(SR * DUR)
+FADE_S = 1.6          # the fade in loop_faded.wav (card t_bab8aa19's B)
 
 
 def write_wav(path, gen):
@@ -39,7 +45,15 @@ def main(argv):
         return math.sin(2 * math.pi * freq * t)
 
     write_wav(f"{out_dir}/loop_broken.wav", broken)
-    print("built loop_seamless.wav + loop_broken.wav")
+
+    def faded(t):
+        # A linear fade over the last FADE_S seconds: no kink at the wrap,
+        # 8.8 dB down across the last second (card t_bab8aa19).
+        amp = max(0.0, min(1.0, (DUR - t) / FADE_S))
+        return amp * math.sin(2 * math.pi * 220 * t)
+
+    write_wav(f"{out_dir}/loop_faded.wav", faded)
+    print("built loop_seamless.wav + loop_broken.wav + loop_faded.wav")
 
 
 if __name__ == "__main__":
