@@ -15,6 +15,7 @@ exists. Where a claim is a plan and not yet a fact, the text says so.
 | First written (WIP backup branch) | `3882292` on `wip/atlas-backup-20261014` | 2026-10-14 |
 | Restored into `main` (ops card t_75aacf8b) | `5a01157` | 2026-10-16 14:12 |
 | Audited against live files and rewritten (card t_b0a4db92) | see `git log -1 -- <this file>` | 2026-10-16 |
+| Declaration re-measured after the `music-producer` SOUL fix (card t_e2375c5a) | see `git log -1 -- <this file>` | 2026-10-16 16:15 |
 
 **Two checkouts hold this repo. They have diverged. Read this before you trust a path.**
 
@@ -27,6 +28,13 @@ Consequences you must know:
 
 - `music/mix/master.py`, `music/suno-gen.py`, `music/packages/` and `music/tests/` exist
   on zephyr and NOT on nexus. They arrive on nexus with the 15 upstream commits.
+  - **Re-measured 2026-10-16 16:15 (card t_e2375c5a):** `music/suno-gen.py` (42,652 B)
+    and `music/assets/pack.py` are now tracked in the nexus `main` as well, so those two
+    are on BOTH hosts. Still absent on nexus: `music/mix/`, `music/lanes/`,
+    `music/publish/` — all three present on zephyr (`lanes/` and `publish/` as untracked
+    working files there). The guard for the whole class is
+    `music/scripts/check_soul_declarations.py`: it fails when the `music-producer` SOUL
+    declares a `music/...` path that is absent on this host and carries no marker.
 - The loudness ruler is already EBU R128 on zephyr and still volumedetect on nexus. See
   §5.1. Never push the nexus copy of `music/gates/` over the zephyr copy.
 - The systemd units run the nexus tree (`ExecStart=/…/ai-content-pipeline/…`). A fix that
@@ -372,7 +380,7 @@ Paths verified on both hosts unless the row says otherwise.
 | Video render | `videobot`, `music/visuals/*.mp4` shape templates | album / mix / loop shapes |
 | Review | `reviewer-deepseek` + panel | `music/rubrics/*.json`, `music/rubrics/measure.py` |
 | Audio mix/master | `scripts/audio/storyteller.py` | `music/mix/master.py` (zephyr only, as of 2026-10-16) |
-| Suno generation | — | `music/suno-gen.py` (zephyr only, as of 2026-10-16) |
+| Suno generation | — | `music/suno-gen.py` (both hosts — tracked on nexus from 2026-10-16; re-measured 16:15, t_e2375c5a) |
 | GPU jobs | zephyr/host GPU scheduling | not wired into the music lane |
 | Human review surface | content.lan (music section, card t_98c95aad) | — |
 
@@ -386,7 +394,8 @@ Two rows of the 2026-10-08 draft were wrong. Corrected above:
 ## 9. Build order (2026-10-08 plan) — current state
 
 1. **Registries + quota ledger** — done. 14 genres, 10 lanes, ledger live.
-2. **Suno CDP generator** — `music/suno-gen.py` exists on zephyr only.
+2. **Suno CDP generator** — `music/suno-gen.py` exists on both hosts (tracked in the
+   nexus `main` from 2026-10-16; re-measured 16:15, card t_e2375c5a).
 3. **Gates** — done. 10 gates, suite green.
 4. **Board + driver wiring** — wired. Live dispatch is gated on card `t_2eaa39ba` (§4.1).
 5. **Genre templates** — done. 14 prompt templates, 14 visual styles.
