@@ -45,6 +45,12 @@
 > the revision that still cited the blank line 54 of `music/oracle.py`. The `WEIGHTS` dict moved to
 > line 75 when `oracle.py` grew its stage-marker block, so that citation opened on a blank line.
 > Both references are corrected in place (§15); nothing else in this file changed.
+> **Verified (tool-fix pass, `t_88879c37`):** 2026-10-16T17:52-05:00 (CDT) — see §17. §9's tool
+> defect is closed: `music/scripts/loop_seam_check.py` now derives its curvature verdict from the
+> delegated gate's own seam line instead of the gate's exit status, its `--selftest` is green, and
+> the selftest runs in the scheduled gate matrix. Supersedes the revision that still quoted the
+> broken report, `sha256 fc1855c861a9c6411db202a7429ea087181304f62397f21484beddaac46f56ea` (86079 B,
+> 1179 lines).
 
 ## 1. Genre resolution (live, not transcribed)
 
@@ -608,13 +614,14 @@ itself silence is no evidence of continuity — the boundary is 0.6 s (6.2 dB), 
 **The standalone second measurement (added 2026-10-16 by `t_42a01e18`, §13):**
 `music/scripts/loop_seam_check.py` runs BOTH rulers — it delegates the curvature check to the
 real gate and adds the rubric's tail/head level comparison — and PASSes only when both agree.
-**Re-measured by this pass: the tool now mis-reports the curvature column, and its own
-selftest is red** (card `t_88879c37`). It takes the delegated gate's *exit status* as the
-curvature verdict, and since the fold that status is a two-ruler answer — so a level-only
-failure is printed as a curvature failure:
+**CLOSED 2026-10-16 by `t_88879c37` (§17): the tool's curvature column and its `--selftest` are
+fixed, and the selftest now runs on a schedule.** The defect the `t_97494e6a` pass measured was
+attribution, not measurement: the tool read the delegated gate's *exit status* as the curvature
+verdict, and since the `t_bab8aa19` fold that status is a three-ruler answer — so a level-only
+failure was printed as a curvature failure. As found (§14 row 14):
 
 ```
-$ /usr/bin/python3 music/scripts/loop_seam_check.py \
+$ /usr/bin/python3 music/scripts/loop_seam_check.py \        ← BEFORE the fix (defect)
     --master …/t_6f0d261e/loop/faded.wav --loop-points …/t_6f0d261e/loop/lp.json
 FAIL loop_seam_check
   master   : …/t_6f0d261e/loop/faded.wav
@@ -625,23 +632,53 @@ FAIL loop_seam_check
     the rubric's `loop_safety` reject (fade-out on a game-loop claim)
 rc=1
 
-$ /usr/bin/python3 music/scripts/loop_seam_check.py --selftest
-artifact                curvature         level (tail vs head)  verdict
-A_seamless             PASS 1.57x   PASS 0.0 dB (-3.0 vs -3.0)     PASS
-B_faded                FAIL 2.21x  FAIL 8.9 dB (-11.9 vs -3.0)     FAIL      ← should read PASS 2.21x
-C_phaseslip            FAIL 5.99x   PASS 0.0 dB (-3.0 vs -3.0)     FAIL
-D_truncated           FAIL 34.01x   PASS 0.0 dB (-3.0 vs -3.0)     FAIL
-
+$ /usr/bin/python3 music/scripts/loop_seam_check.py --selftest     ← BEFORE the fix (defect)
+B_faded                FAIL 2.21x  FAIL 8.9 dB (-11.9 vs -3.0)     FAIL
 FAIL loop_seam_check --selftest: documented behaviour did NOT reproduce:
   - B_faded: curvature ruler measured FAIL, documented PASS (2.21)
 rc=1
 ```
 
+The fix reads the curvature verdict off the gate's own `seam : curvature ratio <x>x (max
+<y>x)` line — both numbers from that line, so the tool keeps no copy of the ceiling — leaves
+the level column its own measurement, and prints a gate refusal the two rulers do not name as
+its own `gate :` block. One ruler's failure can no longer speak for another, and no gate
+refusal is dropped from the verdict. Re-measured after the fix (this pass, same artifacts):
+
+```
+$ /usr/bin/python3 music/scripts/loop_seam_check.py \        ← AFTER the fix
+    --master …/t_6f0d261e/loop/faded.wav --loop-points …/t_6f0d261e/loop/lp.json
+FAIL loop_seam_check
+  master   : …/t_6f0d261e/loop/faded.wav
+  loop     : [0.000s -> 25.600s]
+  curvature: PASS 2.21x (the gate's own seam line, max 3.0x) — no click at the wrap
+  gate     : FAIL — the delegated gate_loop_points refused (exit 1); its own reasons:
+    - loop level drops 8.8 dB across the wrap: tail-1.0s -29.9 dB vs head-1.0s -21.1 dB (max 6.0 dB) — a fade or level ramp at the loop end; the loop is NOT seamless
+    - the loop end ramps 8.5 dB toward silence inside its last 1.0s: first half -27.5 dB vs second half -36.0 dB (max 6.0 dB) — a fade-out shorter than the level window, which the level ruler cannot see; the loop is NOT seamless
+  level    : FAIL tail-1s -29.9 dB vs head-1s -21.1 dB (delta 8.8 dB, max 6.0)
+    the rubric's `loop_safety` reject (a fade-out or level ramp on a game-loop claim)
+rc=1
+
+$ /usr/bin/python3 music/scripts/loop_seam_check.py --selftest     ← AFTER the fix, rc=0
+artifact                curvature         level (tail vs head)  verdict
+A_seamless             PASS 1.57x   PASS 0.0 dB (-3.0 vs -3.0)     PASS
+B_faded                PASS 2.21x  FAIL 8.9 dB (-11.9 vs -3.0)     FAIL
+C_phaseslip            FAIL 5.99x   PASS 0.0 dB (-3.0 vs -3.0)     FAIL
+D_truncated           FAIL 34.01x   PASS 0.0 dB (-3.0 vs -3.0)     FAIL
+
+SELFTEST PASS loop_seam_check: A both rulers PASS; B curvature PASS / level FAIL (the fade is caught); C and D curvature FAIL
+```
+
 So the correct reading of `loop/faded.wav` today is: **curvature PASS 2.21×, level FAIL Δ 8.8 dB,
-verdict FAIL** — and the §9 table above is the authority for that, not the tool's curvature
-column. The tool's finding still reproduces; only its report is wrong. That defect is
-`t_88879c37`, and it matters because the defect shipped from *this* file's first pass
-(`456d525`) and nothing ran the selftest.
+verdict FAIL** — the tool and the §9 table now agree, and the tool's `gate :` block names the
+gate's own two refusals (its level ruler and its end-ramp guard). The selftest is no longer a
+hand-run: it is section 8b of `music/gates/check_gate_suite.sh`, which
+`music/scripts/run_gate_matrix.sh` runs daily from the enabled `music-gate-matrix.timer` (§17),
+so a future ruler change reds the matrix instead of going unnoticed. That section also locks
+the tool's own no-false-pass property with the 1.0 s fade: both of the tool's rulers PASS that
+artifact while the gate's end-ramp guard refuses it, and the tool must report the refusal.
+The defect mattered because it shipped from *this* file's first pass (`456d525`) and nothing
+ran the selftest.
 
 The selftest builds its own four fixtures at a given `--bpm`/`--bars`, so the finding is
 reproducible from the repo alone, without the probe directories under any card's workspace.
@@ -915,7 +952,7 @@ the reproducible one.
 | 11 | (same) | Master rendered: `/var/lib/music-plans/elemental-fire-emberfall.flac`, **120.000 s**, 48 kHz stereo, `sha256 013339ab…`, `.rendered` marker; **not** in `music/quota-ledger.json` (card `t_d6b0cb36`) | CORRECTED (§8) |
 | 12 | "the master loop is 120.0 s (75 bars)… tiles exactly 5×" | Delivered loop is **4 bars / 6.400 s** (PASSes both rulers); 4 does not tile 600 s (93.75); the 120 s master ends in **4.787 s of digital silence** (`115.196687 .. 119.983688`). Card `t_b75ccb4a` owns the decision | CORRECTED (§2, §4) |
 | 13 | §9's headline: `gate_loop_points` PASSES a broken loop | **FIXED** (fold, `t_bab8aa19`/`ae05548`): `loop/faded.wav` now FAILs — curvature 2.21× under the ceiling, level Δ 8.8 dB over it; `loop2/B_faded` Δ 8.9 dB; A still PASSes, C 5.99× / D 34.01× still FAIL | CORRECTED (§9) |
-| 14 | `loop_seam_check.py` prints `curvature: PASS 2.21x` and `SELFTEST PASS` | It now prints `curvature: FAIL 2.21x` (it inherits the delegated gate's two-ruler exit status) and `--selftest` is **red, rc=1**: "B_faded: curvature ruler measured FAIL, documented PASS (2.21)". Its finding is still right; its report is not. **New card `t_88879c37`** | NEW DEFECT (§9) |
+| 14 | `loop_seam_check.py` prints `curvature: PASS 2.21x` and `SELFTEST PASS` | At this pass: `curvature: FAIL 2.21x` (it inherited the delegated gate's three-ruler exit status) and `--selftest` was **red, rc=1**: "B_faded: curvature ruler measured FAIL, documented PASS (2.21)". Its finding was still right; its report was not. **Card `t_88879c37` — CLOSED by the tool-fix pass: `curvature: PASS 2.21x`, `SELFTEST PASS`, rc=0 (§17)** | FIXED (§9, §17) |
 | 15 | The `loop2/` table's per-render numbers | They reproduce — but only with loop points that match each artifact. `loop2/lp.json` is pinned to `25.59886621315193` (D_truncated's length), and running A/B/C through the gate with it reports `34.01x / 3.04x / 34.57x` — a verdict about the loop points, not the audio | CORRECTED (§9, caveat added) |
 | 16 | Rubric panel: "5 criteria… weights 3/3/3/1/1" | **4 criteria apply**: `battle_energy` 3, `loop_safety` 3, `asset_packaging` 1, `loudness_target` 1 (sum 8), via `panel.applicable_criteria()`; the file's other two are scoped elsewhere; `rubric_scope_defects()` → none | CORRECTED (§9, §10, §12) |
 | 17 | `gate_loudness` measures `volumedetect` mean_volume, "known ruler defect" | It does — and that dialect is deliberate (`gate_loudness.py:14–18`); `t_9546841b` is `done`. On the delivered master: **PASS, −13.10 dB, +0.90 dB deviation** | CORRECTED (§10, §12) |
@@ -1177,3 +1214,45 @@ cards on 2026-10-16 and sits in a directory ~8 concurrent workers write; every w
 path-scoped commit and a lock retry. `music/scripts/run_gate_matrix.sh` and
 `music/gates/check_gate_suite.sh` were being edited by sibling cards during this pass, so this
 decision touched neither.
+
+---
+
+## 17. The loop-seam tool fix — `t_88879c37`, 2026-10-16T17:52 CDT
+
+§9's tool defect (§14 row 14) is closed. The tool measured correctly; it REPORTED wrongly: it
+read the delegated `gate_loop_points` run's exit status as its curvature verdict, and that gate
+now runs three rulers, so a level-only refusal was printed as `curvature: FAIL 2.21x` for a loop
+under the 3.0× ceiling — with the gate's level-fix line printed as curvature evidence.
+
+| What changed | Where | Why |
+|---|---|---|
+| The curvature verdict comes from the gate's own `seam : curvature ratio <x>x (max <y>x)` line — the ratio AND the ceiling | `music/scripts/loop_seam_check.py`, `curvature_ruler` | The gate's exit status is a three-ruler answer; a tool that names two rulers must not let one speak for the other. A gate that prints no seam line, or one this tool cannot read, is FAIL (unverified) — never a pass |
+| A gate refusal the two rulers do not name is printed as its own `gate :` block with the gate's own problem lines, and it fails the verdict | same, `check` + the FAIL report | The tool's own rulers are blind to the gate's end-ramp guard and its −50 dB silence floor (card `t_8297d2c6`). Without this the fix would trade a mis-attributed failure for a false PASS: on the suite's 1.0 s fade fixture both of the tool's rulers PASS it while the gate refuses it |
+| `--selftest` is green: A both PASS, B curvature PASS 2.21× + level FAIL 8.9 dB, C 5.99× / D 34.01× curvature FAIL | same | The documented expectation was correct and was NOT edited to match the broken output |
+| The selftest runs in the acceptance matrix, plus three cases on the tool's own report (faded → curvature PASS + level FAIL, and the 1.0 s fade → the gate block) | `music/gates/check_gate_suite.sh` §8b (the pack section is now §8c) | FAILURE → TEST: nothing ran the selftest, so it rotted silently for a whole pass and this brief ended up quoting the rot |
+
+### Measured evidence (live, nexus, 2026-10-16, same artifacts the finding used)
+
+`loop_seam_check.py --selftest` → **rc=0**, `SELFTEST PASS loop_seam_check` (table in §9) ·
+`loop_seam_check.py --master …/t_6f0d261e/loop/faded.wav --loop-points …/lp.json` → **rc=1**,
+`curvature: PASS 2.21x (the gate's own seam line, max 3.0x)`, `level: FAIL … delta 8.8 dB`, plus
+the `gate :` block naming the gate's own two refusals · the seamless twin `loop/seamless.wav` →
+**rc=0** with `gate : PASS` · `bash music/gates/check_gate_suite.sh` → **rc=0**,
+`OK: every gate passed its good artifact and failed its broken one`, the four new lines reading
+`PASS` / `FAILS … as expected` · `python3 -m unittest music.tests.test_loop_close` → OK, 15 tests
+· `check_gate_matrix_scheduled.py` → PASS (one scheduler entry, `music-gate-matrix.timer`
+**enabled**, next run 06:20 CDT, last run rc=0).
+
+### Handoff
+
+`music/scripts/loop_seam_check.py` (the fix), `music/gates/check_gate_suite.sh` §8b (the guard,
+run daily by `music/scripts/run_gate_matrix.sh` from the enabled `music-gate-matrix.timer`), and
+this file (§9 in place, §14 row 14, §17) are the change. **No new card was filed** — the
+acceptance the `t_97494e6a` pass wrote is met and now guarded. The residual the tool still
+cannot see is unchanged and owned elsewhere: the gate's end-ramp guard is blind below a 0.5 s
+fade (card `t_8297d2c6`).
+
+hotspot: `music/scripts/loop_seam_check.py` — one caller in the repo, cited by this file's
+§9/§13/§14/§17; `music/gates/check_gate_suite.sh` was clean when this pass opened it (sibling
+cards had been editing it earlier) and this pass added section 8b without touching anything
+else in it.

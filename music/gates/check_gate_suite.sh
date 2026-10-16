@@ -513,7 +513,53 @@ fail_reason "a loop silent at both ends fails on the silence floor" 1 \
   --scratch "$SCRATCH/loop_scratch"
 
 # ------------------------------------------------------------------
-# 8b. asset packs — gate_sync_ready pack mode + gate_loop_points sweep
+# 8b. the standalone loop-seam report (cards t_97494e6a, t_88879c37)
+# ------------------------------------------------------------------
+# `music/scripts/loop_seam_check.py` delegates its curvature ruler to
+# gate_loop_points and used to read the DELEGATED RUN'S EXIT STATUS as the curvature
+# verdict. That gate now runs THREE rulers, so a level-only refusal was printed as a
+# CURVATURE failure: measured 2026-10-16 on a 2.21x loop (UNDER the 3.0x ceiling) the
+# tool printed `curvature: FAIL 2.21x` and printed the gate's level-fix line as
+# curvature evidence. Its own --selftest — the finding written down as an executable
+# expectation — went red and STAYED red, because nothing ran it. That is the same
+# shape as this suite's reason to exist (t_b16b9046): a check with no runner rots
+# silently, and a brief ends up quoting the rot.
+#
+# These cases are what makes the fix a check rather than a claim:
+#   * the selftest runs HERE, and its documented expectation is NOT edited to match a
+#     broken tool — A both rulers PASS; B curvature PASS 2.21x / level FAIL 8.9 dB
+#     (the fade is still caught); C and D curvature FAIL. A future ruler change that
+#     moves any of those is RED here, not in a brief.
+#   * on the faded fixture the tool's report must say the curvature ruler PASSes and
+#     the LEVEL ruler is the one refusing (before the fix: `curvature: FAIL 2.21x`).
+#   * the 1.0s fade is the false-pass guard on the tool itself: both of the tool's own
+#     rulers PASS it (curvature 2.21x, level 4.7 dB) while the gate's end-ramp guard
+#     refuses it — so the tool must report the gate's refusal instead of a pass. A
+#     tool that agrees to a false pass is worse than the defect it was written for.
+say "loop_seam_check (cards t_97494e6a, t_88879c37)"
+pass "loop_seam_check --selftest: A both PASS, B curvature PASS 2.21x + level FAIL 8.9 dB, C/D curvature FAIL" \
+  "$PY" "$REPO/music/scripts/loop_seam_check.py" --selftest
+fail_reason "loop_seam_check on a faded loop: the CURVATURE ruler says PASS (2.21x is under the ceiling)" 1 \
+  "curvature: PASS" \
+  "$PY" "$REPO/music/scripts/loop_seam_check.py" \
+  --master "$FADED_LOOP/master.wav" \
+  --loop-points "$FADED_LOOP/loop_points.json" \
+  --scratch "$SCRATCH/loop_scratch"
+fail_reason "loop_seam_check on a faded loop: the LEVEL ruler is the one that refuses it" 1 \
+  "level    : FAIL" \
+  "$PY" "$REPO/music/scripts/loop_seam_check.py" \
+  --master "$FADED_LOOP/master.wav" \
+  --loop-points "$FADED_LOOP/loop_points.json" \
+  --scratch "$SCRATCH/loop_scratch"
+fail_reason "loop_seam_check never outvotes the gate: a 1.0s fade passes both its rulers, the gate's end ramp refuses it" 1 \
+  "gate     : FAIL" \
+  "$PY" "$REPO/music/scripts/loop_seam_check.py" \
+  --master "$FADED_SHORT_LOOP/master.wav" \
+  --loop-points "$FADED_SHORT_LOOP/loop_points.json" \
+  --scratch "$SCRATCH/loop_scratch"
+
+# ------------------------------------------------------------------
+# 8c. asset packs — gate_sync_ready pack mode + gate_loop_points sweep
 #     (card t_5ed495eb: the generator's own output must pass the gate it is
 #      built for, every loop must be seam-checked, and the pack shape must
 #      NOT weaken the per-track shape the sync lane still requires)

@@ -31,10 +31,29 @@ RULERS
 2. level     — |mean_volume(last 1 s) - mean_volume(first 1 s)| must be <= --tolerance-db
                (default 6.0 dB, the rubric's "~6 dB"), measured with ffmpeg volumedetect.
 
+DERIVING the curvature verdict (card t_88879c37)
+------------------------------------------------
+The delegated gate runs THREE rulers (curvature, the tail/head level ruler, and the
+end-ramp/silence guard) and returns 1 when ANY of them fails, so ITS EXIT STATUS IS NOT A
+CURVATURE VERDICT. Until this fix this tool read it as one and printed
+`curvature: FAIL 2.21x` for a loop whose ratio is UNDER the 3.0x ceiling (measured on
+…/workspaces/t_6f0d261e/loop/faded.wav) — the gate had refused for its LEVEL, and the
+gate's level fix line was printed as curvature evidence.
+
+The curvature verdict is now read off the gate's OWN curvature line,
+`seam : curvature ratio <x>x (max <y>x)`, which the gate prints on PASS and on FAIL. Both
+numbers come from that line — the ratio under test AND the ceiling the gate applied — so
+this tool keeps no copy of the ceiling. A gate that refused before it measured the seam
+(out-of-range loop points, a span under the floor, a silent region), or a gate whose report
+this tool can no longer read, leaves the seam UNVERIFIED — which is a FAIL, never a pass.
+
 VERDICT
 -------
-PASS only when BOTH rulers pass. Exit 0 = verified seamless by both; 1 = at least one ruler
-reports a break (reasons on stderr); 2 = usage error.
+PASS only when BOTH rulers pass AND the delegated gate itself exits 0. Exit 0 = verified
+seamless by both; 1 = at least one ruler reports a break; 2 = usage error. Reasons go to
+stderr, each under the ruler that measured it: a gate refusal the two rulers above do not
+name is printed as its own `gate :` block with the gate's own problem lines, so one ruler's
+failure never speaks for another and no gate refusal is ever dropped from the verdict.
 
 Usage:
   python3 music/scripts/loop_seam_check.py --master loop.wav --loop-points lp.json
@@ -72,7 +91,11 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parent.parent
 GATE = REPO / "music" / "gates" / "gate_loop_points.py"
 MEAN_RE = re.compile(r"mean_volume:\s*(-?[\d.]+)\s*dB")
-RATIO_RE = re.compile(r"curvature ratio ([\d.]+)x")
+# The delegated gate's OWN curvature line, printed on PASS and on FAIL. Both numbers are
+# read from it: the ratio under test and the ceiling the gate applied (card t_88879c37).
+SEAM_RE = re.compile(r"seam\s*:\s*curvature ratio\s*([\d.]+)x\s*\(max\s*([\d.]+)x\)")
+# The gate's refusal lines (`  - <problem>`), printed by its fail().
+GATE_PROBLEM_RE = re.compile(r"^ {2}- (.*)$")
 DEFAULT_TOLERANCE_DB = 6.0
 
 
@@ -111,14 +134,42 @@ def mean_volume_db(master: Path, start: float, dur: float = 1.0) -> float | None
 
 
 def curvature_ruler(master: Path, loop_points: Path, scratch: Path) -> dict:
-    """Delegate to the real gate. Do not re-implement it."""
+    """Delegate to the real gate. Do not re-implement it.
+
+    The delegated gate runs THREE rulers and returns 1 when ANY of them fails, so its
+    exit status is NOT a curvature verdict (card t_88879c37). Read the curvature verdict
+    off the gate's own `seam : curvature ratio <x>x (max <y>x)` line, which it prints on
+    PASS and on FAIL — that line carries both the measured ratio and the ceiling.
+
+    No readable seam line means the seam was NOT verified: either the gate refused before
+    it measured one (loop points out of range, a span under the floor, a silent region)
+    or its report changed shape. That is a FAIL, never a pass — a tool that cannot read
+    its own evidence must not report success.
+    """
     proc = run([sys.executable, str(GATE), "--master", str(master),
                 "--loop-points", str(loop_points), "--scratch", str(scratch)])
     out = proc.stdout + proc.stderr
-    m = RATIO_RE.search(out)
-    return {"verdict": "PASS" if proc.returncode == 0 else "FAIL",
-            "ratio": float(m.group(1)) if m else None,
-            "rc": proc.returncode, "output": out.strip()}
+    problems = [m.group(1) for m in
+                (GATE_PROBLEM_RE.match(ln) for ln in out.splitlines()) if m]
+    res = {"verdict": "FAIL", "ratio": None, "ratio_max": None,
+           "rc": proc.returncode, "problems": problems, "why": None,
+           "output": out.strip()}
+    if proc.returncode != 0 and "FAIL gate_loop_points" not in out:
+        res["why"] = (f"the delegated gate exited {proc.returncode} without its own "
+                      "report — the gate could not run")
+        return res
+    m = SEAM_RE.search(out)
+    if m is None:
+        res["why"] = ("the gate printed no 'seam : curvature ratio <x>x (max <y>x)' "
+                      "line, so no curvature was measured"
+                      if proc.returncode != 0
+                      else "the gate exited 0 but printed no seam line")
+        return res
+    # The gate's own two numbers. Its exit status is deliberately NOT consulted here.
+    res["ratio"] = float(m.group(1))
+    res["ratio_max"] = float(m.group(2))
+    res["verdict"] = "PASS" if res["ratio"] <= res["ratio_max"] else "FAIL"
+    return res
 
 
 def level_ruler(master: Path, loop_start: float, loop_end: float,
@@ -149,9 +200,18 @@ def check(master: Path, loop_points: Path, scratch: Path | None,
     sc.mkdir(parents=True, exist_ok=True)
     curv = curvature_ruler(master, loop_points, sc)
     lvl = level_ruler(master, loop_start, loop_end, tolerance_db)
-    verdict = "PASS" if curv["verdict"] == "PASS" and lvl["verdict"] == "PASS" else "FAIL"
+    # The delegated gate's refusal, when the curvature ruler did not itself measure the
+    # break: the gate also runs an end-ramp and a silence guard this tool does not
+    # re-implement, so a PASS here must not silently outvote the gate that measured
+    # something this tool cannot see (card t_88879c37 — "a loop that passes only one
+    # ruler is not verified" cuts both ways).
+    gate = {"rc": curv["rc"], "problems": curv["problems"],
+            "unattributed_refusal": curv["rc"] != 0
+            and (curv["verdict"] == "PASS" or curv["ratio"] is None)}
+    verdict = ("PASS" if curv["verdict"] == "PASS" and lvl["verdict"] == "PASS"
+               and curv["rc"] == 0 else "FAIL")
     return {"master": str(master.resolve()), "loop": [loop_start, loop_end],
-            "curvature": curv, "level": lvl, "verdict": verdict}
+            "curvature": curv, "level": lvl, "gate": gate, "verdict": verdict}
 
 
 # ── selftest: build the four documented artifacts and assert the behaviour ──
@@ -295,28 +355,53 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(res, indent=2))
         return 0 if res["verdict"] == "PASS" else 1
     c, l = res["curvature"], res["level"]
+    g = res["gate"]
     if res["verdict"] == "PASS":
         print("PASS loop_seam_check")
         print(f"  master   : {res['master']}")
         print(f"  loop     : [{res['loop'][0]:.3f}s -> {res['loop'][1]:.3f}s]")
-        print(f"  curvature: {c['ratio']:.2f}x — no click at the wrap")
+        print(f"  curvature: PASS {c['ratio']:.2f}x (the gate's own seam line, max "
+              f"{c['ratio_max']:.1f}x) — no click at the wrap")
         print(f"  level    : {l['reason']} — no fade at the wrap")
+        print(f"  gate     : PASS — the delegated gate_loop_points ran all its rulers "
+              f"and exited 0")
         return 0
     print("FAIL loop_seam_check", file=sys.stderr)
     print(f"  master   : {res['master']}", file=sys.stderr)
+    print(f"  loop     : [{res['loop'][0]:.3f}s -> {res['loop'][1]:.3f}s]",
+          file=sys.stderr)
+    # The curvature line carries the curvature RULER's verdict, derived from the gate's
+    # own seam line — never from the gate's exit status (card t_88879c37).
     ok_c = c["verdict"] == "PASS"
     ratio = f"{c['ratio']:.2f}x" if c["ratio"] is not None else "no ratio"
-    print(f"  curvature: {c['verdict']} {ratio}"
-          + (" — no click at the wrap" if ok_c else ""), file=sys.stderr)
-    if not ok_c:
+    if ok_c:
+        print(f"  curvature: PASS {ratio} (the gate's own seam line, max "
+              f"{c['ratio_max']:.1f}x) — no click at the wrap", file=sys.stderr)
+    elif c["ratio"] is None:
+        print(f"  curvature: FAIL — {c['why']}", file=sys.stderr)
+    else:
+        print(f"  curvature: FAIL {ratio} (max {c['ratio_max']:.1f}x)",
+              file=sys.stderr)
+        # The curvature ruler's own evidence: the gate's seam line, its click problem,
+        # and the fix IT printed for a click. Nothing else belongs under this ruler.
         for line in c["output"].splitlines():
-            if "curvature" in line.lower() or "fix:" in line.lower():
-                print(f"    {line.strip()}", file=sys.stderr)
+            s = line.strip()
+            if SEAM_RE.search(line) or s.startswith("- seam curvature") \
+                    or s.startswith("fix:"):
+                print(f"    {s}", file=sys.stderr)
+    # The delegated gate's refusal, when the curvature ruler did not measure the break.
+    # The gate's own problem lines are printed verbatim so a refusal is never dropped and
+    # never re-attributed to a ruler that did not make it.
+    if g["unattributed_refusal"]:
+        print(f"  gate     : FAIL — the delegated gate_loop_points refused (exit "
+              f"{g['rc']}); its own reasons:", file=sys.stderr)
+        for p in g["problems"]:
+            print(f"    - {p}", file=sys.stderr)
     ok_l = l["verdict"] == "PASS"
     print(f"  level    : {l['verdict']} {l['reason']}", file=sys.stderr)
     if not ok_l:
-        print("    the rubric's `loop_safety` reject (fade-out on a game-loop claim) — "
-              "this is the break gate_loop_points cannot see", file=sys.stderr)
+        print("    the rubric's `loop_safety` reject (a fade-out or level ramp on a "
+              "game-loop claim)", file=sys.stderr)
     return 1
 
 
