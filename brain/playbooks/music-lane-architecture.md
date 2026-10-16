@@ -439,6 +439,19 @@ PASS gate_quota
 
 A 55/60 reading is a warning. 58 is a hard stop: route the export through Studio, or halt.
 
+The ledger's `renders:` list is a second thing, and its own `_renders_note` calls it "the
+pipeline's only durable render log". It is EVIDENCE, not a counter: a local ACE render
+consumes 0 downloads, 0 studio exports and 0 credits, and the counters above are unchanged
+by an entry in it. Every render the rail certifies belongs in it — a `.rendered` marker the
+rail reads as finished must have one entry named by the plan stem — and NOTHING checked that
+until 2026-10-16, when the list held one entry while eight markers certified a delivered
+render (card `t_d6b0cb36`). `music/scripts/check_render_ledger.py` is now both the check
+(`--check`, exit 1 for a delivered render the log does not carry) and the recorder
+(`--record --stem <stem>` / `--backfill`, derived from live state and keyed on `name`, so it
+cannot double-record). The rail cannot write the file: its payload is a readOnly ConfigMap
+and the ledger lives in this repo. Section 2c of `music/scripts/run_gate_matrix.sh` runs the
+check daily on nexus and exits 4 when the log is out of step.
+
 ---
 
 ## 7. Human gates (j_kro's desk — never dispatched to a bot)
@@ -472,10 +485,10 @@ Paths verified on both hosts unless the row says otherwise.
 | Board + stage driver | `scripts/automation/pipeline-driver.sh` (board-parameterized, cap 1), `scripts/automation/advance-stage.sh` | `music/stages.yaml`, `music` board |
 | Gate framework | `music/gates/check_gate_suite.sh` (10-gate matrix) | 10 music gates |
 | Registry + validation | — | `music/registry.py`, `music/genres.yaml`, `music/lanes.yaml` |
-| Quota tracking | — | `music/quota-ledger.json`, `gate_quota` |
+| Quota tracking | — | `music/quota-ledger.json`, `gate_quota`, `music/scripts/check_render_ledger.py` (the `renders:` log; section 2c of the gate-matrix runner) |
 | Oracle / card source | — | `music/oracle.py`, `music/scheduler/music-oracle.timer` (daily 08:00, nexus) |
 | Scheduler units | — | `music/scheduler/music-{oracle,policy-watch,pipeline-driver,weekly-digest}.{service,timer}` |
-| Lane checks (drift guards) | — | `music/scripts/check_*.py` (stage scripts, stage advance, scheduler units, gate↔lane surface, brief figures, brief drift, brief line refs, oracle determinism, prompt style counts, panel membership) |
+| Lane checks (drift guards) | — | `music/scripts/check_*.py` (stage scripts, stage advance, scheduler units, gate↔lane surface, brief figures, brief drift, brief line refs, oracle determinism, prompt style counts, panel membership, render ledger) |
 | Lyrics | `writer` profile | `music/lyrics/`, `music/prompts/*` |
 | Video render | `videobot`, `music/visuals/*.mp4` shape templates | album / mix / loop shapes |
 | Review | `reviewer` + `reviewer-nemotron` + `reviewer-deepseek` (three families, panel) | `music/rubrics/*.json`, `music/rubrics/measure.py`, `music/rubrics/panel.py`; reachability guarded by `music/scripts/check_panel_membership.py` (offline) and `music/rubrics/probe_judges.py` (live), both in the scheduled gate-matrix run (`t_3d84acfe`) |

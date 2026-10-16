@@ -79,6 +79,39 @@
 # the job key, not the plan stem; reachable through the task's `audio_url`) and
 # zephyr's ~/Music/acestep/suno-<...>.flac (ComfyUI's own output directory).
 #
+# RENDER LOG CONTRACT (added 2026-10-16 t_d6b0cb36)
+# -----------------------------------------
+# `music/quota-ledger.json` is the pipeline's only durable render log — its own
+# `_renders_note` says so — and its `renders:` list is EVIDENCE, not a counter
+# (a local ACE render consumes 0 downloads, 0 studio exports, 0 credits; the
+# counters above are what `gate_quota` reads).
+#
+# EVERY DELIVERED RENDER IS IN IT. A marker the rail reads as a finished render
+# (render_state.py: an empty `<stem>.rendered`, or `rendered <plan-sha> <utc>`)
+# must have exactly ONE entry in that list, named by the plan stem:
+#
+#   python3 music/scripts/check_render_ledger.py --check \
+#       --plans /var/lib/music-plans --ledger music/quota-ledger.json
+#                                     # rc 0 in step, 1 a delivered render is
+#                                     # NOT in the log, 3 the check cannot answer
+#
+# THE RAIL CANNOT WRITE THIS FILE, so do not expect it to: the render pod mounts
+# its payload readOnly from the chart's ConfigMap and its only writable volume is
+# the plans hostPath, while the ledger is a file in THIS repo (music/oracle.py
+# reads it) — `grep -rn quota-ledger ~/mining-k8s` finds nothing. The recorder
+# derives an entry from LIVE state (the plan, the master at the documented render
+# path, the engine artifact store, the sunolocal job store) and cannot
+# double-record, because it is keyed on `name`:
+#
+#   python3 music/scripts/check_render_ledger.py --record --stem <plan-stem> \
+#       [--card t_xxxxxxxx] [--note "<evidence the recorder cannot measure>"]
+#   python3 music/scripts/check_render_ledger.py --backfill
+#
+# NEVER write an entry for a `.refused` marker: a refusal is a draft waiting on a
+# human, not a delivered render. The scheduled home of the check is section 2c of
+# music/scripts/run_gate_matrix.sh (daily, nexus), which exits 4 for a log that is
+# out of step so it is never read as a broken gate.
+#
 # DERIVED PRODUCT CONTRACT (added 2026-10-16 t_eb079b91)
 # -----------------------------------------
 # The `asset-pack` stage builds the DERIVED product of a finished master for the

@@ -722,6 +722,53 @@ pass "planner: every genre plans + the duration rail admits 16 s and refuses 15 
   "$PY" "$REPO/music/tests/test_planner.py"
 
 # ------------------------------------------------------------------
+# 15. the render log (card t_d6b0cb36)
+# ------------------------------------------------------------------
+# `music/quota-ledger.json` says of its own `renders:` list that it is "the
+# pipeline's only durable render log". Measured on nexus 2026-10-16 that log held
+# ONE entry while EIGHT `.rendered` markers certified a delivered render: seven
+# delivered masters (chill-lounge-slow-gold, commentary-beds-lo-fi-jazz-bed,
+# commentary-beds-lo-fi-jazz-sting, elemental-earth-chamber-loop,
+# elemental-fire-emberfall, final-round,
+# sentimental-piano-room-with-the-light-going) were absent while
+# /var/lib/sunolocal/artifacts/ held every one of them. The music existed; the LOG
+# was short, because nothing kept the two in step - and nothing could: the render
+# pod mounts its payload readOnly from the chart's ConfigMap and its only writable
+# volume is the plans hostPath, the ledger is a file in THIS repo (read by
+# music/oracle.py:load_quota), and `grep -rn quota-ledger ~/mining-k8s` finds
+# nothing. So the answer is a check, not an auto-write (card t_d6b0cb36, decision
+# 1), and these cases are what makes it one:
+#   * a delivered render with no ledger entry must be RED, and the message must
+#     name the command that fixes it;
+#   * a `refused` marker needs NO entry - "Do NOT write a ledger entry for a
+#     `refused` marker: those are drafts waiting on a human";
+#   * a plan outside the genre registry (the rail's own smoke plan is genre
+#     `test`) is a NOTE, not a RED;
+#   * --record must derive the entry from live state and RE-RUNNING IT MUST NOT
+#     DOUBLE-RECORD (the card's own condition), while leaving every quota counter
+#     untouched;
+#   * the check must be green after --record, and a replaced master must be a
+#     NOTE rather than a silent pass;
+#   * a ledger the check cannot read, and a plans directory that is not there,
+#     must both be NON-ZERO (rc 3): "no markers" is not "in step".
+# The live half (the real /var/lib/music-plans against the real ledger) is NOT
+# run here, deliberately: this suite is the fixture-based acceptance matrix, and
+# a live assertion inside it would report a drifted log as a BROKEN gate. That
+# half is section 2c of music/scripts/run_gate_matrix.sh, where it exits 4 and is
+# therefore never read as a gate defect either.
+say "the render log (music/scripts/check_render_ledger.py, card t_d6b0cb36)"
+pass "render ledger selftest: no entry is RED, a refusal needs none, --record cannot double-record" \
+  "$PY" "$REPO/music/scripts/check_render_ledger.py" --selftest
+fail_reason "the render ledger check is rc 3, not a pass, when the ledger will not read" 3 \
+  "FAIL check_render_ledger" \
+  "$PY" "$REPO/music/scripts/check_render_ledger.py" --check --plans "$SCRATCH" \
+  --ledger "$SCRATCH/no-such-ledger.json"
+fail_reason "an absent plans dir is rc 3, not a pass ('no markers' is not 'in step')" 3 \
+  "FAIL check_render_ledger" \
+  "$PY" "$REPO/music/scripts/check_render_ledger.py" --check \
+  --plans "$SCRATCH/no-such-plans" --ledger "$REPO/music/quota-ledger.json"
+
+# ------------------------------------------------------------------
 # 16. the planner carries a HUMAN SHEET into the plan (card t_e69368ff)
 # ------------------------------------------------------------------
 # `--lyrics-mode draft` writes a SCAFFOLD (the tags plus the template's craft

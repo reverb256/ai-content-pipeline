@@ -30,6 +30,20 @@
 #      EVERY asset, and that state used to be invisible — the panel runs only
 #      when a human runs it. A panel failure exits 3, so it is never read as a
 #      gate defect.
+#   2c. CHECK THE RENDER LOG (card t_d6b0cb36): music/quota-ledger.json is "the
+#      pipeline's only durable render log" in its own words, and it held ONE
+#      entry while EIGHT `.rendered` markers certified a delivered render — seven
+#      delivered masters (chill-lounge-slow-gold, commentary-beds-lo-fi-jazz-
+#      bed/-sting, elemental-earth-chamber-loop, elemental-fire-emberfall,
+#      final-round, sentimental-piano-room-with-the-light-going) were absent
+#      while /var/lib/sunolocal/artifacts/ held every one of them. The music
+#      existed; the LOG was short, because nothing kept the two in step: the
+#      render pod cannot write this file (its payload is a readOnly ConfigMap and
+#      the ledger is a file in this repo — `grep -rn quota-ledger ~/mining-k8s`
+#      finds nothing), so every card that queued a genre had to remember to append
+#      an entry by hand. music/scripts/check_render_ledger.py is the missing
+#      step, and this is its scheduled home. It exits 4, so a log that is out of
+#      step is never read as a gate defect.
 #   3. RECORD one summary line in performance/music-gate-matrix.log and a
 #      machine-readable performance/music-gate-matrix.status.json. Those are the
 #      files music-weekly-digest.service reads, so the result reaches the weekly
@@ -58,6 +72,16 @@
 #                               For deliberate fault injection only — a drill must not
 #                               fire a synthetic alert or park a fake card on the board.
 #   PANEL_CHECKS                "0" = skip the panel judge phase (default 1 = run it).
+#   RENDER_PLANS_DIR            the render rail's own plans directory, where the
+#                               `.rendered` markers live (default /var/lib/music-plans).
+#                               The leg runs unconditionally: when the directory is not
+#                               there the check exits 3 and the leg FAILS, because a
+#                               directory that cannot be read is not a log that is in step.
+#   RENDER_LEDGER               the render log to check against
+#                               (default $REPO/music/quota-ledger.json)
+#   RENDER_LOG_CHECKS           "0" = skip the render-log phase (default 1 = run it).
+#                               For a host that has no render rail at all — never to
+#                               silence a red one.
 set -uo pipefail
 
 REPO="${GATE_MATRIX_REPO:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
@@ -132,6 +156,38 @@ if [ "${PANEL_CHECKS:-1}" != "0" ]; then
   fi
 fi
 
+# --- 2c. the render log (card t_d6b0cb36) -----------------------------------
+# gate_quota reads this file's COUNTERS. Nothing read its `renders:` list, which
+# its own `_renders_note` calls "the pipeline's only durable render log": measured
+# 2026-10-16 it held ONE entry while EIGHT `.rendered` markers certified a
+# delivered render, so seven delivered masters were absent from the log while
+# /var/lib/sunolocal/artifacts/ held every one of them. The rail cannot write the
+# file (a readOnly ConfigMap payload and a ledger in THIS repo), so the log went
+# short every time a card forgot the hand-written step. This is the missing
+# detector — the same shape as the panel leg above, and distinct from a gate
+# failure for the same reason: a log that is out of step must never be read as a
+# broken gate.
+unset ledger_verdict
+ledger_rc=0
+if [ "${RENDER_LOG_CHECKS:-1}" != "0" ]; then
+  {
+    echo
+    echo "---- the render log (markers vs the ledger's renders: list, card t_d6b0cb36) ----"
+    "$PY" "$REPO/music/scripts/check_render_ledger.py" --check \
+      --plans "${RENDER_PLANS_DIR:-/var/lib/music-plans}" \
+      --ledger "${RENDER_LEDGER:-$REPO/music/quota-ledger.json}"
+  } >> "$OUT" 2>&1 || ledger_rc=$?
+  say "$TS — render log: rc=$ledger_rc (markers vs the ledger; section in $OUT)"
+  ledger_verdict="$(tail -n 1 "$OUT" 2>/dev/null || echo '(no render log output)')"
+  # rc=1 is the incident this card is about: a delivered render the log does not
+  # carry. rc=3 says the leg could not answer at all (no plans directory, an
+  # unreadable ledger) — reported the same way, because an unanswerable check is
+  # not a pass.
+  if [ "$ledger_rc" -ne 0 ] && [ "$rc" -eq 0 ]; then
+    rc=4
+  fi
+fi
+
 DURATION=$(( $(date +%s) - START ))
 
 passed="$(grep -cE '^PASS ' "$OUT" || true)"
@@ -139,6 +195,7 @@ expected="$(grep -cE '^FAILS ' "$OUT" || true)"
 bad="$(grep -cE '^BAD ' "$OUT" || true)"
 fatal="$(grep -cE '^FATAL' "$OUT" || true)"
 panel_fails="$(grep -cE '^FAIL (check_panel_membership|probe_judges)' "$OUT" || true)"
+ledger_fails="$(grep -cE '^FAIL check_render_ledger' "$OUT" || true)"
 interp="$(grep -m1 '^interpreter: ' "$OUT" 2>/dev/null | sed 's/^interpreter: //' || true)"
 verdict="$suite_verdict"
 
@@ -147,15 +204,16 @@ case "$rc" in
   1) state="BROKEN: $bad check(s) misbehaved" ;;
   2) state="REFUSED: the suite would not run" ;;
   3) state="PANEL: the reviewer panel cannot run ($panel_fails panel check(s) failed) — the gates themselves are not implicated" ;;
+  4) state="RENDER LOG: the log is not in step with the delivered renders ($ledger_fails render-log check(s) failed) — the gates and the panel are not implicated" ;;
   *) state="ERROR: unexpected exit $rc" ;;
 esac
 
-say "$TS — gate matrix: rc=$rc $state pass=$passed expected_failures=$expected misbehaved=$bad fatal=$fatal panel_fails=$panel_fails interpreter=${interp:-$PY} duration=${DURATION}s${DRILL:+ drill=$DRILL}"
+say "$TS — gate matrix: rc=$rc $state pass=$passed expected_failures=$expected misbehaved=$bad fatal=$fatal panel_fails=$panel_fails ledger_rc=$ledger_rc ledger_fails=$ledger_fails interpreter=${interp:-$PY} duration=${DURATION}s${DRILL:+ drill=$DRILL}"
 
 if [ "$rc" -ne 0 ]; then
   {
     echo "--- failing checks (run $TS, rc=$rc); full output: $OUT"
-    grep -E '^(BAD|FATAL|FAIL (check_panel_membership|probe_judges))' -A 2 "$OUT" | head -60
+    grep -E '^(BAD|FATAL|FAIL (check_panel_membership|probe_judges|check_render_ledger))' -A 2 "$OUT" | head -60
   } | tee -a "$LOG"
 fi
 
@@ -180,6 +238,9 @@ cat > "$STATUS" <<JSON
   "panel_rc": ${panel_rc:-0},
   "panel_fails": ${panel_fails:-0},
   "panel_verdict": "$(j "${panel_verdict:-(not run)}")",
+  "ledger_rc": ${ledger_rc:-0},
+  "ledger_fails": ${ledger_fails:-0},
+  "ledger_verdict": "$(j "${ledger_verdict:-(not run)}")",
   "duration_s": $DURATION,
   "drill": $([ "$DRILL" = "1" ] && echo true || echo false),
   "output_file": "$OUT",
@@ -199,14 +260,14 @@ wired \`music/gates/check_gate_suite.sh\` into \`music-gate-matrix.timer\`
 - run: $TS (rc=$rc, $state)
 - runner: \`music/scripts/run_gate_matrix.sh\` on $REPO @ $head_sha
 - interpreter: ${interp:-$PY}
-- counts: pass=$passed expected_failures=$expected misbehaved=$bad fatal=$fatal panel_fails=$panel_fails
+- counts: pass=$passed expected_failures=$expected misbehaved=$bad fatal=$fatal panel_fails=$panel_fails ledger_rc=$ledger_rc ledger_fails=$ledger_fails
 - full suite output: \`$OUT\`
 - run log: \`$LOG\`
 
 Failing checks:
 
 \`\`\`
-$(grep -E '^(BAD|FATAL|FAIL (check_panel_membership|probe_judges))' -A 2 "$OUT" | head -60)
+$(grep -E '^(BAD|FATAL|FAIL (check_panel_membership|probe_judges|check_render_ledger))' -A 2 "$OUT" | head -60)
 \`\`\`
 
 Reproduce: \`bash music/gates/check_gate_suite.sh\` must exit 0 with
@@ -214,6 +275,16 @@ Reproduce: \`bash music/gates/check_gate_suite.sh\` must exit 0 with
 For rc=3 (a panel failure, not a gate failure):
 \`/usr/bin/python3 music/scripts/check_panel_membership.py\` and
 \`/usr/bin/python3 music/rubrics/probe_judges.py\` must both exit 0.
+For rc=4 (the render log, not a gate failure): a render the rail delivered has no
+entry in music/quota-ledger.json's renders: list (the RED lines name each one),
+or the leg could not read the markers at all (its exit 3). Record the delivered
+renders with
+
+    /usr/bin/python3 music/scripts/check_render_ledger.py --record --stem <stem>
+
+which derives the entry from live state, or --backfill for all of them at once;
+then --check must exit 0. Do NOT hand-write an entry, and do NOT write one for a
+.refused marker — a refusal is a draft waiting on a human.
 Fix the gate (or its fixture) or re-point the judges, do not weaken the check.
 BODY
 
