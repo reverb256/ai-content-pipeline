@@ -9,7 +9,8 @@
 > **Verified (duplicate-card pass, `t_05b640f6`):** 2026-10-16T13:40-05:00 (CDT) — see §12.
 > One claim was withdrawn (§8.4); three items were corrected (§6.1, §8.3, §8.5).
 > **Aged counts re-measured (card `t_0f7aed63`):** 2026-10-16 — see §13.
-> **Re-measured (surviving-card pass, `t_60767fb1`):** 2026-10-16 15:5x–16:2x CDT — see §14.
+> **Re-measured (surviving-card pass, `t_60767fb1`):** 2026-10-16 15:58–16:08 CDT (commit
+> `41b7b1e`) — see §14.
 > Every section the live world has moved past carries its correction inline; §14 tabulates all
 > of them against the revision that supersedes this copy.
 > **Repo:** `/home/j_kro/ai-content-pipeline` (main) — NOT `~/Projects/ai-content-pipeline`,
@@ -791,7 +792,7 @@ NOT re-run.** The surviving chain resumes at the stage after brief — `genre-se
 
 ### Every checkable claim, re-measured live
 
-| # | Section | Claimed before this pass | Measured 2026-10-16 15:5x–16:2x CDT |
+| # | Section | Claimed before this pass | Measured 2026-10-16 15:58–16:08 CDT |
 |---|---|---|---|
 | 1 | header | card `t_9cc9b48f` (7.5) owns the genre | surviving card `t_60767fb1`, true score **7.0**; digest `2e603d85…` superseded |
 | 2 | §1, §11 | the registry `defaults:` block cited at 19–25 | the block is **20–25**; line 19 is blank (`check_brief_line_refs` FAIL) — corrected |
@@ -844,11 +845,10 @@ PASS check_doc_refs: 25 section ref(s) resolve to headings in brain/playbooks/mu
 PASS gate suite: OK: every gate passed its good artifact and failed its broken one (rc=0)
 ```
 
-`check_brief_drift` did not hold still while this pass ran: at 16:05 CDT (revision `c296db6`) it
-passed on every count; at 16:25 CDT (revision `c296db6`, with other workers' uncommitted edits
-in the tree) it named `anime-opening.md:18` for a stale divergence — a concurrent worker's
-commit had aged that count in between. Same command, same revision, different world. Neither
-reading is this file's.
+`check_brief_drift` did not hold still while this pass ran: with revision `c296db6` checked out
+it passed on every count in one run, and named `anime-opening.md:18` for a stale divergence in
+the next, minutes later — a concurrent worker's commit had aged that count in between. Same
+command, same revision, different world. Neither reading is this file's.
 
 **This file is clean in both of the checks that were failing on it.** The residual failures
 live on other briefs and are not this card's work: one figure defect
@@ -865,6 +865,11 @@ has one fewer file to touch. The two `FAIL` checks exit non-zero, so no failure 
 | 2 | `fd4a7a6b…` | 690 lines / 38 897 B | `t_0f7aed63` aged-count pass |
 | 3 | `2e603d85ef4e5b3ce41c2d69b5ff1b9210828e289bb2b6c6c3ed1dda64974457` | 692 lines / 39 339 B | the copy this pass supersedes |
 | 4 | this revision | — | `t_60767fb1` surviving-card pass |
+
+Two commits carry this pass, both path-scoped to this file: `41b7b1e` (every correction above)
+and a follow-up of the same pass that condensed the pass's own time window — this file first
+said `15:5x–16:2x CDT`, which is not a measured range, and it now says `15:58–16:08 CDT`, read
+from the first measurement and the commit clock.
 
 ### Open items (reported, not created here)
 
