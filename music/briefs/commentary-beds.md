@@ -1,23 +1,34 @@
 # Brief — commentary-beds
 
-> **Stage:** brief (`music/stages.yaml`: `brief` → bot `producer`; on this board the
-> cards are assigned `music-producer` and claimed by the generic kanban dispatcher).
-> **Card:** t_47491ec0 (`music-oracle: commentary-beds (score 8.1)`)
-> **Duplicate card:** t_4187b092 (`music-oracle: commentary-beds (score 8.3)`) — same genre,
-> same lanes, created by the second oracle run ten minutes later. Both resolve to THIS
-> brief; the brief is keyed by genre, not by card.
+> **Stage:** brief (`music/stages.yaml`: `brief` → bot `producer`) — DELIVERED; the chain
+> resumes at `genre-select` (already resolved in §1–§3).
+> **Card:** t_b976f49f (`music-oracle: commentary-beds (score 8.3)`) — the surviving OPEN card
+> for this genre. The board check reports `commentary-beds → t_b976f49f [running]` and one open
+> card per genre, rc=0 (`music/scripts/check_oracle_board.py`, re-run in this pass).
+> **Superseded cards:** t_47491ec0 (score 8.1, done) wrote this brief; t_4187b092 (score 8.3,
+> done) was its duplicate, created by the second oracle run ten minutes later. Briefs in this
+> lane are keyed by **genre**, not by card, so all three cards resolve to this one file.
 > **Verified (unit-correction pass, `t_e504b516`):** 2026-10-16T15:22-05:00 (CDT) — §1 registry
 > table and §10 provenance. Both cited the prompt template's size with the unit `B`, but the
 > value they gave was that file's CHARACTER count, so the label understated the byte count.
 > Both labels are corrected in place; no other figure in this brief was touched. The 13:20
 > revision of this file is
 > `sha256 d6fbd52f800199fe501a41556835e0b582dfd82f458a4c4c4c9a8bab9139b590` (commit `9ebf6af`);
-> this pass supersedes it.
+> that pass supersedes it.
 > **Written:** 2026-10-16T13:20-05:00 (CDT)
-> **Repo:** `/home/j_kro/ai-content-pipeline` @ `ade6e87` (main; the working tree is shared
-> by 6–7 concurrent brief-stage workers and HEAD moved 4 times while this brief was written).
-> **Oracle:** 8.1/10 — quota headroom 10.0, **lane coverage 4.0**, revenue 10.0, cadence fit
-> 10.0, policy risk 10.0, trend signal 3.0. Threshold 5.0 → produce.
+> **Verification pass:** 2026-10-16T15:50-05:00 (CDT), card t_b976f49f — every checkable claim
+> below re-measured live against the worktree and the running pipeline. §12 records the oracle
+> ruling, the corrections and what changed after the brief stage.
+> **Repo:** `/home/j_kro/ai-content-pipeline` @ `4b1ba88` (main; the working tree is shared by
+> 6–7 concurrent music workers and HEAD moved many times while this brief was written).
+> **Oracle:** **true score 8.1/10** — oracle dedupe ruling 2026-10-16 (`music/oracle.py` @
+> `b2d11f7`): quota headroom 10.0, **lane coverage 4.0**, revenue potential 10.0, cadence fit
+> 10.0, policy risk 10.0, trend signal 3.0. Threshold 5.0 → produce. The card titles' 8.3 and
+> 8.1 are the two halves of the 2026-10-09 double emission; §12.1 shows which numbers are
+> reachable from the fixed scorer.
+> **Revision:** the superseded blob was
+> `7db8ea568da53bd1983bb53737680223dc72d4f862421900e299c481aeea1398` (commit `63440da`); the
+> current digest is re-readable with `sha256sum music/briefs/commentary-beds.md`.
 
 ## 1. Genre resolution (live, not transcribed)
 
@@ -25,14 +36,21 @@ Resolved from `music/genres.yaml` through the registry loader:
 
 ```
 $ /usr/bin/python3 music/registry.py validate
-registry OK: 14 genres, 10 lanes
+registry OK: 14 genres, 10 lanes, 1 stage gate rule(s)
 genres: activist, anime-ending, anime-opening, chill-lounge, chiptune-8bit,
         commentary-beds, elemental-air, elemental-earth, elemental-fire,
         elemental-water, epic-orchestral-boss, jungle-dnb, sentimental-piano, trance
 lanes: direct-fan, direct-license, game-assets, stock-ai-native, streaming,
        sync, sync-documentary, youtube-gaming, youtube-longform, youtube-mix
+stage gate visual: lane_gate -> gate_youtube_authentic (when_absent: none)
 quota ledger: period 2026-10, standard 0/60 (warn_at 55, hard_stop_at 58)
 ```
+
+That transcript is the live output of this pass (2026-10-16T15:50 CDT). It gained one line and
+one clause since the brief stage wrote it: the board now declares a stage gate rule for the
+`visual` stage, and the header count reads `1 stage gate rule(s)`. The rule reads *a genre with a
+YouTube lane gets `gate_youtube_authentic`; where the lane is absent the answer is `none`* —
+which is this genre's case (§3, last bullet): `commentary-beds` has no YouTube lane.
 
 **Interpreter trap, measured.** Plain `python3 music/registry.py validate` fails in a
 worker shell with `ModuleNotFoundError: No module named 'yaml'`: `python3` here resolves to
@@ -94,17 +112,30 @@ against an empty package directory (this is the requirement list the package sta
 satisfy):
 
 ```
-$ python3 music/gates/gate_sync_ready.py --package-dir <empty> --lane sync
+$ /usr/bin/python3 music/gates/gate_sync_ready.py --package-dir <empty> --lane sync
 FAIL gate_sync_ready
   - full_mix.wav is not a real audio file (ffprobe could not read a duration)
   - no stems/ directory — a sync track without stems is not sync-ready (architecture HARD RULE 4)
   - only 0 stem(s) found; 4 required (drums, bass, keys, vocals, ...)
   - instrumental.wav is not a real audio file (sync needs an instrumental version)
   - no manifest.json
+  - manifest.json has no metadata object
+  - manifest metadata missing 'title'
+  - manifest metadata missing 'artist'
+  - manifest metadata missing 'bpm'
+  - manifest metadata missing 'key'
+  - manifest metadata missing 'mood'
+  - manifest metadata missing 'genre'
   - no clearance_doc.pdf (or .txt) — sync requires a clearance document
   - no ai_disclosure.txt — the AI role must be declared for sync platforms
 rc=1
 ```
+
+Re-measured in this pass. The requirement list is longer than the brief stage recorded: the gate
+now also demands a `manifest.json` `metadata` object carrying `title`, `artist`, `bpm`, `key`,
+`mood` and `genre` — one finding each. `--lane direct-license` returns the same list plus a
+fifteenth finding, `direct-license lane requires license_tiers`, so the `license_tiers` bullet
+below is enforced by the gate itself, not only by this brief.
 
 Decisions locked here so no later stage re-litigates them:
 
@@ -198,14 +229,12 @@ genre rather than dispatched to videobot (see §9).
 
 ## 7. Generation path — measured on this host
 
-**The lane's own generate prompt names `music/suno-gen.py`. That file is not in this
-checkout.** It exists on `origin/main` (`music/suno-gen.py`, commits `295fc49`, `ba28f55`).
-This checkout has diverged: `git rev-list --count HEAD..origin/main` = **15** commits of this
-lane's own work missing locally, plus local brief commits that are not upstream. Already
-carded (t_8a715681, nexus-core) — flagged, not fixed: seven workers share this tree and a
-pull/rebase would auto-stash their in-flight edits.
-
-What `origin/main` contains, read from the git object (not from disk):
+**The file the lane's own generate prompt names is in this checkout now.** `music/suno-gen.py`
+is on disk (42652 B, mtime 2026-10-16T14:23) and its history is `origin/main`'s (`295fc49`,
+`ba28f55`). The divergence the brief stage recorded is closed, measured in this pass:
+`git rev-list --count HEAD..origin/main` = **0** (it read 15 when the brief was written) and
+`git rev-list --count origin/main..HEAD` = **66** at 15:52 CDT (the tree is shared by concurrent
+workers, so the ahead count moves). Read live from the working tree:
 
 - `music/suno-gen.py:141 is_instrumental_template(genre)` — the decision that lets the rail
   accept a track with no human lyric sheet. Its own docstring names the 8 instrumental
@@ -215,60 +244,107 @@ What `origin/main` contains, read from the git object (not from disk):
   genre is detected as instrumental and needs **no lyric sheet**. That is the whole reason a
   5/wk kit cadence can close.
 - `music/sunolocal/**` — the local Suno-shaped service (ACE-Step + YuE2 adapters); the live
-  render engine is the in-cluster `sunolocal` deployment.
+  render engine is the in-cluster `sunolocal` deployment (`localhost/sunolocal:v0.1.3`, engine
+  `ace`).
 
-**Two render gaps that bite this genre** (both already carded on t_25a6499c, nexus-core —
-cited here so the stages after this one do not rediscover them):
+**The two render gaps the brief stage recorded are CLOSED** (card `t_25a6499c`: `mining-k8s`
+`a80ab4e` + this repo `52ae620`, engine `localhost/sunolocal:v0.1.3`):
 
-1. **Instrumental tracks cannot be expressed in the planner queue.** `mining-k8s`
-   `values.yaml` brief schema is `{name, genre, brief, lyricsMode?, language?, title?,
-   duration?}` and `planner.py --lyrics-mode` accepts only `draft|ai`. For an instrumental
-   genre both are wrong: `draft` produces a scaffold `acestep_plan.py` refuses (exit 1,
-   `.refused` marker), `ai` writes lyrics for a track that must have none. An
-   `instrumental` mode is required before this kit can render. (Measured on the
-   sentimental-piano card: `/var/lib/music-plans/smoke-chill-lounge.rendered` and
-   `testplan.rendered` both contain `refused`.)
-2. **Tempo.** The deployed `sunolocal/translate.py` hardcodes `bpm = 120`. For most of the 8
-   instrumental genres that is wrong (sentimental-piano anchors 72), but for
-   **commentary-beds 120 BPM is exactly the product spec** — the hardcode is accidentally
-   correct here and must not be "fixed" into a different value for this genre. The local
-   planner, by contrast, falls back to `bpm = 100` when
-   `music/lyrics/blueprints/<genre>.yaml` is absent (`music/planner/planner.py` ~line 470,
-   `"blueprint": false`), and only 6 of the 14 genres have a blueprint (`activist`,
-   `anime-ending`, `anime-opening`, `chill-lounge`, `epic-orchestral-boss`, `trance`). **Acceptance for this genre: the plan's `bpm` field must read
-   120, never 100.** At 100 BPM a bar is 2.40 s and every bar-aligned cutdown in the kit is
-   wrong.
+1. **Instrumental tracks are expressible in the planner queue now.** The schema gained
+   `lyricsMode: instrumental` (or the boolean `instrumental: true` — either spelling, same
+   effect) and `planner.py --lyrics-mode` accepts it. An instrumental plan declares itself with
+   its own `instrumental: true` field. Measured on this genre's own plan (§8):
+   `"instrumental": true`, `"_meta": {"lyrics_mode": "instrumental"}`, no `.refused` marker.
+   `draft` is still refused on purpose; it is not a workaround for this genre.
+2. **Tempo travels with the queue entry.** `bpm` and `keyscale` are optional entry fields,
+   passed to the planner as `--bpm`/`--keyscale` and carried to the engine, so the 100-fallback
+   for a genre with no blueprint does not apply once the entry states the tempo. Measured on
+   this genre's own plan: `"bpm": 120`, `"key": "C minor"`, `"_meta": {"blueprint": false}` —
+   **the acceptance is met: the plan reads 120, not 100.** At 100 BPM a bar would be 2.40 s and
+   every bar-aligned cutdown in the kit would be wrong. The deployed engine used to hardcode
+   `bpm = 120`; nothing in this brief now depends on that hardcode, because the tempo travels
+   with the entry — and the rendered durations confirm the tempo was honoured: 16.000000 s and
+   32.000000 s are exactly 8 and 16 bars at 2.00 s (§8).
+
+**Two rail walls found while this kit rendered** (card `t_640cc2a1` — cited so the stages after
+this one do not rediscover them):
+
+1. **The planner's floor refuses the 16 s sting.** `music/planner/planner.py:103`
+   `MIN_DURATION_S = 30` (ceiling `MAX_DURATION_S = 600`), so the sting plans with
+   `VALIDATION FAILED (1): duration 16s outside 30-600s` and that pod exits 1. The engine has no
+   such floor: the 16 s render completed and measures 16.000000 s (§8). Carded `t_96dfc521`. The
+   entry keeps its spec length — do not raise the sting to 30 s to dodge the planner.
+2. **The planner reads the FIRST style field, and this template carries two.**
+   `music/planner/planner.py:135` takes the first `## Style field` fenced block;
+   `music/prompts/commentary-beds.md` declares INTRO STING (line 7) before LOOPABLE TALK BED
+   (line 13). So BOTH kit plans carry the sting caption, byte-identical — measured in this pass
+   on `/var/lib/music-plans/commentary-beds-lo-fi-jazz-sting.json` and
+   `...-bed.json`: the two `caption` values are the same string. The 32 s artifact is therefore
+   the sting at 32 s, not the anti-melody bed that §2 defines. Carded `t_3497b627` (fix +
+   re-plan + re-render). Do not ship the current 32 s render as the talk bed.
 
 Live route into audio (in-cluster, not the kanban stage machine): ConfigMap
 `music-pipeline-briefs` → CronJob `music-pipeline` (plans via `planner.py` →
 `/var/lib/music-plans/<name>.json`) → CronJob `music-pipeline-render` (`acestep_plan.py` →
-sunolocal studio API). Chart: `/home/j_kro/mining-k8s/helm/charts/music-pipeline/`; its
-payload already carries `music/prompts/**` (including `commentary-beds.md`),
-`music/genres.yaml`, `planner.py`, `acestep_plan.py` and `lyrics/blueprints/`. `values.yaml` `briefs:` reads `[]` (line 39,
-measured 2026-10-16); sibling cards have requested the first additions for trance
-(`t_791b48f7`) and anime-ending (`t_a14e5d52`), neither applied yet.
+sunolocal studio API). Chart: `/home/j_kro/mining-k8s/helm/charts/music-pipeline/`; its payload
+carries `music/prompts/**` (including `commentary-beds.md`), `music/genres.yaml`, `planner.py`,
+`acestep_plan.py` and `lyrics/blueprints/`.
+
+**This genre's kit is already on that route.** Measured in this pass from the live ConfigMap
+(`kubectl -n mining get cm music-pipeline-briefs -o jsonpath='{.data.briefs\.json}'`): the
+`briefs` list holds **11 entries**, two of them this genre's, and the two are the pair §2
+specifies:
+
+| name | duration | bpm | keyscale | lyricsMode |
+|---|---|---|---|---|
+| `commentary-beds-lo-fi-jazz-sting` | 16 | 120 | C minor | instrumental |
+| `commentary-beds-lo-fi-jazz-bed` | 32 | 120 | C minor | instrumental |
+
+Both plans are written to `/var/lib/music-plans/` and each carries a 0-byte `.rendered` marker
+with no `.refused` marker. The list no longer reads `[]`; card `t_640cc2a1` (`mining-k8s`
+`fb03105`) filled this genre's half of it.
 
 ## 8. Existing assets for this genre
 
-Measured: **none.** `music/lyrics/` holds `activist/`, `anime-opening/`, `chill-lounge/`, `trance/` and
-`blueprints/{activist,anime-ending,anime-opening,chill-lounge,epic-orchestral-boss,trance}.yaml` — no commentary-beds sheet or blueprint
-(expected: the genre is instrumental, so there is no lyric sheet to write). No campaign
-directory, no masters, no stems, no cover exist for this genre. The first render is genuine
-work, not a re-run. Quota is untouched:
+**In `music/`: no sheet and no blueprint of this genre's own — unchanged.** `music/lyrics/` holds
+`activist/`, `anime-opening/`, `chill-lounge/`, `trance/` and a `blueprints/` directory whose
+files are listed in §11 — no commentary-beds sheet or blueprint (expected: the genre is
+instrumental, so there is no lyric sheet to write, and §7 shows the tempo no longer needs a
+blueprint). No campaign directory, no masters, no stems, no cover, nothing published.
+
+**The kit has been rendered, though.** The generate stage's first pass ran through the live
+in-cluster route (card `t_640cc2a1`, entries in §7). Measured in this pass with `ffprobe` 9.0.1
+against the engine's artifacts directly, not transcribed from the card's report:
+
+| Entry | engine job id | artifact | duration | sha256 |
+|---|---|---|---|---|
+| `commentary-beds-lo-fi-jazz-sting` | `c27fc133641540259517cb235af10207` | `/var/lib/sunolocal/artifacts/suno-c27fc133641540259517cb235af10207.flac` | **16.000000 s** | `bf8ca7f419d3ea1acef87b3e84366d1556c1de1781a75993047027317401acdd` |
+| `commentary-beds-lo-fi-jazz-bed` | `0e3fb7b2728747ce816c3e6a760c3c69` | `/var/lib/sunolocal/artifacts/suno-0e3fb7b2728747ce816c3e6a760c3c69.flac` | **32.000000 s** | `082c9c79b6764490ccfdb674bcc5d0ab5366b2429067576038508dcf8e1d0f0b` |
+
+Both are 48 kHz stereo FLAC and both land exactly on §4's bar math (8 bars and 16 bars at
+2.00 s). The 32 s artifact is **not** the talk bed, though: it carries the sting caption and
+needs the re-render `t_3497b627` owns (§7). Nothing here is a published asset — both lanes are
+rung `advisory` and publish is a j_kro gate.
+
+Quota is untouched:
 
 ```
-$ python3 music/gates/gate_quota.py
+$ /usr/bin/python3 music/gates/gate_quota.py
 PASS gate_quota
   period          : 2026-10
   standard dl used: 0/60 (warn_at=55, hard_stop_at=58)
   studio exports  : 0
 ```
 
+A local ACE render consumes no Suno quota — it is neither a download nor a Studio export — so
+the counters stay at 0.
+
 ## 9. Stage plan for this genre (skips locked)
 
 `brief` ✓ → `genre-select` → **`lyrics` SKIPPED** (instrumental: the template's empty-box
 statement is the spec; `is_instrumental_template` keys on it) → `generate` (quota gate first;
-**two** generations per kit — sting and bed separately) → `curate` (pick the winning sting and
+**two** generations per kit — sting and bed separately; this genre's first pass already ran
+through the live in-cluster route — §7, §8) → `curate` (pick the winning sting and
 bed per flavour; record a reject reason per loser) → `stems` (≥ 4, ±0.5 s, plus the distinct
 instrumental) → `master` (sync target −16 LUFS ±1; note `gate_loudness` measures ffmpeg
 `volumedetect` RMS, not gated LUFS — known ruler defect, card t_9546841b) → `gate`
@@ -289,18 +365,25 @@ carry weight 3 each) → `package` (`gate_sync_ready` per lane, `loop_points.jso
 - Rubric: `music/rubrics/utility.json` (family `utility`, genres `["commentary-beds"]`)
 - Autonomy: `music/autonomy.yaml` (both lanes `advisory`)
 - Stage contract: `music/stages.yaml` (`brief` → `producer`; advance calls added in `9c2d2d3`)
-- Upstream truth read from git objects: `origin/main:music/suno-gen.py` (`is_instrumental_template`),
-  `music/sunolocal/translate.py` (bpm hardcode, quoted from the deployed pod on t_25a6499c)
-- **Dangling reference (unchanged):** `brain/playbooks/music-lane-architecture.md` is cited as
-  "READ FIRST" by this lane's profile, `stages.yaml`, `genres.yaml`, `lanes.yaml`,
-  `autonomy.yaml`, `gates/README.md` and `gates/*.py`, but no copy exists on this machine
-  (`find /home/j_kro -name 'music-lane-architecture.md'` → no hits). Same for
-  `brain/research/music-monetization-2026.md` (`brain/research/` does not exist). Quoted
-  section numbers (§3, §5, §11.2) cannot be checked. Carded: t_b0a4db92 (coo).
-- **Not fixed here (other owners, already carded):** diverged checkout t_8a715681; scheduler
-  units running the wrong checkout t_41f354be; instrumental/in-genre render gaps t_25a6499c;
-  28 oracle cards for 14 genres t_bf0e5edd; missing architecture docs t_b0a4db92; profile
-  workdir + kanban env vars t_75aacf8b.
+- Generation-path truth read from the working tree in this pass: `music/suno-gen.py`
+  (`is_instrumental_template`, 42652 B) and the live plans in `/var/lib/music-plans/`
+  (`"bpm": 120`, `"key": "C minor"`, `"instrumental": true`)
+- **Dangling reference — corrected in this pass.** Both documents exist on this machine and are
+  tracked in `HEAD`: `brain/playbooks/music-lane-architecture.md` (34328 B, mtime
+  2026-10-16T15:31) and `brain/research/music-monetization-2026.md` (11067 B, mtime
+  2026-10-16T13:59). `find /home/j_kro -name 'music-lane-architecture.md'` now returns that
+  path. Both are still **absent from `origin/main`** (`git cat-file -e
+  origin/main:brain/playbooks/music-lane-architecture.md` → "exists on disk, but not in
+  'origin/main'"), so a fresh clone still dangles: the local-citation problem is closed, the
+  upstream one is not. Carded: t_b0a4db92 (coo).
+- **Resolved since the brief stage:** the checkout divergence (t_8a715681) — measured
+  `HEAD..origin/main` = 0 in this pass; the instrumental + in-genre render gaps (t_25a6499c);
+  the missing architecture docs (t_b0a4db92) now exist on disk (see above).
+- **Still open (other owners, already carded):** the scheduler units running the wrong checkout
+  t_41f354be; re-emitted oracle cards carrying `stage: brief` for genres whose brief is on disk
+  t_6599927d; the planner's 30 s floor t_96dfc521 and the first-style-field caption bug
+  t_3497b627; the 28-oracle-cards-for-14-genres class t_bf0e5edd; profile workdir + kanban env
+  vars t_75aacf8b.
 - **hotspot:** `music/briefs/` — six concurrent workers write this directory and commit to one
   working tree (`4daf132`, `9c2d2d3`, `132a781`, `4bb1ea6`, `ade6e87` landed inside 15
   minutes). `music/stages.yaml`, `music/oracle.py` and `scripts/automation/*` are also being
@@ -313,8 +396,117 @@ census as stale. Re-measured and corrected in place. The §1 and §10 unit label
 `t_e504b516` are untouched.
 
 - **Superseded revision of this file:** `sha256 293c7cfe781d6f90c46357e39121a83fc739724148fa581e5b09cac4b3254aac` (307 lines / 18366 B).
-- **Blueprint census, re-measured 2026-10-16 15:31 CDT:** 6 of the 14 genres carry a lyric
-  blueprint (`activist`, `anime-ending`, `anime-opening`, `chill-lounge`,
-  `epic-orchestral-boss`, `trance`); the other 8 do not. `commentary-beds` has none, so §7's
-  100-fallback blocker stands — 120 BPM is still this genre's correct plan value.
+- **Blueprint census, re-measured 2026-10-16 15:52 CDT:** 7 of the 14 genres carry a lyric
+  blueprint (`activist`, `anime-ending`, `anime-opening`, `chill-lounge`, `epic-orchestral-boss`,
+  `jungle-dnb`, `trance`); the other 7 do not. `commentary-beds` has none, and the 100-fallback
+  blocker this census once implied is gone: the queue entry states `bpm: 120` itself, so the
+  plan reads 120 with `"_meta": {"blueprint": false}` (§7.2). The original measurement of this
+  bullet, 15:31 CDT, read 6 and was correct then — `jungle-dnb.yaml` (7331 B) landed at 15:49
+  under card `t_e6d422ec`, so this count is a moving number. The class is carded `t_c5a98379`.
 - **Corrected in place:** §7 (the census sentence) and §8 (the `music/lyrics/` listing).
+
+## 12. Surviving-card pass (card `t_b976f49f`, 2026-10-16T15:50 CDT)
+
+Disposition: this card is the **surviving open card** for the genre, and the brief stage's
+artifact already exists. Briefs in this lane are keyed by **genre**, so all three
+commentary-beds cards resolve to this one file: no second brief was written, no second chain
+started. Verified live — `music/scripts/check_oracle_board.py` reports
+`commentary-beds → t_b976f49f [running]`, 12 open cards across 12 genres, one open card each,
+rc=0.
+
+### 12.1 Oracle ruling — true score 8.1, the title's 8.3 is not the live number
+
+Recomputed with the repo's own scorer (`music/oracle.py` imported as a module; `score_genre`
+called directly; `WEIGHTS` closes at 1.0):
+
+```
+quota_headroom     10.0  (w 0.25)      lane_coverage   4.0  (w 0.20)
+revenue_potential  10.0  (w 0.20)      cadence_fit    10.0  (w 0.15)
+policy_risk        10.0  (w 0.10)      trend_signal    3.0  (w 0.10)
+TOTAL 8.1
+```
+
+Every total this genre can reach by trend-fetch outcome: **8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7,
+8.8** (trend signal 3.0 → 10.0 in tenth-point steps). The title's **8.3 is reachable only at
+trend_signal 5.0** — the premium the pre-`b2d11f7` `except` branch paid to a FAILED fetch. Fixed
+in `b2d11f7`: a failed fetch and a working fetch with no results both score the no-signal floor
+3.0, so the live number is 8.1.
+`music/scripts/check_oracle_determinism.py` PASS rc=0. The ruling corrects the number, not the
+decision — threshold 5.0 → produce either way.
+
+### 12.2 Corrected in place in this pass
+
+1. **Header** — named this card as the surviving card, recorded both superseded cards, the 8.1
+   ruling and the superseded blob digest. Before this pass the header named the superseded
+   writer card as `**Card:**` and never recorded that the chain had moved past `brief`.
+2. **§1** — the registry transcript was one clause and one line short of live: it read
+   `registry OK: 14 genres, 10 lanes` where the loader prints `…, 1 stage gate rule(s)`, and it
+   lacked the `stage gate visual:` line. Block refreshed from live output.
+3. **§3** — the quoted `gate_sync_ready` failure was 7 findings; live is 14 for `--lane sync`
+   and 15 for `--lane direct-license` (the gate now also demands a `manifest.json` `metadata`
+   object carrying `title`, `artist`, `bpm`, `key`, `mood`, `genre`, and enforces
+   `license_tiers` on the direct-license lane). Transcript replaced with the measured output.
+4. **§7** — three claims were false on disk. `music/suno-gen.py` **is** in this checkout
+   (42652 B) and the divergence is closed (`git rev-list --count HEAD..origin/main` = 0, it read
+   15 when the brief was written). The two instrumental-render gaps are closed by `t_25a6499c`.
+   The queue's `briefs:` list no longer reads `[]` — it carries 11 entries, two of them this
+   genre's. The two rail walls the kit's render exposed (`t_96dfc521` duration floor,
+   `t_3497b627` first-style-field caption) are recorded there so later stages do not
+   rediscover them.
+5. **§8** — "Existing assets: none / the first render is genuine work, not a re-run" was false:
+   the kit's two renders exist and were re-measured here with `ffprobe` (16.000000 s and
+   32.000000 s, digests in the table). The `gate_quota` transcript was refreshed to the
+   `/usr/bin/python3` form.
+6. **§10** — the dangling-reference bullet was false in both directions: both `brain/` documents
+   exist on disk and in `HEAD`, and both are still absent from `origin/main`. The
+   upstream-truth bullet now names the working tree instead of git objects. The resolved/open
+   lists were re-cut.
+7. **§11** — its closing clause ("§7's 100-fallback blocker stands") was superseded by the
+   closed tempo gap.
+8. **The blueprint census** — §11's "6 of the 14" was live at 15:31 and is not live now:
+   `jungle-dnb.yaml` (7331 B) landed at 15:49 under card `t_e6d422ec`, so the census is 7 of 14.
+   §11 keeps its clock anchor and cross-references this; §12.3 carries the current number. The
+   same census shape is stale in seven other briefs — that class is card `t_c5a98379`, which
+   measured the same 13 lines.
+
+### 12.3 Re-measured, unchanged
+
+Registry entry identical: family `utility`, lanes `[direct-license, sync]`, cadence 5/wk,
+`video_shape: none`, note "82% of podcasts license stock themes". Both lanes still carry
+`gate: gate_sync_ready`, requiring `[stems, metadata, clearance_doc, instrumental_version]` and
+`[stems, license_tiers]`; both rungs still `advisory` in `music/autonomy.yaml`. Prompt template
+4159 B / 4133 chars, style fields 420 and 422 chars (INTRO STING / LOOPABLE TALK BED), Weirdness
+25 % / 20 %, Style Influence 85 % / 90 %, the same six exclusion terms. Blueprint census
+re-measured at 15:52 CDT: 7 of the 14 genres carry a lyric blueprint (`activist`,
+`anime-ending`, `anime-opening`, `chill-lounge`, `epic-orchestral-boss`, `jungle-dnb`,
+`trance`); the other 7 do not, and `commentary-beds` is one of them. It was 6 when §11 measured
+it at 15:31 — `jungle-dnb.yaml` landed at 15:49 (card `t_e6d422ec`) — so this census is a moving
+number; the class is carded as `t_c5a98379`. Rubric `music/rubrics/utility.json`
+unchanged: `pass_threshold` 7.0, five criteria, weights 3 / 3 / 2 / 2 / 1 with `voice_headroom`
+and `seamless_loop` at 3. `gate_quota` PASS 0/60, studio 0. `gate_sync_ready` re-exercised on an
+empty package dir, rc=1 both lanes. §4's bar math holds: at 120 BPM one bar is exactly 2.00 s,
+so 8 bars = 16.0 s, 16 bars = 32.0 s and 15 s = 7.5 bars (the off-grid cutdown finding).
+Throughput 5/wk × 2 generations per kit = 10 generations/week.
+
+### 12.4 Checks run on the committed content
+
+```
+PASS check_oracle_board: every one of the 12 open oracle genre(s) carries exactly one open card
+PASS check_oracle_determinism: trend fetch failure never outscores an empty success
+PASS check_brief_figures    --briefs …: 5 recomputed figure(s) across 1 brief(s)
+PASS check_brief_drift      --briefs …: 2 live count(s) across 1 brief(s)
+PASS check_brief_line_refs  --briefs …: 2 cited line range(s) resolve and hold
+PASS check_brief_bpm_solutions  --briefs …: 0 styleWeight claim(s) buy the BPM they state
+PASS check_brief_paths / check_stage_scripts / check_prompt_style_counts / check_gate_lane_surface
+PASS check_stage_advance / check_doc_refs / check_video_shapes
+```
+
+Repo-wide `check_brief_figures` still FAILs on **other** briefs (`elemental-water.md:600`,
+`epic-orchestral-boss.md:53`) — filed as `t_34f496d7` / `t_6dd13d76`, not touched here.
+
+**Supersession record.** Superseded blob
+`7db8ea568da53bd1983bb53737680223dc72d4f862421900e299c481aeea1398` (320 lines / 19360 B, commit
+`63440da`); this pass's revision is committed on `main` and its digest is re-readable with
+`sha256sum music/briefs/commentary-beds.md`. The chain resumes at the stage after `brief` —
+`genre-select`, whose resolution §1–§3 already carry. The re-emitted card's body marker
+(`stage: brief`) is the defect card `t_6599927d` owns, not a reason to re-run the brief stage.
