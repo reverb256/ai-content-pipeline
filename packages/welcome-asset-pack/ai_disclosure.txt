@@ -18,5 +18,5 @@ itch.io this pack carries the `AI-Generated` tag. See
 brain/runbooks/music-game-assets.md.
 
 LICENCE
-Multi-tier (personal / commercial / exclusive). See LICENCE.txt and
-music/licences/perpetual_game_asset_v1.txt.
+The lane's licence of record (music/licences/perpetual_game_asset_v1.txt),
+shipped verbatim as LICENCE.txt in this pack.

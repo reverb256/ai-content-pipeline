@@ -71,7 +71,9 @@ loops/  stems/     real audio (ffprobe), counts as declared, stems mutually
 (one_shots/, sfx/) time-aligned within +/-0.5 s, loops with a span >= 2 s
 clearance_doc.pdf  a real PDF (%PDF-), not a renamed text file
 ai_disclosure.txt  the AI role, for the marketplace AI-Generated tag
-LICENCE.txt        multi-tier licence with explicit use/distribution rules
+LICENCE.txt        the lane's licence of record, byte for byte
+                   (music/licences/perpetual_game_asset_v1.txt); the gate
+                   compares it and the manifest binds it by sha256
 ```
 
 Generate the pack with `python3 music/assets/pack.py <master.wav> --genre <g>`

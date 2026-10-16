@@ -9,7 +9,7 @@
 **Sample rate:** 44100 Hz
 **Bit depth:** 16-bit
 **Source track:** /home/j_kro/ai-content-pipeline/packages/welcome-asset-pack/source/welcome-reconstructed.wav
-**Created:** 2026-10-16T19:35:31.299287+00:00
+**Created:** 2026-10-16T19:51:24.452879+00:00
 
 ## Contents
 
@@ -57,5 +57,5 @@ python3 music/gates/gate_loop_points.py --pack-dir <this pack>
 - `clearance_doc.pdf` — who cleared this audio for resale.
 - `ai_disclosure.txt` — the AI role, for the marketplace AI tag
   (`brain/runbooks/music-game-assets.md`: itch.io requires `AI-Generated`).
-- `LICENCE.txt` — see music/licences/perpetual_game_asset_v1.txt — multi-tier (personal / commercial /
-  exclusive), with explicit permitted use, distribution and derivative rules.
+- `LICENCE.txt` — Perpetual Music Asset Licence (v1.0) (music/licences/perpetual_game_asset_v1.txt), shipped byte-for-byte.
+  sha256 e1dd51ae29489c15b4321b250965dc9e81110882de394ec257389a153b5ebfbd.
