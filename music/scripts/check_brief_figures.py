@@ -73,6 +73,15 @@ Usage:
                   /usr/bin/python3 music/scripts/check_brief_figures.py \\
                       --rev ade6e87 --briefs music/briefs/anime-opening.md
   --briefs PATH only check these briefs (repeatable; repo-relative).
+  --selftest    inject the incident into a throwaway repo and prove the check fails.
+
+Related checks (deliberately not duplicated here)
+-------------------------------------------------
+  * `music/scripts/check_prompt_style_counts.py` — the TEMPLATE side of this budget: a
+    `## Style field` heading's own `N/1000 chars` claim against its block. It states that
+    it checks no briefs; this script is the brief side.
+  * `music/scripts/check_stage_scripts.py`, `music/scripts/check_brief_paths.py` — do the
+    cited paths exist / resolve. This one checks the FIGURES.
 
 Run with /usr/bin/python3: the shell's bare python3 in a worker shell is the Hermes
 bundled interpreter. (This script needs no PyYAML — see t_d3b9e218 — but a uniform
@@ -444,14 +453,68 @@ def check_brief(tree: Tree, rel: str) -> tuple[list[str], int, int]:
     return failures, recomputed, skipped
 
 
+def selftest() -> int:
+    """Prove the check can fail: inject both incident shapes into a throwaway repo.
+
+    A correct brief must exit 0; a brief whose whole-file claim carries the character
+    count as "B" AND whose style-block claim carries the byte count as "chars" (the two
+    incident directions) must exit 1 with two UNIT MISLABEL findings.
+    """
+    import contextlib
+    import io
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as td:
+        repo = Path(td)
+        (repo / "music/prompts").mkdir(parents=True)
+        (repo / "music/briefs").mkdir(parents=True)
+        prompt = ('# p\n\n## Style field (paste into Suno "Styles", 28/1000 chars)\n\n'
+                  '```text\nwarm lo-fi bed — no melody\n```\n')
+        (repo / "music/prompts/p.md").write_text(prompt, encoding="utf-8")
+        block = "warm lo-fi bed — no melody"
+        f_bytes, f_chars = len(prompt.encode()), len(prompt)
+        b_bytes, b_chars = len(block.encode()), len(block)
+
+        def brief(body: str) -> tuple[int, str]:
+            (repo / "music/briefs/t.md").write_text(body, encoding="utf-8")
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = main(["--repo", str(repo), "--briefs", "music/briefs/t.md"])
+            return rc, buf.getvalue()
+
+        rc_good, _ = brief(
+            f"# brief\n\n| Prompt template | `music/prompts/p.md` ({f_bytes} B, resolves) |\n"
+            f"Style: `` `music/prompts/p.md` `` — style block is {b_bytes} bytes / "
+            f"{b_chars} characters\n")
+        rc_bad, out_bad = brief(
+            f"# brief\n\n| Prompt template | `music/prompts/p.md` ({f_chars} B, resolves) |\n"
+            f"Style: `` `music/prompts/p.md` `` — style block is {b_bytes} chars\n")
+
+    mislabels = out_bad.count("UNIT MISLABEL")
+    ok = rc_good == 0 and rc_bad == 1 and mislabels == 2
+    print(f"SELFTEST {'PASS' if ok else 'FAIL'} check_brief_figures: "
+          f"correct-claims rc={rc_good} (want 0), flipped-units rc={rc_bad} (want 1), "
+          f"unit mislabels={mislabels} (want 2)")
+    line = "  (caught) " + "\n  (caught) ".join(
+        ln.strip() for ln in out_bad.splitlines() if "MISLABEL" in ln)
+    if mislabels:
+        print(line)
+    return 0 if ok else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     here = Path(__file__).resolve()
     ap = argparse.ArgumentParser(description="Recompute the figures a music brief cites.")
     ap.add_argument("--repo", default=str(here.parents[2]))
     ap.add_argument("--rev", default=None, help="check this revision's briefs and referents")
     ap.add_argument("--briefs", action="append", default=[], help="only these briefs")
+    ap.add_argument("--selftest", action="store_true",
+                    help="inject the incident into a throwaway repo and prove the check fails")
     ap.add_argument("--quiet-skips", action="store_true")
     args = ap.parse_args(argv)
+
+    if args.selftest:
+        return selftest()
 
     repo = Path(args.repo).resolve()
     try:
