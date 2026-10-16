@@ -60,6 +60,22 @@ else
   FAILS+=("rubric scope test: music/rubrics/test_panel_math.py FAILED with $RUBRIC_PY — criterion scope data is broken (incident card t_426a82a3); last lines: $(printf '%s' "$RUBRIC_TEST_OUT" | tail -3 | tr '\n' ' ')")
 fi
 
+# --- tempo measurement integrity (incident: card t_ed609eb0) -------------------
+# `measure.py::_bpm()` folded 0.5 / 1.0 / 2.0 only from its whole-band argmax.
+# On 2026-10-16 the elemental-air render (instrumental, 92 BPM anchor, no
+# percussion by genre rule) got `bpm 60.1` (conf 0.369) with the anchor absent
+# from `bpm_candidates`, because that argmax sat at the 60 BPM end of the lag
+# search range — a systematically unmeetable acceptance criterion for every
+# percussion-free genre in the registry. The check asserts the per-band
+# candidate set, the anchor block, the band-edge rule, and the
+# "no measurable pulse" verdict on both fixtures named in the card.
+if BPM_TEST_OUT=$("$RUBRIC_PY" music/rubrics/test_measure_bpm.py 2>&1); then
+  BPM_TEST="PASS"
+else
+  BPM_TEST="FAILED"
+  FAILS+=("tempo measurement test: music/rubrics/test_measure_bpm.py FAILED with $RUBRIC_PY — the tempo candidate set or the anchor block is broken (incident card t_ed609eb0); last lines: $(printf '%s' "$BPM_TEST_OUT" | tail -3 | tr '\n' ' ')")
+fi
+
 # --- previous week's actions --------------------------------------------------
 PREV=$(ls -1 performance/weekly/*.md 2>/dev/null | grep -v "/$DATE" | sort | tail -1 || true)
 PREV_ACTIONS="(no previous digest found)"
@@ -145,6 +161,7 @@ PY
   echo "- Git commits (7d): $GIT_COMMITS"
   echo "- Review artifacts (brain/, performance/, campaigns/): $ARTIFACTS"
   echo "- Rubric scope test (music/rubrics/test_panel_math.py): $RUBRIC_TEST"
+  echo "- Tempo measurement test (music/rubrics/test_measure_bpm.py): $BPM_TEST"
   echo "- Kanban boards:"
   echo "$KANBAN_STATS_MD"
   echo
