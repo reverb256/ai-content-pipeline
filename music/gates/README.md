@@ -43,11 +43,25 @@ The runner's own result is what the weekly music digest reads. Before that unit
 existed nothing ran the matrix at all.
 
 The suite builds its own fixtures (synthesized audio via
-ffmpeg, rendered visuals via ffmpeg) in
-`$GATE_SCRATCH` (default `/tmp/music-gate-fixtures`; the scheduled run above
-uses the durable `/home/j_kro/.cache/music-gate-fixtures` and prunes it every
-run), so
-it is reproducible from a clean checkout. The asset-pack
+ffmpeg, rendered visuals via ffmpeg). It builds them in a fixture
+directory of its OWN: with no `GATE_SCRATCH` set, each run makes a
+private `mktemp -d` directory under `$TMPDIR` and removes it when it
+ends, so two runs can never share one. Set `GATE_SCRATCH` to pin the
+directory instead (the scheduled run above uses the durable
+`/home/j_kro/.cache/music-gate-fixtures` and prunes it every run).
+An explicit directory is LOCKED for the run: a second run on the
+same directory REFUSES with exit 2 (`another run of the gate suite
+owns <dir>`), and so does a run pointed at a non-empty directory no
+live run owns — the suite reports a gate as broken only against a
+fixture tree this run built. Exit 2 is never a misbehaving check;
+`run_gate_matrix.sh` reports it as `REFUSED: the suite would not
+run`. Set `GATE_SCRATCH_KEEP=1` to keep a private directory for
+inspection. Because the fixtures are built from nothing, the suite is
+reproducible from a clean checkout. (Incident 2026-10-16, card
+t_075cb010: two runs shared the fixed `/tmp/music-gate-fixtures` and
+the pack cases reported a false BROKEN — "no manifest.json", "no
+loop_points.json" — while that tree was complete a moment later.)
+The asset-pack
 fixtures include one pack built by the REAL generator
 (`music/assets/pack.py`, which needs numpy + scipy) — the
 suite refuses to run (exit 2) when a fixture builder fails

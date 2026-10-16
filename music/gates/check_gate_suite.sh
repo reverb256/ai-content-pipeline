@@ -6,12 +6,16 @@
 # as expected.
 #
 # Usage: bash music/gates/check_gate_suite.sh
+#
+# Fixtures are built in a PRIVATE directory per run; set GATE_SCRATCH to pin a
+# durable one (it is then locked for the run - card t_075cb010).
 set -uo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO"
 GATES="$REPO/music/gates"
-SCRATCH="${GATE_SCRATCH:-/tmp/music-gate-fixtures}"
+# SCRATCH is resolved and OWNED further down, once the interpreter is known to
+# work: the default is a private directory per run (card t_075cb010).
 fails=0
 
 # ------------------------------------------------------------------
@@ -58,7 +62,44 @@ if ! "$PY" -c 'import numpy, scipy' >/dev/null 2>&1; then
   exit 2
 fi
 
-mkdir -p "$SCRATCH"
+# ------------------------------------------------------------------
+# fixture scratch: private per run, owned by this run (card t_075cb010)
+# ------------------------------------------------------------------
+# INCIDENT 2026-10-16 (measured during t_69cab80b): the default fixture
+# directory was the fixed `/tmp/music-gate-fixtures`, and the suite rebuilds
+# every fixture there as it runs. Two overlapping runs read each other's
+# half-written trees and the suite reported a healthy gate as BROKEN - two
+# FALSE BADs on the pack cases ("no manifest.json", "no loop_points.json")
+# while that directory was fully populated a moment later, and the same suite
+# was green with a private directory. A false BROKEN is worse than no check:
+# the matrix's failure path posts to the alert feed and files a card.
+#
+# So: no GATE_SCRATCH -> this run gets its own `mktemp -d` directory, removed
+# when it ends. An explicit GATE_SCRATCH (the scheduled matrix wants a durable
+# one) is honoured, and the run takes an exclusive lock on it: another LIVE run
+# holding that lock, or a tree this run did not build, REFUSES with rc 2. A
+# refusal is never a check failure - the run stops before it reads anything.
+. "$GATES/_gate_scratch.sh"
+if ! gate_scratch_resolve; then
+  echo "FATAL: cannot create a fixture scratch directory (GATE_SCRATCH=${GATE_SCRATCH:-unset})" >&2
+  exit 2
+fi
+SCRATCH="$GATE_SCRATCH_RESOLVED"
+if ! gate_scratch_acquire; then
+  # rc 2, and NO check has run: the verdict is "refused", never "broken".
+  # run_gate_matrix.sh maps rc 2 to "REFUSED: the suite would not run" and
+  # does not count it as a misbehaving check.
+  exit 2
+fi
+trap gate_scratch_release EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+export GATE_SUITE_RUN=1   # a nested suite run (music/tests/test_gate_scratch_ownership.py)
+if [ "$GATE_SCRATCH_PRIVATE" = 1 ]; then
+  echo "scratch: $SCRATCH (private, removed when this run ends)"
+else
+  echo "scratch: $SCRATCH (explicit GATE_SCRATCH, kept)"
+fi
 
 # ------------------------------------------------------------------
 # helpers
@@ -952,6 +993,20 @@ pass "pack key: no fabricated key below the analyser's window, and --key still w
 say "the fixture builders write only into the scratch they are given (t_7ab98781)"
 pass "fixtures: the concat list goes next to its output, and a relative output is refused" \
   "$PY" "$REPO/music/tests/test_gate_fixture_scratch.py"
+
+# The other half of the same class (card t_075cb010, incident 2026-10-16). Even
+# with every builder confined to the scratch it is GIVEN, a fixed default
+# scratch is shared by concurrent runs: this suite rebuilds its fixtures in
+# place, so two overlapping runs read each other's half-written trees and the
+# suite reported a healthy gate as BROKEN (two FALSE BADs on the pack cases:
+# "no manifest.json" / "no loop_points.json" - measured during t_69cab80b,
+# while the tree was complete a moment later and the same suite was green with
+# a private directory). The default is now a PRIVATE directory per run, and an
+# explicit GATE_SCRATCH is locked and refused (rc 2, never a check failure)
+# when another live run owns it. The test drives this suite itself - two runs,
+# one directory - so it needs no fixture of its own.
+pass "scratch: two runs never share one fixture directory (private default, refusal on a shared one)" \
+  "$PY" "$REPO/music/tests/test_gate_scratch_ownership.py"
 
 # ------------------------------------------------------------------
 rm -f /tmp/gate_out.$$
