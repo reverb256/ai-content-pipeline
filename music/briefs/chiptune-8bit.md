@@ -1,18 +1,26 @@
 # Brief — chiptune-8bit
 
 > **Stage:** brief (`music/stages.yaml`: `brief` → bot `producer`)
-> **Card:** t_9cc9b48f (`music-oracle: chiptune-8bit (score 7.5)`)
-> **Duplicate card:** t_05b640f6 (`music-oracle: chiptune-8bit (score 7.7)`) — same genre,
-> same lanes, emitted by an earlier oracle run before the dedupe guard existed.
-> Both resolve to THIS brief; the brief is keyed by genre, not by card.
+> **Card (surviving):** t_60767fb1 (`music-oracle: chiptune-8bit (score 7.2)`)
+> **Superseded cards:** t_9cc9b48f (score 7.5, `done`) and t_05b640f6 (score 7.7, `done`) —
+> the same genre, emitted by earlier oracle runs before the dedupe guard existed. The brief is
+> keyed by genre, not by card, so all three cards resolve to THIS file.
 > **Written:** 2026-10-16T13:17-05:00 (CDT), profile `music-producer`, run 77
 > **Verified (duplicate-card pass, `t_05b640f6`):** 2026-10-16T13:40-05:00 (CDT) — see §12.
-> One claim was withdrawn (§8.4); three items were corrected (§6.1, §8.3, §8.5). The canonical
-> card `t_9cc9b48f` is `done`; this brief is the one artifact both oracle cards resolve to.
-> **Repo:** `/home/j_kro/ai-content-pipeline` @ `afa242e` (main) at this pass — NOT `~/Projects/ai-content-pipeline`,
-> which is a second clone without a `music/` tree (both verified below).
-> **Oracle score:** 7.5/10 (quota headroom 10.0, lane coverage 6.0, revenue 8.0,
-> cadence fit 6.7, policy risk 9.0, trend signal 3.0). Threshold 5.0 → produce.
+> One claim was withdrawn (§8.4); three items were corrected (§6.1, §8.3, §8.5).
+> **Aged counts re-measured (card `t_0f7aed63`):** 2026-10-16 — see §13.
+> **Re-measured (surviving-card pass, `t_60767fb1`):** 2026-10-16 15:5x–16:2x CDT — see §14.
+> Every section the live world has moved past carries its correction inline; §14 tabulates all
+> of them against the revision that supersedes this copy.
+> **Repo:** `/home/j_kro/ai-content-pipeline` (main) — NOT `~/Projects/ai-content-pipeline`,
+> which is a second clone without a `music/` tree.
+> **Oracle score:** **7.0/10** — the true score of the surviving card `t_60767fb1` (quota
+> headroom 10.0, lane coverage 6.0, revenue 8.0, cadence fit 3.3, policy risk 9.0, trend
+> signal 3.0). The 7.2 in the card's title is the pre-`b2d11f7` failed-fetch premium,
+> WEIGHTS['trend_signal'] × (5.0 − 3.0) = 0.20. Threshold 5.0 → produce. See §14.
+> **Superseded digest:** this file was
+> `sha256 2e603d85ef4e5b3ce41c2d69b5ff1b9210828e289bb2b6c6c3ed1dda64974457`
+> (692 lines / 39 339 B) when this pass began. The revision below supersedes that copy.
 
 Every number and quoted string below comes from a command run or a file read during this
 stage. Nothing is recalled. Where something is unknown, it says so.
@@ -23,12 +31,13 @@ stage. Nothing is recalled. Where something is unknown, it says so.
 
 ```
 $ /usr/bin/python3 music/registry.py validate
-registry OK: 14 genres, 10 lanes
+registry OK: 14 genres, 10 lanes, 1 stage gate rule(s)
 genres: activist, anime-ending, anime-opening, chill-lounge, chiptune-8bit,
         commentary-beds, elemental-air, elemental-earth, elemental-fire,
         elemental-water, epic-orchestral-boss, jungle-dnb, sentimental-piano, trance
 lanes: direct-fan, direct-license, game-assets, stock-ai-native, streaming,
        sync, sync-documentary, youtube-gaming, youtube-longform, youtube-mix
+stage gate visual: lane_gate -> gate_youtube_authentic (when_absent: none)
 quota ledger: period 2026-10, standard 0/60 (warn_at 55, hard_stop_at 58)
 ```
 
@@ -48,7 +57,7 @@ and every gate that imports `music/lyrics/lyrics.py` fail on it (measured in §8
 | Lyric blueprint | none — and none is needed (§4) |
 | Registry note | **absent** — this block has no `notes:` key, unlike chill-lounge/trance/anime-* |
 
-Registry `defaults:` that bind every track (`music/genres.yaml` lines 19–25):
+Registry `defaults:` that bind every track (`music/genres.yaml` lines 20–25):
 export `studio`, stems `true`, lyrics `human-original`, release_private `true`,
 gate_profile `reviewer-deepseek`.
 
@@ -73,10 +82,18 @@ applies to **this genre only**:
 > 1 triangle, 1 noise, 1 DPCM; no reverb on the chip, no filter ... A stacked chord that
 > rings as a chord is a hardware-impossible defect."
 
-Its `reject_signals` list includes two that will bite a lazy render:
+Re-measured 2026-10-16 (§14): the rubric carries six criteria — `chip_timbre_authenticity`
+3, `battle_energy` 3, `elemental_atmosphere` 3, `loop_safety` 3, `asset_packaging` 1,
+`loudness_target` 1 — and six `reject_signals`. Two of them will bite a lazy render:
 
-- "chiptune claim with reverb/pads/realistic instruments or >2-note chords per channel"
-- "fade-out or truncated ending on a game-loop claim"
+- "chiptune claim with reverb/pads/realistic instruments or >2-note chords per channel
+  (hardware-impossible = OUT of genre)" (`chip_impossible_timbre`)
+- "fade-out or truncated ending on a game-loop claim" (`loop_fade_or_truncation`)
+
+Two more bear directly on this genre's deliverable:
+
+- `no_stated_tempo_key`: "no stated BPM/key for a game-asset product"
+- `clipped_master`: "clipped master (max_volume_db >= -0.1)"
 
 So the quality gate for this genre is not "does it sound nice" — it is a hardware-budget
 audit. Plan for that now.
@@ -136,12 +153,13 @@ Four consequences that are decisions, not details:
    and head windows, concatenates them, and measures the junction curvature against the body
    (PASS ≤ 3.0x). Verified live on the gate's own fixtures:
    `PASS seamless loop (1.6x curvature)`, `FAILS phase-slip loop (6.0x curvature)`.
-3. **The `loop-10min` shape is 600 s, and no stage renders 600 s of audio.** The shape
-   template measures exactly 600.000 s (ffprobe), but the planner caps a plan at 420 s
-   (`planner.py` `MAX_DURATION_S = 420`) and the deployed engine's bpm/duration handling is
-   unguarded (§6). Decision: **render one ≤ 420 s loop whole-bar-exact, mark the loop point,
-   and let the visual stage tile it to 600 s.** That is what a game loop is for, and it is
-   the only arrangement the current engine supports.
+3. **The `loop-10min` shape is 600 s, and the planner now accepts 600 s.** The shape
+   template measures exactly 600.000 s (ffprobe). When this brief was written the planner
+   capped a plan at 420 s (`MAX_DURATION_S = 420`); re-measured 2026-10-16 (§14) the cap is
+   **600 s** (`music/planner/planner.py:104`, raised by commit `52ae620` for this very shape).
+   **600.000 s is whole-bar at this genre's tempo — 375 bars × 1.600 s a bar — so the loop can
+   be rendered at full length.** Revised decision: plan the loop at 375 bars / 600 s; cut it
+   to a shorter whole-bar master only if the game-asset pack wants one.
 4. **The `youtube-gaming` gate rejects the existing shape template.** Measured: the lane's own
    `music/visuals/loop_10min.mp4` (600.0 s, 1280×720, 25 fps) **FAILS**
    `gate_youtube_authentic` with `only 4 distinct frame signature(s) across 600.0s (10 required)
@@ -155,7 +173,8 @@ Bar arithmetic at the genre's 150 BPM (4/4 → one bar = 240/150 = **1.600 s**),
 | 32 | 51.20 s | short NES-style level loop |
 | 64 | 102.40 s | **recommended primary** — whole-bar, phrase-multiple, loop-safe |
 | 128 | 204.80 s | long-form variant |
-| 256 | 409.60 s | longest whole-bar length under the 420 s planner cap (420 s = 262.5 bars, not whole) |
+| 256 | 409.60 s | long-form variant |
+| 375 | 600.00 s | **the full `loop-10min` shape** — whole-bar at 150 BPM and inside the 600 s planner cap |
 
 ---
 
@@ -174,10 +193,15 @@ Why it matters beyond bookkeeping:
 - **The copyright path is not at risk.** The lane's copyright claim depends on human-authored
   lyrics; an instrumental has none to author, so there is nothing to fake and nothing to
   lose. The registry default `lyrics: human-original` is satisfied vacuously.
-- **No blueprint is required.** `music/lyrics/blueprints/` holds `activist.yaml`,
-  `anime-ending.yaml`, `anime-opening.yaml`, `chill-lounge.yaml`, `epic-orchestral-boss.yaml`, `trance.yaml`. The planner falls back to `bpm = 100` when a
-  blueprint is absent — for a 150 BPM genre that fallback is wrong, and it is one more reason
-  the plan's `bpm` must be set explicitly rather than inherited (§6.3).
+- **No blueprint is required.** `music/lyrics/blueprints/` holds seven files — `activist`,
+  `anime-ending`, `anime-opening`, `chill-lounge`, `epic-orchestral-boss`, `jungle-dnb`,
+  `trance` (re-measured §14; `jungle-dnb.yaml` landed after this brief was written).
+  `planner.py show --genre chiptune-8bit` reports `"blueprint": false`, and that is not a
+  defect: with no blueprint the planner reads the BPM the genre's own caption states
+  (`bpm_in_caption`, `planner.py:199`; `bpm_anchor_for`, `planner.py:212`), so this genre plans
+  at its template's 150 BPM. The hardcoded `100` is reachable only when neither a blueprint
+  anchor nor a caption BPM exists. Measured live: `structure_source: template`,
+  `bpm_anchor: null`, `caption_chars: 567`, `instrumental: true`.
 - **`--lyrics-mode ai` is not a temptation here.** There are no lyrics to generate. The
   generate stage must pass the instrumental flag, not an AI-written sheet.
 
@@ -190,8 +214,9 @@ one streaming release per track) = **2 loops/week, 104/year**. At 64 bars each t
 minutes of new audio per week — small. The real cost is downstream per-track packaging, not
 rendering: stems, loop points, metadata, ISRC, artwork, and a distinct visual per upload.
 
-This is why the genre's oracle score shows lane coverage 6.0 and cadence fit 6.7 — it is a
-low-volume, high-packaging genre. Budget the packaging, not the generation.
+The surviving card's true score is **7.0**, with lane coverage 6.0 and cadence fit **3.3**
+(§14; the title's 7.2 carried cadence fit 6.7 — the pre-`b2d11f7` failed-fetch premium). The
+genre is low-volume and high-packaging: budget the packaging, not the generation.
 
 ---
 
@@ -206,58 +231,69 @@ low-volume, high-packaging genre. Budget the packaging, not the generation.
 | plan | CronJob `music-pipeline` (ns `mining`) | `17 */6 * * *` | ConfigMap `music-pipeline-briefs` key `briefs.json` | `/var/lib/music-plans/<name>.json` |
 | render | CronJob `music-pipeline-render` (ns `mining`) | `41 */4 * * *` | plans without a `.rendered` marker | audio via `sunolocal` |
 
-Both ran in the last hour. Real logs:
+Both ran inside the hour before this pass. Real logs, re-measured 2026-10-16 (§14):
 
 ```
-$ kubectl logs job/music-pipeline-render-29869541 -n mining --tail=5
-ComfyUI up at http://comfyui-zephyr.mining.svc.cluster.local:8188
-skip   final-round (already rendered)
+$ kubectl logs job/music-pipeline-render-t6d7ad524 -n mining --tail=4
 skip   smoke-chill-lounge (already rendered)
 skip   testplan (already rendered)
-done: found=3 rendered=0 skipped=3 failed=0
+skip   trance-signal-before-dawn (already rendered)
+done: found=13 rendered=1 skipped=12 failed=0
+
+$ kubectl logs job/music-pipeline-t6d7ad524 -n mining --tail=4
+bpm/key  : 72 BPM · C minor · 4/4
+duration : 420s   language: en
+validation: PASS
+done: 11/11 planned
 ```
 
-The planner job's last line was `done: 1/1 planned`. The queue is live, and it is empty of
-useful work: `/var/lib/music-plans/` holds only `final-round`, `smoke-chill-lounge` and
-`testplan` (all `.rendered`). **No chiptune plan exists.** The brief ConfigMap still carries
-one entry, the chill-lounge smoke brief.
+The queue is live and no longer empty of useful work: `/var/lib/music-plans/` holds 13 plans,
+12 markers, one rendered master (`elemental-fire-emberfall.flac`, 11 421 612 B) and `loops/`
+carrying that track's loop pair. **No chiptune plan exists, and the brief ConfigMap carries no
+chiptune entry** — 11 entries, 5 of them `lyricsMode: instrumental`. This genre is not queued
+yet, and adding its entry is the generate stage's first action (§10).
 
-**Rail B — `music/suno-gen.py` (Suno over CDP).** `music/stages.yaml` tells the generate stage
-to use it. It does **not** exist in this checkout, and never appears in the history of the
-local `main` branch. It does exist on `origin/main`, added by `ba28f55`. Measured now:
+**Rail B — `music/suno-gen.py` (Suno over CDP) — RESOLVED 2026-10-16 14:23.** When this brief
+was written the file lived only on `origin/main`; the reconciliation merge `ab33ad1` (card
+`t_8a715681`) joined the two lineages. Measured live at this pass (§14):
 
 ```
-$ git log --oneline -1 main          → ade6e87
-$ git log --oneline -1 origin/main   → ba28f55
-$ git merge-base main origin/main    → e278f61
-$ git rev-list --left-right --count main...origin/main → 6   15   # 22   15 at the t_05b640f6 pass
-$ git cat-file -e origin/main:music/suno-gen.py → EXISTS on origin/main
-$ ls music/suno-gen.py               → No such file or directory
+$ git log --oneline -1                              → c296db6
+$ git ls-remote origin main                         → ba28f55
+$ git rev-list --left-right --count origin/main...HEAD → 0   72
+$ git merge-base --is-ancestor origin/main HEAD     → YES
+$ ls -l music/suno-gen.py                           → 42 652 B in the working tree
+$ /usr/bin/python3 music/scripts/check_stage_scripts.py
+PASS check_stage_scripts: 11 referenced script path(s) all present in /home/j_kro/ai-content-pipeline
 ```
 
-The two lineages have diverged: `rev-list --left-right --count main...origin/main` measured
-**22  15** at the verification pass — up from `6  15` when this brief was written, because
-this wave's brief commits landed on local main. `music/suno-gen.py` is still absent from
-local main and still present on `origin/main`. The generate stage as written cannot run in
-this tree. Fix is a branch reconciliation, not a rewrite.
+Local `main` is 72 commits ahead of `origin/main` and 0 behind. The ahead-count is anchored to
+revision `c296db6` on purpose: this lane commits every few minutes. Nothing is pushed to the
+remote — that is a separate action and no step of this brief depends on it.
 
 ### 6.2 The live engine and its exact contract (probed, not assumed)
 
 ```
-$ kubectl get deploy sunolocal-source -n mining   → image localhost/sunolocal:v0.1.2, Ready 1/1, age 2d14h
-$ kubectl exec deploy/sunolocal-source -n mining -- \
-    curl? no — probed over HTTP from an in-cluster pod:
-    GET /health        → {"status":"ok"}
-    GET /api/v1/models → {"engines":{"ace":{"kind":"ACE-Step 1.5","via":"acestep_plan.py -> comfyui-zephyr window"},
-                          "yue2":{"kind":"YuE2-3B","via":"yue2-zephyr http"}},"default":"ace"}
+$ kubectl get deploy sunolocal-source -n mining
+sunolocal-source   1/1   1   1   2d17h     → image localhost/sunolocal:v0.1.3
+$ kubectl get deploy -n mining sunolocal-source -o jsonpath='{.spec.template.spec.containers[0].env}'
+SUNOLOCAL_ENGINE=ace · SUNOLOCAL_COMFY_URL=http://comfyui-zephyr.mining.svc.cluster.local:8188
+SUNOLOCAL_ACESTEP_SCRIPT=/opt/sunolocal/music/scripts/acestep_plan_direct.py
 ```
 
-The deployment's own env names the renderer:
-`SUNOLOCAL_ACESTEP_SCRIPT=/opt/sunolocal/music/scripts/acestep_plan_direct.py` (9190 bytes on
-disk in the pod). Request schema (`sunolocal/spec.py`) has **no `bpm` field**: the wire
-contract is `prompt, style, lyrics, title, instrumental, model, customMode, negativeTags,
-vocalGender, duration, styleWeight, weirdnessConstraint, audioWeight, variety, callBackUrl,
-seed, engine`.
+The image was `v0.1.2` when this brief was written; **re-measured at this pass it is
+`v0.1.3`** (§14). The request schema in the pod (`/opt/sunolocal/music/sunolocal/spec.py`,
+3478 B on the pod's filesystem) now carries the two fields this genre needs:
+
+```
+bpm: Optional[int] = None        # explicit tempo; beats the style_weight fallback
+keyscale: Optional[str] = None   # explicit key signature, e.g. "C major"
+```
+
+Both were card `t_25a6499c` D1/D2, and both are fixed on the deployed engine. The wire
+contract is otherwise `prompt, style, lyrics, title, instrumental, model, customMode,
+negativeTags, vocalGender, duration, styleWeight, weirdnessConstraint, audioWeight, variety,
+callBackUrl, seed, engine`.
 
 The engine **can** render an instrumental. `sunolocal/translate.py` in the pod:
 
@@ -271,45 +307,65 @@ and `adapters/ace_comfy.py` passes `--allow-empty` to the renderer, so the empty
 instrumental passes the renderer's loader. The instrumental path exists end to end on the
 engine side.
 
-### 6.3 THE BLOCKER: the scheduled wrapper hardcodes `instrumental: False`
+### 6.3 The three blockers — ALL RESOLVED on the deployed rail (re-measured §14)
 
-The render CronJob runs `/payload/music/scripts/acestep_plan.py`, mounted from ConfigMap
-`music-pipeline-payload` (volume `payload`, `workingDir: /payload`). Extracted from the live
-ConfigMap, that wrapper contains:
+When this brief was written the wrapper mounted from ConfigMap `music-pipeline-payload`
+(volume `payload`) hardcoded `"instrumental": False` at its line 87, invoked no
+`--allow-empty`, and carried no BPM — so an instrumental 150 BPM genre could only render as a
+120 BPM vocal-shaped track. All three are fixed on the deployed rail. Evidence, re-measured
+2026-10-16 (§14):
 
-```python
-"instrumental": False,  # we assume lyrics present; if empty and allow-empty, still instrumental?
-```
+- The deployed wrapper is now **354 lines** and byte-identical to the repo copy
+  (`diff -q music/scripts/acestep_plan.py <chart>/files/music/scripts/acestep_plan.py` →
+  identical). Its body carries
+  `"instrumental": bool(plan.get("instrumental"))` (line 174),
+  `"bpm": int(plan["bpm"]) if plan.get("bpm") is not None else None` (line 189) and
+  `"keyscale": (str(plan["key"]).strip() or None) if plan.get("key") else None` (line 190).
+  Its own docstring records the defect it fixes: "`plan["bpm"]` never left the plan, so the
+  engine answered its own default", and "`instrumental` … used to be dropped, so an
+  instrumental plan rendered as a vocal track with an empty lyrics box".
+- `check_lyrics` (line 95) returns early for an instrumental plan (line 119), so the
+  `--allow-empty` refusal no longer reaches this genre. The render CronJob still invokes
+  `acestep_plan.py <plan> --name <stem>` without the flag, and no longer needs it.
+- Live proof on the rail: `/var/lib/music-plans/t_8c5a6b91/t8c5a6b91-empty-lyrics.json` plus a
+  0-byte `.rendered` marker — the empty-lyrics fix was exercised on the cluster. The plan job's
+  log line for an instrumental genre reads
+  `mode : INSTRUMENTAL — no lyrics; the template declares an empty lyrics box. The renderer's
+  draft refusal does not apply.`
+- The tempo travels with the plan. `music/planner/planner.py` writes `bpm` and `key`, and the
+  wrapper passes both through. Measured on queued plans: `elemental-fire-emberfall` reads
+  `bpm=150, keyscale=D Phrygian`; `elemental-air-above-the-weather` reads
+  `bpm=92, keyscale=C major, instrumental=true`. The pod's `translate.py` resolves
+  `bpm = int(req.bpm)` first (line 63), the `styleWeight` formula second (line 67), and `120`
+  only as the last resort (line 69).
 
-That is line 87 of the deployed wrapper. Consequences for **this** genre:
+Consequence for this genre: plan `bpm: 150`, let the template caption supply the key, and the
+engine renders 150 BPM. The `styleWeight = 0.75` workaround this section used to recommend is
+no longer needed.
 
-- The request can never carry `instrumental: true` on the scheduled rail. Chiptune-8bit is
-  instrumental by its own template (§4), so the scheduled path would submit the genre's
-  parenthetical tag sheet as `lyrics` with the vocal flag off — a vocal-shaped hole, which is
-  the exact failure the engine-side comment warns about.
-- The CronJob invokes the wrapper **without** `--allow-empty`, and the wrapper's own
-  `check_lyrics` exits 1 on an empty body. A plan with `lyrics: ""` would therefore be marked
-  `.rendered` containing `refused` (visible precedent:
-  `/var/lib/music-plans/smoke-chill-lounge.rendered` and `testplan.rendered` both say
-  `refused`), i.e. silently parked as "waiting for a human" forever.
-- **The request carries no BPM, and the deployed `translate.py` hardcodes `bpm = 120`**
-  (`bpm = 120` unless `styleWeight` is set, then `bpm = int(60 + style_weight * 120)`, clamped
-  30–240). This genre is specified at **150 BPM**. Rendered through the as-deployed wrapper
-  (`"style_weight": None`) the engine will produce **120 BPM** chiptune — out of genre. The
-  arithmetic remedy exists and is exact: `60 + 0.75 * 120 = 150`, i.e. **`styleWeight = 0.75`
-  yields 150 BPM**. With `styleWeight` left `None`, 120 is unavoidable.
+### 6.4 Duration — corrected: a 600 s render is plannable and has been rendered
 
-So three things must change before the generate stage can produce a correct chiptune track:
-carry `instrumental: true` for this genre, pass `--allow-empty`, and pin the tempo (either
-`styleWeight = 0.75` or a fixed `bpm` plumbed through `translate.py`). None of these is
-plausible to do inside this brief stage; all three are named here so the generate stage does
-not rediscover them as mysteries.
+~~A 600 s render is impossible.~~ Corrected 2026-10-16 (§14): the planner's guard rail is now
+30–600 s (`planner.py:103-104`), and `/var/lib/music-plans/elemental-earth-chamber-loop.json`
+carries `duration: 600` with a `.rendered` marker — the rail has rendered a 600 s plan.
+`translate.py` still takes `duration` straight from the request with no upper guard (line 55:
+`float(req.duration)` else `30.0`), so the planner remains the only duration guard. §3.3 now
+recommends the full 375-bar / 600 s loop.
 
-### 6.4 What the engine cannot do at all today
+### 6.5 New since this brief: the render rail refuses a loop claim it cannot verify
 
-A 600 s render. The planner's guard rail is 30–420 s, and `translate.py` takes `duration`
-straight from the request with no upper guard. §3.3 resolves this by tiling at the visual
-stage rather than asking for one 10-minute render.
+`music/scripts/loop_close.py` now runs inside `music-pipeline-render`. For every plan it
+renders, the job asks `--claims-loop --plan <plan> --genres-yaml music/genres.yaml`, which
+reads the claim from the genre's own `video_shape` in `music/genres.yaml`. This genre's shape
+is `loop-10min`, so **a chiptune master is a loop claim**: the rail then requires the rendered
+master to exist, closes the loop with `loop_close.py`, and re-checks the closed loop with
+`--check-only`. A failure writes `<stem>.looprefused`, prints the reason, and exits the job
+non-zero (card `t_b21aeb51`).
+
+Effect on the generate stage: a chiptune render that cannot carry a seamless loop is refused
+at generation time, before `gate_loop_points` ever sees it. That is an improvement, not a
+blocker — but the plan's loop length must be whole-bar, which is why §3.3's 375-bar figure
+matters.
 
 ---
 
@@ -317,10 +373,13 @@ stage rather than asking for one 10-minute render.
 
 Measured: **none.**
 
-- `music/lyrics/` holds `activist/`, `anime-opening/`, `chill-lounge/`, `trance/` plus
-  `blueprints/{activist,anime-ending,anime-opening,chill-lounge,epic-orchestral-boss,trance}.yaml`. No chiptune lyric dir or blueprint —
-  expected, the genre is instrumental.
-- No campaign directory, no masters, no stems, no cover artwork, no `loop_points.json`.
+- `music/lyrics/` holds `activist/`, `anime-opening/`, `chill-lounge/`, `trance/` plus seven
+  blueprints (`activist, anime-ending, anime-opening, chill-lounge, epic-orchestral-boss,
+  jungle-dnb, trance`). No chiptune lyric dir or blueprint — expected, the genre is
+  instrumental.
+- No chiptune plan, master, stems, cover artwork or `loop_points.json`, and no queue entry.
+  Other genres now have some: `/var/lib/music-plans/elemental-fire-emberfall.flac` (11 421 612 B)
+  and its `loops/` pair. Nothing of this genre's exists.
 - `music/visuals/pixel_scene.mp4` is a **5.000 s**, 1280×720 reference render (14 244 bytes),
   not a 10-minute visual. `music/visuals/loop_10min.mp4` is the 600 s shape template — and it
   fails its own lane gate (§3.4).
@@ -357,51 +416,52 @@ game-asset procedure in the repo — ends with this checklist:
 - [ ] Sample rate (44.1k/48k) explicitly stated in metadata.json.
 ```
 
-`music/stages.yaml` runs `gate_quota`, `gate_lyrics_original`, `gate_stems_present`,
-`gate_loudness`, `gate_quality`, `gate_release_ready` and `gate_youtube_authentic` — and
-**never** `gate_sync_ready` or `gate_loop_points`. The `package` stage runs
-`gate_release_ready` (the streaming gate) for every genre, whatever its lanes.
+`music/stages.yaml` names six gates — `gate_quota`, `gate_lyrics_original`,
+`gate_stems_present`, `gate_loudness`, `gate_quality`, `gate_release_ready` — and **never**
+`gate_sync_ready` or `gate_loop_points`. The `package` stage runs `gate_release_ready` (the
+streaming gate) for every genre, whatever its lanes. The visual stage's gate is no longer
+hardcoded in the stage map: that stage now resolves it from the registry
+(`music/lanes.yaml` `stage_gates.visual`, selector `lane_gate`, `when_absent: none`):
 
-So a chiptune card would pass the pipeline while never having its loop seam measured, and the
-one gate that exists specifically for the seam is referenced only by a runbook and by the
-`check_gate_suite.sh` fixtures. `lane.game-assets.gate: gate_sync_ready` in `lanes.yaml` is a
-declaration nothing consumes at stage level; `gate_sync_ready` itself only checks that the
-*file* `loop_points.json` exists, and it says so: "run gate_loop_points.py for the seam
-check". The seam gate is in the toolbox, in the runbook, and in the fixture suite — and in
-no stage of the pipeline.
+```
+$ /usr/bin/python3 music/registry.py gate-for-stage --stage visual --genre chiptune-8bit
+gate    : gate_youtube_authentic
+script  : music/gates/gate_youtube_authentic.py
+reason  : lane 'youtube-gaming' is guarded by gate_youtube_authentic (surface: youtube)
+```
+
+So a chiptune card would still pass the pipeline while never running `gate_sync_ready` — the
+game-assets lane's own gate — and the seam gate is still not a stage gate. Two things have
+narrowed the gap since this brief was written (§14): `gate_sync_ready` now **measures** every
+seam itself (`music/gates/gate_sync_ready.py:347`, importing the loop floor from
+`gate_loop_points` at line 80) instead of only asserting that `loop_points.json` exists, and
+the render rail now refuses an unverifiable loop claim at generation time (§6.5). The
+remaining defect is the wiring, not the measurement.
 
 ### 8.2 The chart's payload-sync check FAILS on this host (wrong source path + real drift)
 
 The ConfigMap `music-pipeline-payload` is generated by `mining-k8s`
-(`helm/charts/music-pipeline`, Argo app `music-pipeline` — `Synced/Healthy`). Its sync scripts:
+(`helm/charts/music-pipeline`, Argo app `music-pipeline`). When this brief was written both
+sync scripts defaulted to the wrong checkout and the chart's wrapper was ahead of the repo's.
+Both defects are fixed; re-measured at this pass (§14):
 
 ```
-$ bash helm/charts/music-pipeline/check-payload-sync.sh
-DRIFT  music/planner/planner.py
-DRIFT  music/genres.yaml
-DRIFT  music/scripts/acestep_plan.py
-RESULT: FAIL — run sync-payload.sh
+$ bash /home/j_kro/mining-k8s/helm/charts/music-pipeline/check-payload-sync.sh
+source : /home/j_kro/ai-content-pipeline  (worktree 2611770)
+ref    : origin/main = ba28f55
+RESULT: PASS — chart payload matches the lane repo (/home/j_kro/ai-content-pipeline / origin/main)
+
+$ grep -n 'SRC=' helm/charts/music-pipeline/{check-payload-sync,sync-payload}.sh
+check-payload-sync.sh:34:SRC="${SRC:-/home/j_kro/ai-content-pipeline}"
+sync-payload.sh:5:SRC="${SRC:-/home/j_kro/ai-content-pipeline}"
+
+$ wc -l helm/charts/music-pipeline/files/music/scripts/acestep_plan.py music/scripts/acestep_plan.py
+354 both  ·  diff -q → identical
 ```
 
-Two independent problems, both measured:
-
-1. **`SRC` defaults to the wrong checkout.** Both scripts use
-   `SRC="${SRC:-/home/j_kro/Projects/ai-content-pipeline}"`. That tree has **no `music/`
-   directory** (`ls /home/j_kro/Projects/ai-content-pipeline` → no `music`), so
-   `cmp -s "$SRC/$rel" "$dst/$rel"` reports DRIFT on every file, and `sync-payload.sh`
-   (which is `set -euo pipefail`) would abort at its first `cp`. This is the same wrong-path
-   bug that killed the systemd music units, in a third place.
-2. **The chart copy is newer than the repo, not older.** The chart's
-   `files/music/scripts/acestep_plan.py` is a *sunolocal-API* wrapper
-   (`SUNOLOCAL_HOST=...:8123`, `POST /api/v1/generate`). The repo's copy — local and on
-   `origin/main` (`diff` → identical) — is still the older *direct-ComfyUI* version. The
-   wrapper's history lives in `mining-k8s` (`b326135`, `f1d9f66`, `7fdb9d2`), not in
-   ai-content-pipeline (`git log --all -- music/scripts/acestep_plan.py` → one commit,
-   `6b5cb56`).
-
-**Therefore "just run sync-payload.sh" is wrong advice**: with `SRC` corrected it would
-regress the live wrapper back to direct-ComfyUI. The instrumental-flag fix in §6.3 has to land
-in the chart's wrapper (and be back-ported to the repo), not the other way round.
+`SRC` now names the checkout that carries `music/`, and "run sync-payload.sh" is safe again:
+the chart copy and the repo copy are the same 354-line file, so a sync cannot regress the live
+wrapper. The §6.3 fixes live in both.
 
 ### 8.3 The gate suite's interpreter hazard — FIXED since the brief stage
 
@@ -448,8 +508,10 @@ PASS gate_lyrics_original
 The gates were never broken — the suite's interpreter was unpinned, and it is pinned now.
 Every section passes its fixtures (quota, stems, loudness, quality, sync-ready, release-ready,
 loop-points, youtube-authentic, human-approval), and this genre's own loop gate is among the
-passing ones. Re-confirmed verbatim at this pass: `PASS seamless loop (1.6x curvature)` /
-`FAILS phase-slip loop (6.0x curvature) fails`.
+passing ones. Re-confirmed at this pass (§14): `OK: every gate passed its good artifact and
+failed its broken one`, with `PASS seamless loop (1.6x curvature) passes` /
+`FAILS phase-slip loop (6.0x curvature) fails` verbatim. The loop section has grown since:
+it also refuses a faded tail on the LEVEL ruler, and both pack fixtures.
 
 ### 8.4 WITHDRAWN — the template's style-field count was already accurate
 
@@ -482,10 +544,11 @@ t_05b640f6|music-oracle: chiptune-8bit (score 7.7)|ready|music-producer
 `ade6e87` added an open-card guard to `music/oracle.py`, so new runs no longer duplicate. The
 existing pair was created before it. Both resolve to this one genre-keyed brief; the duplicate
 should be closed rather than worked, or the generate stage will render the same track twice.
-**Status at the `t_05b640f6` pass (re-measured):** `t_9cc9b48f` is **done** — it wrote this
-brief (`c3e2f23`) — and `t_05b640f6` is the running duplicate whose pass produced §12. The
-pair is resolved, not duplicated. Board-wide residue has shrunk as this wave closed out:
-**6 `ready` and 3 `running`** `music-oracle:*` cards (was 15 / 7 at the brief stage).
+**Status re-measured at this pass (§14):** `t_9cc9b48f` **done**, `t_05b640f6` **done**,
+`t_60767fb1` **running** — the surviving card. Three cards, one genre, one brief: resolved, not
+duplicated. Board-wide `music-oracle:*` residue, read from the board database: **37 `done`,
+7 `running`, 3 `ready`**, and `music/scripts/check_oracle_board.py` reports one open card per
+open genre (`PASS`, rc=0) — the board invariant holds live.
 
 ---
 
@@ -498,68 +561,88 @@ pair is resolved, not duplicated. Board-wide residue has shrunk as this wave clo
    (measured 1.4–2.4 dB below ebur128 on a real album). Note the ruler difference before
    calling a master defective.
 4. `gate_quality` — reviewer model **different** from the producer; scored against
-   `music/rubrics/gamer.json` (pass 7.0), where `chip_timbre_authenticity` and `loop_safety`
-   each weight 3
+   `music/rubrics/gamer.json` (pass 7.0), whose six criteria are `chip_timbre_authenticity` 3,
+   `battle_energy` 3, `elemental_atmosphere` 3, `loop_safety` 3, `asset_packaging` 1,
+   `loudness_target` 1
 5. `gate_sync_ready --lane game-assets` — stems + `loop_points.json` + manifest metadata
    (title, artist, bpm, key, mood, genre) + clearance doc + AI disclosure + instrumental
-   version that is not a byte-copy of the master
+   version that is not a byte-copy of the master. Since this pass it also **measures** every
+   seam with `gate_loop_points.check_loop` (§8.1)
 6. `gate_release_ready` — streaming package (ai_disclosure, ISRC per ISO 3901 — 12 chars, no
    check digit, artwork)
 7. `gate_youtube_authentic` — ≥ 10 distinct frame signatures across the visual, Jaccard
    ≤ 0.85 vs prior uploads, AI disclosure beside the video
 8. `gate_human_approval` — j_kro. Never auto-passes.
 
+Ahead of all of them, at generation time: the render rail's own loop check
+(`music/scripts/loop_close.py`, §6.5). It runs on the cluster before any gate above sees the
+master.
+
 ---
 
 ## 10. Recommended next stage
 
-**`lyrics` → advance immediately as instrumental** (§4), then **`generate`**, whose prompt the
-next worker must treat as needing three corrections before it can succeed for this genre:
+**`lyrics` → advance immediately as instrumental** (§4), then **`generate`**. The three
+corrections this brief originally demanded are all in place on the deployed rail (§6.3, §14):
 
-1. `instrumental: true` must reach the engine — the deployed wrapper hardcodes `False` (§6.3).
-2. `--allow-empty` must be passed, or an empty-body plan is marked `.refused` and parked (§6.3).
-3. The tempo must be pinned — the deployed `translate.py` hardcodes 120 BPM and the request has
-   no `bpm` field; `styleWeight = 0.75` is the exact lever for this genre's 150 BPM (§6.3).
+1. `instrumental: true` reaches the engine — the deployed wrapper carries
+   `bool(plan.get("instrumental"))` (wrapper line 174).
+2. No `--allow-empty` is needed — `check_lyrics` returns early for an instrumental plan
+   (wrapper line 119).
+3. The tempo travels: the planner writes `bpm`/`key` into the plan and the wrapper passes both
+   (lines 189-190); the pod's `translate.py` reads `req.bpm` first (line 63).
 
-Deliverable for `generate`: **one 64-bar (102.40 s) whole-bar loop at 150 BPM**, no reverb, no
-pads, four voices, ending on the loop phrase — plus a second take for curation. Render on the
-`sunolocal` rail; do not attempt Rail B (Suno) until `music/suno-gen.py` exists in this tree
-(§6.1). Then `curate` → `stems` → `master` → `gate` → `package`
+What the generate stage must add instead: a **queue entry** for this genre (the ConfigMap
+carries none, §6.1) with `lyricsMode: instrumental`, `bpm: 150` and a duration that is
+whole-bar, and it must satisfy the render rail's loop check — this genre's `loop-10min` shape
+makes the master a loop claim (§6.5).
+
+Deliverable for `generate`: **one 375-bar (600.000 s) whole-bar loop at 150 BPM** — the full
+`loop-10min` shape, whole-bar and inside the planner's 600 s cap (§3.3) — no reverb, no pads,
+four voices, ending on the loop phrase; plus a second take for curation. A 64-bar (102.40 s)
+whole-bar master is the acceptable game-asset pack cut. Render on the `sunolocal` rail: it is
+what runs by itself, and `music/suno-gen.py` is present now but needs a logged-in browser
+session on a host (§6.1). Then `curate` → `stems` → `master` → `gate` → `package`
 (`gate_sync_ready --lane game-assets` + `gate_loop_points`, both currently un-wired, §8.1) →
 `visual` (a real 600 s pixel-scene video, not the 4-signature template, §3.4) →
 **human-approval** → `publish` (PRIVATE / draft only — never public without j_kro) → `track`.
 
-Human queue raised by this brief (reported, not fixed here — none of these is this stage's
-work): the payload-sync source path and wrapper drift (§8.2), the missing game-assets gate
-wiring in `stages.yaml` (§8.1), and the branch divergence that hides `suno-gen.py` (§6.1). The
-duplicate chiptune card (§8.5) is **closed** by the `t_05b640f6` pass recorded in §12.
+Human queue raised by this brief (reported, not fixed here): the missing game-assets gate
+wiring in `stages.yaml` (§8.1) is the one item still open. The payload-sync path and wrapper
+drift (§8.2) and the divergence that hid `suno-gen.py` (§6.1) are **resolved** — §14. The
+duplicate chiptune cards (§8.5) are **closed**, and §14 records the oracle's surviving-card
+ruling that made this card the owner of the genre.
 
 ---
 
 ## 11. Provenance
 
-- Registry: `music/genres.yaml` (lines 19–25, 119–125), `music/lanes.yaml`, `music/autonomy.yaml`
-  — validated live (`registry OK: 14 genres, 10 lanes`)
+- Registry: `music/genres.yaml` (lines 20–25 defaults, 119–125 genre block — re-measured §14),
+  `music/lanes.yaml`, `music/autonomy.yaml` — validated live
+  (`registry OK: 14 genres, 10 lanes, 1 stage gate rule(s)`)
 - Rubric: `music/rubrics/gamer.json` (read in full)
 - Gates: `music/gates/` — `gate_quota`, `gate_loop_points`, `gate_sync_ready`,
   `gate_youtube_authentic`, `gate_release_ready` read; suite executed
 - Stage contract: `music/stages.yaml` (read in full)
 - Runbook: `brain/runbooks/music-game-assets.md`
-- Cluster: CronJobs `music-pipeline`, `music-pipeline-render`; Deployments
-  `sunolocal-source` (v0.1.2), `comfyui-zephyr`; ConfigMap `music-pipeline-payload`;
-  Argo apps `music-pipeline`, `sunolocal` (`Synced/Healthy`)
+- Cluster: CronJobs `music-pipeline`, `music-pipeline-render` (last jobs `…-t6d7ad524`);
+  Deployments `sunolocal-source` (**v0.1.3**, re-measured §14), `comfyui-zephyr`; ConfigMaps
+  `music-pipeline-briefs`, `music-pipeline-payload`; `/var/lib/music-plans` (hostPath,
+  `PLANS_DIR=/plans`)
 - Chart: `/home/j_kro/mining-k8s/helm/charts/music-pipeline/` (`values.yaml`, `sync-payload.sh`,
   `check-payload-sync.sh`, executed), `helm/charts/sunolocal/files/music/sunolocal/{spec,studio,translate}.py`
 - Media: `ffprobe` on `music/visuals/pixel_scene.mp4` and `loop_10min.mp4`
   (`/home/j_kro/.hermes/tools/ffmpeg-9.0.1-linux-x64/bin/ffprobe` — ffmpeg is not on PATH)
-- **Still dangling:** `brain/playbooks/music-lane-architecture.md` is cited as "READ FIRST" by
-  this lane's profile, `stages.yaml`, `genres.yaml`, `lanes.yaml`, `autonomy.yaml`,
-  `gates/README.md` and the gate docstrings — the file does not exist in this repo. Section
-  numbers quoted from it (§3, §5, §11.2, §13) cannot be checked.
+- ~~**Still dangling:** `brain/playbooks/music-lane-architecture.md` … does not exist.~~
+  **Resolved 2026-10-16 (§14):** the file exists — `brain/playbooks/music-lane-architecture.md`,
+  34 328 B, written 15:31.
 
 ---
 
 ## 12. Duplicate-card verification pass (`t_05b640f6`, 2026-10-16T13:40-05:00 CDT)
+
+> **Historical.** This section records what that pass measured at 13:40. Where the live world
+> has moved since, §14 carries the correction. §12 is not rewritten.
 
 This brief is genre-keyed, so both oracle cards for `chiptune-8bit` resolve to it. `t_9cc9b48f`
 (score 7.5) wrote it at 13:17 and is `done`; `t_05b640f6` (score 7.7 — the earlier emission,
@@ -690,3 +773,110 @@ to three files while the directory had grown to six. Re-measured and corrected i
 - **Corrected in place:** §4 (the blueprint-list bullet), §7 (the `music/lyrics/` asset listing),
   §12's "Held as written" bullet and §12's corrections row 3.
 - **Superseded by this pass (card `t_e6d422ec`, 2026-10-16):** `sha256 fd4a7a6b8e106b41ee380b0c28dd09882b72d7af20d52653f8c7b287b742da4b` (690 lines / 38897 B) — the census bullet above was restated as a live claim when `music/lyrics/blueprints/jungle-dnb.yaml` landed. No genre finding was reopened.
+
+## 14. Surviving-card pass (`t_60767fb1`, 2026-10-16)
+
+### The scorer's ruling
+
+`music/oracle.py` @ `b2d11f7` re-scored this genre against the live registry, the quota ledger
+and the calendar. Its ruling, posted on this card: **the NEWEST scoring run owns the genre.**
+This card is that run, and its true score is **7.0/10** — not the 7.2 in its own title, and not
+the 7.5 / 7.7 on the two `done` cards. The pre-guard pair differed by exactly
+0.20 = WEIGHTS['trend_signal'] × (5.0 − 3.0): the premium the old `except` branch paid to a
+FAILED trend fetch. `b2d11f7` made a failed fetch and an empty success score the same no-signal
+floor (3.0), so the number is reproducible; `music/scripts/check_oracle_determinism.py` PASS.
+
+Briefs are keyed by GENRE, so all three cards resolve to this one file. **The brief stage is
+NOT re-run.** The surviving chain resumes at the stage after brief — `genre-select`.
+
+### Every checkable claim, re-measured live
+
+| # | Section | Claimed before this pass | Measured 2026-10-16 15:5x–16:2x CDT |
+|---|---|---|---|
+| 1 | header | card `t_9cc9b48f` (7.5) owns the genre | surviving card `t_60767fb1`, true score **7.0**; digest `2e603d85…` superseded |
+| 2 | §1, §11 | the registry `defaults:` block cited at 19–25 | the block is **20–25**; line 19 is blank (`check_brief_line_refs` FAIL) — corrected |
+| 3 | §1 | two quoted `reject_signals` | rubric carries **6 criteria** and **6 reject_signals**; `no_stated_tempo_key` and `clipped_master` added to the quotes |
+| 4 | §3.3, §6.4 | planner cap `MAX_DURATION_S = 420`; a 600 s render is impossible | cap **600** (`planner.py:104`, commit `52ae620`); `elemental-earth-chamber-loop.json` is `duration: 600` with a `.rendered` marker; 600.000 s = 375 bars at 150 BPM, whole-bar |
+| 5 | §4, §7, §12 | 6 lyric blueprints; `bpm = 100` fallback wrong for 150 BPM | **7** blueprints (+`jungle-dnb.yaml`); the fallback reads the caption's own BPM (`planner.py:199`, `:212`), so this genre plans at 150 |
+| 6 | §5 | cadence fit 6.7 | **3.3** (surviving card's true breakdown) |
+| 7 | §6.1 | render log `found=3 rendered=0 skipped=3`; 3 plans; 1 queue entry | `found=13 rendered=1 skipped=12 failed=0`; **13 plans, 12 markers, 1 master + `loops/`**; queue holds **11 entries**, none of this genre |
+| 8 | §6.1 | `music/suno-gen.py` absent; lineages diverged | present (42 652 B); `origin/main` is an ancestor; **0 behind / 72 ahead** at `c296db6`; `check_stage_scripts` PASS 11/11 |
+| 9 | §6.2 | engine `v0.1.2`; `spec.py` has no `bpm` field | engine **`v0.1.3`**; `spec.py` carries `bpm` and `keyscale` (card `t_25a6499c` D1/D2) |
+| 10 | §6.3 | three blockers: `instrumental: False`, no `--allow-empty`, hardcoded 120 BPM | **all resolved**: wrapper 354 lines = the repo copy, carrying `instrumental`/`bpm`/`keyscale` (lines 174/189/190); `check_lyrics` early-returns for instrumental (line 119); live fixture `t_8c5a6b91/t8c5a6b91-empty-lyrics.json` + `.rendered`; `translate.py` reads `req.bpm` at line 63 |
+| 11 | §6.5 (new) | — | the render rail refuses a loop-claim master that fails `loop_close.py --check-only` (`.looprefused`, job rc=1, card `t_b21aeb51`); this genre's `loop-10min` shape makes its master a loop claim |
+| 12 | §8.1 | `gate_sync_ready` only checks that `loop_points.json` exists | it now **measures** every seam via `gate_loop_points.check_loop` (`gate_sync_ready.py:347`); the visual gate is resolved from the registry (`stage_gates.visual`), not hardcoded |
+| 13 | §8.2 | payload sync FAILs; `SRC` names a tree with no `music/`; chart wrapper ahead of the repo's | `check-payload-sync.sh` → **PASS**; `SRC` default is the lane checkout; chart wrapper 354 lines, identical to the repo's |
+| 14 | §8.3 | suite green | still green — `OK: every gate passed its good artifact and failed its broken one` |
+| 15 | §8.5, §12 | residue 6 `ready` + 3 `running` | **37 done / 7 running / 3 ready**; `check_oracle_board` PASS rc=0, one open card per open genre |
+| 16 | §11 | `brain/playbooks/music-lane-architecture.md` does not exist | exists, 34 328 B, written 2026-10-16 15:31 |
+| 17 | §3.4, §9 | `gate_youtube_authentic` fails the shipped template | unchanged: `only 4 distinct frame signature(s) across 600.0s (10 required) — this is a raw dump`, plus the missing-disclosure reason |
+
+Held as written (re-measured, unchanged): the genre block and the five `defaults:` keys; the
+genre has no `notes:` key; `gate_quota` `0/60`, `0` studio exports; the template's style block
+**567 chars / 568 bytes** (1 line) — the header's "567/1000" is accurate; the template caption
+`150 BPM`, instrumental, six exclude terms; `ffprobe` `pixel_scene.mp4` 5.000000 s / 14 244 B
+and `loop_10min.mp4` 600.000000 s · 1280×720 · 25/1 fps; the lane → gate → required-artifact
+table and all three `advisory` rungs; the `gate_loop_points` fixtures; `gate_loudness` still
+the volumedetect ruler.
+
+The checks cited above were run at revision `c296db6` (2026-10-16, before this pass's commit),
+against a repository that concurrent workers were committing to — the live census values
+(figures recomputed, line ranges cited, commits ahead, open cards) move while the checks run.
+
+### Checks run at this pass
+
+Commands: `/usr/bin/python3 music/scripts/<check>.py` and `bash music/gates/check_gate_suite.sh`,
+run at revision `c296db6` (2026-10-16, before this pass's commit), against a repository that
+concurrent workers were still committing to — so the live census figures move between runs of
+the same check. Verbatim results:
+
+```
+FAIL check_brief_line_refs rc=1: 1 of 107 cited line range(s) does not hold — music/briefs/elemental-fire.md:605 (106 OK)
+FAIL check_brief_figures  rc=1: 1 of 102 recomputed figure(s) does not match — music/briefs/elemental-water.md:600 (101 OK)
+PASS check_brief_paths: 19 `mining-k8s/...` citation(s) across 14 brief(s) resolve under /home/j_kro (rc=0)
+PASS check_brief_bpm_solutions: 9 styleWeight claim(s) across 14 brief(s) buy the BPM they state (rc=0)
+PASS check_stage_scripts: 11 referenced script path(s) all present (rc=0)
+PASS check_prompt_style_counts: 15 declared style-field length(s) across 14 template(s) match (rc=0)
+PASS check_oracle_board: every open oracle genre carries exactly one open card (rc=0)
+PASS check_oracle_determinism: trend fetch failure never outscores an empty success (rc=0)
+PASS check_gate_lane_surface: every gate accepts the lanes lanes.yaml gives it (rc=0, card t_d9983bb9)
+PASS check_doc_refs: 25 section ref(s) resolve to headings in brain/playbooks/music-lane-architecture.md (rc=0)
+PASS gate suite: OK: every gate passed its good artifact and failed its broken one (rc=0)
+```
+
+`check_brief_drift` did not hold still while this pass ran: at 16:05 CDT (revision `c296db6`) it
+passed on every count; at 16:25 CDT (revision `c296db6`, with other workers' uncommitted edits
+in the tree) it named `anime-opening.md:18` for a stale divergence — a concurrent worker's
+commit had aged that count in between. Same command, same revision, different world. Neither
+reading is this file's.
+
+**This file is clean in both of the checks that were failing on it.** The residual failures
+live on other briefs and are not this card's work: one figure defect
+(`elemental-water.md:600`, 53 claimed lines against 88) and one line-range defect
+(`elemental-fire.md:605`). The `genres.yaml` defaults-range class that this pass fixed here is
+also carried by card `t_e86c2110` (`ready` on this board) for the remaining files, so that card
+has one fewer file to touch. The two `FAIL` checks exit non-zero, so no failure is silent.
+
+### Supersession chain for this file
+
+| Revision | sha256 | Size | Pass |
+|---|---|---|---|
+| 1 | `12c6e2cf…` | 672 lines / 37 365 B | the revision the oracle ruling named |
+| 2 | `fd4a7a6b…` | 690 lines / 38 897 B | `t_0f7aed63` aged-count pass |
+| 3 | `2e603d85ef4e5b3ce41c2d69b5ff1b9210828e289bb2b6c6c3ed1dda64974457` | 692 lines / 39 339 B | the copy this pass supersedes |
+| 4 | this revision | — | `t_60767fb1` surviving-card pass |
+
+### Open items (reported, not created here)
+
+Every open item this pass raises already has an owner card on the board, so this pass created
+none:
+
+- No queue entry exists for this genre. Adding one is the generate stage's first action (§10).
+- `gate_sync_ready` and `gate_loop_points` are still not stage gates (§8.1) — the measurement
+  gap is closed, the wiring gap is not.
+- The residual check failures this file does not carry belong to `t_6dd13d76` (the stale-figure
+  and line-range class) and `t_e86c2110` (the `genres.yaml` defaults-range class, now one file
+  smaller); `t_bdb94fb7` owns the stale "path is absent" class that §6.1 and §8.2 used to
+  carry. The re-emitted-card stage marker this card arrived with is `t_6599927d`.
+- The loop-10min delivery chain — the discarded render output and the rail's loop close — is
+  `t_320bae4c` and `t_d7f6d053`; neither changes this brief's recommendation.
