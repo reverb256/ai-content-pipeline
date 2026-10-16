@@ -36,6 +36,52 @@ sheet nobody measured.
 EVERY NUMBER IN THIS FILE WAS MEASURED on the sheet it reads:
     8 sections, 14 direction lines, 0 singable lines, 71 unique words (54 of
     them carried by direction lines under the old rule).
+
+THE COMMITTED CORPUS IS TWO CONTROLS, MEASURED (card t_450e7f39, 2026-10-16)
+---------------------------------------------------------------------------
+The corpus check below first assumed that EVERY committed sheet is made of
+singable lines, and used the whole `music/lyrics/*/*/lyrics.suno.txt` glob as the
+negative control for the widened rule. Three direction-only sheets landed the
+same day (commit ce845f6, card t_9682a610) for genres whose own template says the
+lyrics box stays empty — so every line in them IS direction text, the gate flags
+all of them, and it is right to. The glob reported
+
+    FAILED (failures=3)   in   music.tests.test_acestep_sheet_guard
+
+and `music/gates/check_gate_lyrics_original.sh` reported "BROKEN: 1 of 14
+check(s) misbehaved" for sheets that are correct.
+
+MEASURED 2026-10-16 — 9 committed sheets, and the sheet's own `# genre:` header
+equals the directory it sits in for 9 of 9:
+
+    vocal        (>=1 sung line, 0 placeholder problems each)         6 sheets
+      activist/what-runs-beneath, anime-ending/reflections,
+      anime-opening/becoming, anime-opening/opening-theme,
+      chill-lounge/amber-hour, trance/signal-before-dawn
+    direction-only (0 sung lines, every line flagged as direction)    3 sheets
+      commentary-beds/warm-jazz-bed (3 lines), elemental-fire/molten-blaze
+      (7), sentimental-piano/first-snow (7)
+
+So the corpus is split by the STATE the shipped rule measures, one control each:
+
+  * a sheet WITH a sung line is the NEGATIVE control: no line of it may be read
+    as direction text (a rule that widens too far, or that flags everything);
+  * a sheet with NO sung line is the POSITIVE control: every line of it must be
+    read as direction text, and its genre's template must declare the empty
+    lyrics box — that is what makes it a finished instrumental sheet rather than
+    a scaffold.
+
+WHY THE SPLIT IS NOT KEYED ON THE GENRE MARKER. The card that filed this
+(t_450e7f39) offered "skip the sheets whose genre template leaves the lyrics box
+empty" and "assert the placeholder rule fires on all of them". The marker cannot
+carry that decision: music/prompts/chill-lounge.md:14 says "Leave the **lyrics
+box empty**", music/planner/planner.py:is_instrumental_template reads
+chill-lounge as instrumental (it is one of the census of 8 that
+music/tests/test_planner.py pins), and yet music/lyrics/chill-lounge/amber-hour
+is a finished, human-claimed VOCAL sheet that the gate's own acceptance matrix
+requires to PASS (music/gates/check_gate_suite.sh:354). The marker is therefore a
+ONE-WAY condition — a direction-only sheet implies an instrumental genre, never
+the converse — and the sheet's own measured state is what selects its control.
 """
 
 import importlib.util
@@ -112,6 +158,52 @@ CONTROLS = {
     # line with a stray word, which is the silent failure this guard prevents.
     "direction with an inline remainder": ("(direction) real lyric here", []),
 }
+
+
+# --- the committed corpus (card t_450e7f39, 2026-10-16) ---------------------
+# The sheets this repo has committed, the genre each one declares in its own
+# header, and the predicate that decides whether a genre's template leaves the
+# lyrics box empty. The predicate is the SHIPPED one: the same predicate
+# music/planner/planner.py gates `--lyrics-mode` on, which
+# music/tests/test_planner.py pins against the CDP rail's copy
+# (music/suno-gen.py:is_instrumental_template) over every genre. No genre list
+# lives in this file — the genre comes from the sheet, the marker from the
+# genre's own template.
+PLANNER = REPO / "music" / "planner" / "planner.py"
+planner = _load(PLANNER, "planner_under_test")
+
+SHEET_GLOB = "music/lyrics/*/*/lyrics.suno.txt"
+GENRE_HEADER_RE = re.compile(r"^#\s*genre:\s*(\S+)\s*$", re.M)
+
+
+def committed_sheets() -> list:
+    return sorted(REPO.glob(SHEET_GLOB))
+
+
+def sheet_genre(sheet: pathlib.Path) -> str:
+    """The genre the sheet declares about itself (`# genre:` in its header).
+
+    music/lyrics/lyrics.py scaffold writes that line, and parse_sections skips
+    `#` lines, so it is never lyric body. The directory is NOT read as a
+    fallback: a sheet that does not say what genre it is cannot be asked the
+    right question about its template (the corpus test asserts the two agree).
+    """
+    m = GENRE_HEADER_RE.search(sheet.read_text(encoding="utf-8"))
+    if m is None:
+        raise AssertionError(
+            f"{sheet.relative_to(REPO)} has no '# genre: <genre>' header line")
+    return m.group(1)
+
+
+def sheet_problems(sheet: pathlib.Path) -> list:
+    sections = lyrics.parse_sections(sheet.read_text(encoding="utf-8"))
+    return lyrics.validate_sheet(sections, strict=False)
+
+
+def is_direction_only(sheet: pathlib.Path) -> bool:
+    """True when the shipped rule finds no sung line anywhere in the sheet."""
+    sections = lyrics.parse_sections(sheet.read_text(encoding="utf-8"))
+    return not any(lyrics.sung_lines(lines) for _, lines in sections)
 
 
 def plan(lyrics_text: str, **over) -> dict:
@@ -239,16 +331,121 @@ class TheControlsStillBehave(unittest.TestCase):
         with self.assertRaises(SystemExit):
             acestep.check_lyrics(plan("[Intro]\n(the motif, alone)\n"), False)
 
-    def test_the_committed_sheets_still_pass_the_gate(self):
-        """The corpus is the negative control for the widened placeholder rule."""
-        sheets = sorted(REPO.glob("music/lyrics/*/*/lyrics.suno.txt"))
+
+class TheCommittedCorpusIsTwoControls(unittest.TestCase):
+    """Card t_450e7f39: the committed sheets pin BOTH halves of the widened rule.
+
+    The first version of this check used the whole `music/lyrics/*/*/lyrics.suno.txt`
+    glob as the negative control, i.e. it assumed every committed sheet is made of
+    singable lines. Three direction-only sheets landed (commit ce845f6, card
+    t_9682a610) for genres whose template says the lyrics box stays empty, so every
+    line in them IS direction text and the gate flags all of them — correctly. The
+    glob then reported FAILED (failures=3) and the lyrics stage's own runner read
+    "BROKEN: 1 of 14 check(s) misbehaved" for sheets that are right.
+
+    The split is by the state the shipped rule MEASURES, not by genre. The module
+    docstring records why the genre marker cannot be the key: chill-lounge declares
+    the empty lyrics box and still ships a finished human-claimed vocal sheet.
+    """
+
+    def test_every_committed_sheet_declares_the_genre_it_sits_in(self):
+        """The genre asked about the template must be the sheet's own genre."""
+        sheets = committed_sheets()
         self.assertGreaterEqual(len(sheets), 3, "no committed sheets found")
         for sheet in sheets:
-            sections = lyrics.parse_sections(sheet.read_text(encoding="utf-8"))
-            problems = lyrics.validate_sheet(sections, strict=False)
             with self.subTest(sheet=str(sheet.relative_to(REPO))):
-                self.assertEqual([p for p in problems if "placeholder" in p], [],
-                                 "a human-authored sheet now fails the gate")
+                self.assertEqual(
+                    sheet_genre(sheet), sheet.parent.parent.name,
+                    "the sheet's own '# genre:' header and the directory it sits "
+                    "in disagree: one of them is wrong, and every check below asks "
+                    "the genre's template a question about this sheet")
+
+    def test_the_committed_sheets_still_pass_the_gate(self):
+        """A sheet WITH a sung line: the negative control. Nothing is direction."""
+        sheets = [s for s in committed_sheets() if not is_direction_only(s)]
+        self.assertGreaterEqual(len(sheets), 1,
+                                "no committed sheet carries a sung line any more, "
+                                "so the negative control is empty (see "
+                                "test_the_corpus_holds_both_controls)")
+        for sheet in sheets:
+            problems = sheet_problems(sheet)
+            with self.subTest(sheet=str(sheet.relative_to(REPO))):
+                self.assertEqual(
+                    [p for p in problems if "placeholder" in p], [],
+                    "a human-authored sheet now fails the gate. If the flagged line "
+                    "is the CONTINUATION of a wrapped direction, that is the "
+                    "t_bc6a0c00 bug (a continuation line the rule read as a lyric), "
+                    "not a defect in the sheet.")
+
+    def test_a_direction_only_sheet_is_flagged_line_for_line(self):
+        """A sheet with NO sung line: the positive control. Every line is direction.
+
+        Two ways to fail here, both real:
+          * the genre's template does not declare an empty lyrics box, so the sheet
+            is a scaffold (or a genre whose template lost its marker) — a sheet
+            nobody finished, which is not evidence about the widened rule;
+          * a line of the sheet is NOT read as direction text. That is the t_bc6a0c00
+            bug (a direction that WRAPS: its continuation line opens no parenthesis,
+            so the rule saw it as a lyric). No committed sheet wraps a direction yet
+            — measured 2026-10-16 — so the template-sheet tests above are what cover
+            the wrapped case; this one covers every line on the real beds.
+        """
+        sheets = [s for s in committed_sheets() if is_direction_only(s)]
+        self.assertGreaterEqual(len(sheets), 1,
+                                "no direction-only sheet is committed any more, so "
+                                "this positive control is gone (see "
+                                "test_the_corpus_holds_both_controls)")
+        for sheet in sheets:
+            rel = str(sheet.relative_to(REPO))
+            sections = lyrics.parse_sections(sheet.read_text(encoding="utf-8"))
+            body = [ln.strip() for _, lines in sections for ln in lines if ln.strip()]
+            genre = sheet_genre(sheet)
+            problems = sheet_problems(sheet)
+            flagged = [p for p in problems if "placeholder" in p]
+            with self.subTest(sheet=rel):
+                self.assertTrue(
+                    planner.is_instrumental_template(genre),
+                    f"{rel} carries no sung line, and '{genre}' is not an "
+                    f"instrumental genre: music/prompts/{genre}.md does not say the "
+                    "lyrics box stays empty. A sheet like this is a scaffold — a "
+                    "half-written sheet, not a control: finish it, or re-point this "
+                    "test if the state is deliberate")
+                self.assertEqual(
+                    len(flagged), len(body),
+                    f"{rel}: {len(body)} line(s) in the sheet, {len(flagged)} read as "
+                    "direction text — a direction line the rule did not see:\n"
+                    + "\n".join(problems))
+                seen = "\n".join(flagged)
+                for line in body:
+                    self.assertIn(line[:60], seen,
+                                  f"{rel}: only a direction line can be here, and "
+                                  f"this one is not flagged: {line!r}")
+
+    def test_the_corpus_holds_both_controls(self):
+        """Both controls must stay populated, or the rule can collapse unnoticed.
+
+        A rule that flagged every line would leave the negative control EMPTY —
+        every sheet would look direction-only and test_the_committed_sheets_still_
+        pass_the_gate would pass over an empty list. So the census is asserted, and
+        printed when it fails.
+        """
+        sheets = committed_sheets()
+        vocal = [s for s in sheets if not is_direction_only(s)]
+        beds = [s for s in sheets if is_direction_only(s)]
+        census = "\n".join(
+            [f"  vocal ({len(vocal)}):"] + [f"    {s.relative_to(REPO)}" for s in vocal]
+            + [f"  direction-only ({len(beds)}):"]
+            + [f"    {s.relative_to(REPO)}" for s in beds])
+        self.assertEqual(len(vocal) + len(beds), len(sheets),
+                         "a sheet was classified into two states at once")
+        self.assertGreaterEqual(len(vocal), 1,
+                                "no committed sheet carries a sung line any more: a "
+                                "rule that flags every line empties the negative "
+                                "control instead of failing it\n" + census)
+        self.assertGreaterEqual(len(beds), 1,
+                                "no direction-only sheet is committed any more: the "
+                                "positive control (every direction line is seen) is "
+                                "gone\n" + census)
 
 
 if __name__ == "__main__":
