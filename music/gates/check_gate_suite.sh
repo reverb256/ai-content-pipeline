@@ -753,6 +753,56 @@ pass "planner --lyrics-file: sheet carried verbatim, the rail's guard accepts it
   "$PY" -m unittest music.tests.test_planner_lyrics_file
 
 # ------------------------------------------------------------------
+# 17. the render rail's backfill (card t_d7f6d053)
+# ------------------------------------------------------------------
+# The rail closes the delivered loop for the plan it has JUST rendered, so every
+# plan rendered BEFORE that step existed (card t_b21aeb51) keeps its `.rendered`
+# marker, is skipped, and never gets its loop. Measured live 2026-10-16: 7
+# `.rendered` markers in /var/lib/music-plans with no render at the documented
+# path - elemental-earth's 600 s `loop-10min` claim among them, on a card
+# (t_909069f0) already CLOSED on an acceptance nobody could check. The bytes were
+# still in the engine's own store, so the fix is a backfill, not a re-render:
+# recover the master to the documented path and close the loop with the same
+# music/scripts/loop_close.py the rail runs.
+#
+# These cases are what makes that a check rather than a claim: the backfill must
+# REFUSE a mapping it cannot name (a title alone can belong to two plans), use
+# the ENGINE's extension, be a no-op on the second run, and never write the
+# engine's store - and the chart must run it, mount that store read-only, and
+# let a refusal be reported instead of failing the render loop.
+say "the render rail's backfill (music/scripts/backfill_render.py)"
+pass "backfill selftest: refuses what it cannot name, recovers, closes, no-ops" \
+  "$PY" "$REPO/music/scripts/backfill_render.py" --selftest
+pass "backfill suite: mapping rules, engine ext, no-op re-run, store untouched" \
+  "$PY" -m unittest music.tests.test_backfill_render
+pass "the backfill reads the engine's store READ-ONLY (sqlite mode=ro)" \
+  grep -qF -- '?mode=ro' "$REPO/music/scripts/backfill_render.py"
+fail_expected "the backfill never opens the engine's store read-write" 1 \
+  grep -qF -- 'mode=rw' "$REPO/music/scripts/backfill_render.py"
+
+CHART_DIR="${MINING_K8S:-$REPO/../mining-k8s}/helm/charts/music-pipeline"
+if [ -f "$CHART_DIR/templates/cronjob-render.yaml" ]; then
+  pass "the rail runs the backfill" \
+    grep -qF -- 'backfill_render.py' "$CHART_DIR/templates/cronjob-render.yaml"
+  pass "the rail runs it BEFORE the ComfyUI probe (a backfill needs no GPU)" \
+    awk '/BACKFILL, "--all"/ {b=NR} /system_stats/ {c=NR} END {exit !(b && c && b < c)}' \
+    "$CHART_DIR/templates/cronjob-render.yaml"
+  pass "a backfill that cannot run is REPORTED, not fatal to the render loop" \
+    grep -qF -- 'the backfill did not run (' "$CHART_DIR/templates/cronjob-render.yaml"
+  pass "the rail mounts the engine's store read-only" \
+    grep -qF -- 'readOnly: true' "$CHART_DIR/templates/cronjob-render.yaml"
+  pass "the chart names the store it mounts and points the job at it" \
+    grep -qF -- 'storeMountPath' "$CHART_DIR/values.yaml"
+  pass "the chart's payload carries the backfill AND the check knows its name" \
+    grep -qF -- 'check_file music/scripts/backfill_render.py' "$CHART_DIR/check-payload-sync.sh"
+  pass "the payload copy IS the lane's script, byte for byte" \
+    cmp -s "$REPO/music/scripts/backfill_render.py" \
+    "$CHART_DIR/files/music/scripts/backfill_render.py"
+else
+  echo "SKIP  the chart is not at $CHART on this host (set MINING_K8S=...)"
+fi
+
+# ------------------------------------------------------------------
 rm -f /tmp/gate_out.$$
 if [ "$fails" -eq 0 ]; then
   echo
