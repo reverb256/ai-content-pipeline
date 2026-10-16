@@ -6,6 +6,10 @@
 > same lanes, emitted ten minutes later by the same unguarded oracle run.
 > Both resolve to THIS brief; the brief is keyed by genre, not by card.
 > Root cause fixed with this card — see §7.
+> **Verified (duplicate-card pass, `t_abaa7e2d`):** 2026-10-16T13:36-05:00 (CDT) — see §9.
+> One correction came out of it (§1 style-block unit). The 13:09 revision of this file is
+> `sha256 539fae3fa619effea56e7dc304975ffe2a9a6d3b8e6bc111ca6e9f6602ed6840` (commit `ade6e87`);
+> this pass supersedes it.
 > **Written:** 2026-10-16T13:00-05:00 (CDT), profile `music-producer`, run 7
 > **Repo:** `/home/j_kro/ai-content-pipeline` @ `1553da2` (main)
 > **Oracle score:** 7.55/10 (quota headroom 10.0, lane coverage 8.0, revenue 10.0,
@@ -39,7 +43,7 @@ not — `python3 music/registry.py validate` fails with
 |---|---|
 | Genre | `anime-opening` |
 | Family | `anisong` |
-| Prompt template | `music/prompts/anime-opening.md` — resolves; style block measures 754 chars (`awk` between the first ```` ```text ```` fences, newlines stripped) |
+| Prompt template | `music/prompts/anime-opening.md` — resolves; style block measures 754 bytes / 752 characters (`awk` between the first ```` ```text ```` fences, `wc -c` counts bytes — the block holds one 3-byte em dash, so the character count is 752; corrected in the §9 pass) |
 | Visual style | `music/visuals/anime-opening.md` — resolves |
 | Lanes | `streaming`, `sync`, `direct-license`, `youtube-gaming` |
 | Cadence | 1/wk |
@@ -266,3 +270,68 @@ Then, in order: `generate` (2 takes, Suno CDP, Studio export only — after
 `gate_quota`), `curate`, `stems`, `master`, `gate` (different model),
 `package`, `visual`, `publish` (PRIVATE / draft only — never public without
 j_kro's approval), `track`.
+
+## 9. Verification pass — the duplicate card `t_abaa7e2d` (2026-10-16 13:36)
+
+This brief is keyed by genre, so the twin oracle card `t_abaa7e2d` (`score 7.75`) resolves to
+this same file. It closes as a duplicate after re-measuring every checkable claim against live
+state. Measured, not asserted:
+
+| Claim | Re-measured how | Result |
+|---|---|---|
+| Artifact identity | `sha256sum`; `git show ade6e87:…`; `git status --porcelain` | 268 lines / `13120 B`, `sha256 539fae3f…`, disk == `HEAD` == `ade6e87`, tree clean |
+| Registry 14 genres / 10 lanes | `/usr/bin/python3 music/registry.py validate` | OK — identical genre and lane lists, `period 2026-10, standard 0/60` |
+| Genre row: family `anisong`, lanes `[streaming, sync, direct-license, youtube-gaming]`, cadence `1/wk`, shape `single-4min` | `music/genres.yaml` read live | exact match, including the quoted registry note character for character |
+| Registry `defaults:` | `music/genres.yaml` lines 20–25 | `export: studio`, `stems: true`, `lyrics: human-original`, `release_private: true`, `gate_profile: reviewer-deepseek` — match |
+| Template and visual resolve | `stat` | `music/prompts/anime-opening.md` 6578 B, `music/visuals/anime-opening.md` 2111 B — both present |
+| Style block is the first `text` fence pair | fence scan | 2 ```` ```text ```` blocks in the template; the first is the style field |
+| Blueprint absent | `ls music/lyrics/blueprints/` | `activist.yaml`, `chill-lounge.yaml`, `trance.yaml` only — match |
+| Gate path | `music/gates/` | all nine scripts present: `gate_lyrics_original`, `gate_stems_present`, `gate_loudness`, `gate_quality`, `gate_release_ready`, `gate_sync_ready`, `gate_youtube_authentic`, `gate_human_approval`, `gate_quota` |
+| Lane gates and `requires` lists | `music/lanes.yaml` | `streaming` → `gate_release_ready` (`ai_disclosure, isrc, metadata, master`); `sync` → `gate_sync_ready` (`stems, metadata, clearance_doc, instrumental_version`); `direct-license` → `gate_sync_ready` (`stems, license_tiers`); `youtube-gaming` → `gate_youtube_authentic` — exact |
+| The shape collision | `music/genres.yaml` + `music/lanes.yaml` | genre `single-4min`, `youtube-gaming` lane `loop-10min` — the collision in §3 stands |
+| Every rung `advisory`, 0 publishes / 0 strikes / $0 | `music/autonomy.yaml` | exact for all four lanes |
+| Quota `PASS`, 0/60, warn 55, hard_stop 58 | `music/gates/gate_quota.py` | reproduced exactly |
+| §4's transcript runs with the bare `python3` that §1 warns against | ran it literally on nexus | reproduced, `rc=0` — `gate_quota` needs no PyYAML, so the trap is latent, not active; §1's warning is real (`python3 music/registry.py validate` → `ModuleNotFoundError: No module named 'yaml'`, rc=1). Same trap the chill-lounge duplicate (`t_4c838339`) recorded |
+| Craft contract (key-changed final chorus, royal road, 90-second density, Japanese script, no fade) | `music/prompts/anime-opening.md` lines 8, 14, 19, 68, 77–78, 81, 123, 126–127 | every quoted requirement present in the template |
+| Consumer names ("Opening Theme", "Becoming") | template lines 6–7 | quoted verbatim from the template |
+| 28 cards for 14 genres | `performance/music-oracle-runs.log` | `03:27:53 — 14 created` and `03:37:53 — 14 created` — 28, match |
+| Dedupe guard and its test | `music/test_oracle_dedupe.py`; `music/oracle.py:119,436–446`; oracle journal | `Ran 12 tests … OK` (rc=0); `open_oracle_genres()` and the fail-closed read present; unit `Result=success ExecMainStatus=0` at 13:08:45 with `0 created, 14 skipped (open), board_read_ok=True` |
+| Fail-closed behaviour | ran `open_oracle_genres('music')` from a worker shell | board read refused (`delegate_task child contexts cannot mutate Kanban tasks or boards`) → guard returned `None` → `would fail closed (0 cards created)` — verified live, not by reading the code |
+| Scheduler path fix (§7.2) | `sha256sum` of each installed unit vs `music/scheduler/<unit>` | `music-oracle`, `music-policy-watch`, `music-weekly-digest` byte-identical to the repo copies; `music-pipeline-driver` still differs (installed `ExecStart` → `~/Projects/ai-content-pipeline/…`) — §7.2 and §7.3 stand |
+| The 08:00 daily failure | `journalctl --user -u music-oracle.service --since 07:50 --until 08:15` | `08:00:00 Main process exited, code=exited, status=2/INVALIDARGUMENT` / `Failed with result 'exit-code'` — match |
+| Driver "dispatched 0 all day" | `performance/pipeline-driver.log` | `13:04:32 … dispatched 0, running 0/1` and `13:28:19 … dispatched 0` — match |
+| Unit backups kept | `ls …/scratch/unit-backup-20261016/` | 7 files, 13:07 — match |
+| `music-policy-watch` still times out | `systemctl --user show` + journal | `Result=timeout`, `ExecMainStatus=130`, 5 min 2.932 s wall (2026-10-16 07:05:03) — match, and its own log file was never written |
+| `campaigns/virtual-reflections/` absent | `find . -iname '*virtual*'` | no output — match |
+| VR masters for tracks 7–8 | `find` for `opening-theme` / `becoming` / `virtual-reflection` | no output — §7.4's open question is answered: no master exists, so nothing can be duplicated by generating |
+| Live engine | `kubectl get cronjob -n mining`; ConfigMap `music-pipeline-briefs` | `music-pipeline` (`17 */6 * * *`) and `music-pipeline-render` (`41 */4 * * *`) both live, not suspended; the queue holds `smoke-chill-lounge` only — §6's "verify, do not trust" is discharged |
+
+**One correction came out of the pass, applied in place:** §1 said the style block "measures
+754 chars". The measurement is real and the number is what the stated pipeline prints, but
+`wc -c` counts **bytes**, and the block holds one 3-byte em dash (`—`), so the block is 754
+bytes and **752 characters**. The label is corrected; zero decision impact. This is the second
+known instance of the same unit-label class in this lane — `music/briefs/commentary-beds.md`
+carries the first ("4133 B" for 4133 characters, both directions of the same confusion). Both
+are now cited in `t_55379aba`.
+
+**Expected drift, not a defect:** §7.1's board snapshot (72 tasks; `done 31 / ready 26 /
+running 6 / todo 6 / blocked 3`) has moved with the day's completions. Live now: 95 tasks —
+`done 50`, `ready 31`, `running 2`, `todo 7`, `blocked 4`, `archived 1`. Eight pre-guard
+oracle duplicates remain `ready`; `t_bf0e5edd` (assignee `oracle`) owns that sweep, and no
+j_kro decision is needed to stop new ones — only to clear the old ones.
+
+**One card created — for a gap, not a blocker.** Every blocker this brief names already has an
+owner, and the stage handoff already exists: `t_53da62e5` (assignee `writer`, `ready`, parent
+`t_96821eed`) owns the anisong blueprint plus the original Japanese lyric sheet — exactly the
+`lyrics` advance §8 recommends. Other owners: `t_bf0e5edd` (oracle duplicates), `t_41f354be`
+and `t_75aacf8b` (scheduler checkout and profile path), `t_19d0714b` (which dispatcher owns the
+board), `t_8a715681` (diverged checkout), `t_5a93164a` (stage advance refused), `t_bae1a3e1`
+(the worker-shell CLI fence that made the fail-closed path observable here).
+
+What had no owner was the missing check: this lane cannot recompute the evidence figures in a
+brief, which is how §1's unit label survived a write, a commit and a completion. Created
+`t_55379aba` (assignee `nexus-core`, parent this card) for a deterministic figure check that
+must fail against the pre-correction revisions of both known instances. FAILURE → TEST: the
+incident now has its check, and the check is not self-assigned.
+
+This pass changed no registry value, gate, plan, or cluster config. Only this brief changed.
