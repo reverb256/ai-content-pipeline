@@ -568,6 +568,35 @@ pass "loop_close suite: pack.py parity, registry reader, frozen fixture, close/r
   "$PY" -m unittest music.tests.test_loop_close
 
 # ------------------------------------------------------------------
+# 12. the render output contract (card t_320bae4c)
+# ------------------------------------------------------------------
+# A finished render has ONE documented path - /var/lib/music-plans/<plan-stem>.<ext>
+# on the node, /plans/<plan-stem>.<ext> in the render pod - and the rail only
+# writes its success `.rendered` marker when the file is THERE. Measured before
+# that check existed: the wrapper's copy went to the pod's /tmp, so
+# `kubectl cp <pod>:/tmp/...flac .` said NotFound and the rail reported the
+# render as done anyway; the pack stage was told to read "where the brief says"
+# and nothing said. These three cases are what makes the contract a check:
+#   * a plan nothing was rendered for must FAIL, naming the path it looked in;
+#   * a rail whose own mount is no longer the documented host path must be rc 3
+#     (DRIFT), not a pass - that is the "a future change cannot silently move it"
+#     half, and the file being present must not rescue it;
+#   * the selftest proves all of it on real files AND compares the chart's own
+#     `outHostPath` against the constant.
+mkdir -p "$SCRATCH"
+say "the render output contract (music/scripts/check_render_landed.py)"
+fail_reason "a render that landed nowhere fails the contract check" 1 \
+  "MISSING" \
+  "$PY" "$REPO/music/scripts/check_render_landed.py" --check \
+  --plans "$SCRATCH" --stem no-such-render-landed
+fail_reason "a rail moved off the documented host path is rc 3, not a pass" 3 \
+  "MOVED" \
+  "$PY" "$REPO/music/scripts/check_render_landed.py" --check \
+  --plans "$SCRATCH" --stem no-such-render-landed --host-path /var/lib/other-plans
+pass "render output contract: red/green/moved on real files + the chart's outHostPath" \
+  "$PY" "$REPO/music/scripts/check_render_landed.py" --selftest
+
+# ------------------------------------------------------------------
 rm -f /tmp/gate_out.$$
 if [ "$fails" -eq 0 ]; then
   echo

@@ -305,7 +305,25 @@ def main() -> int:
             # Determine output path. The extension comes from the artifact the
             # service actually produced (audio_url), not from the engine name:
             # ace renders .flac, yue2 .flac, fixture .wav.
-            out_dir = os.environ.get("SUNOLOCAL_WRAPPER_OUT", "/tmp")
+            #
+            # The DIRECTORY is the caller's decision, never a default: a finished
+            # render has exactly ONE documented path, /var/lib/music-plans/
+            # <stem>.<ext> on the node (the render rail sets
+            # SUNOLOCAL_WRAPPER_OUT to its mount of it), and the pack stage reads
+            # it there (card t_320bae4c, music/stages.yaml RENDER OUTPUT
+            # CONTRACT, music/scripts/check_render_landed.py). An unset value
+            # used to write this copy to /tmp without a word - pod-local, gone
+            # with the pod, and the rail certified the render anyway. The
+            # fallback stays /tmp for an ad-hoc caller, but it says so.
+            out_dir = os.environ.get("SUNOLOCAL_WRAPPER_OUT") or ""
+            if not out_dir:
+                out_dir = "/tmp"
+                sys.stderr.write(
+                    "WARNING: SUNOLOCAL_WRAPPER_OUT is unset - writing the render "
+                    f"copy to {out_dir}, which does NOT outlive this process. The "
+                    "documented render path is <SUNOLOCAL_WRAPPER_OUT>/<stem>.<ext> "
+                    "= /var/lib/music-plans/<stem>.<ext> on the node (card "
+                    "t_320bae4c).\n")
             url_ext = os.path.splitext(audio_url)[1].lstrip(".")
             ext = url_ext if url_ext in ("wav", "flac", "mp3") else "wav"
             out_path = os.path.join(out_dir, f"{stem}.{ext}")
