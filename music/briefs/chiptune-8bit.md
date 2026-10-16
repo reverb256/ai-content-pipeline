@@ -5,8 +5,11 @@
 > **Duplicate card:** t_05b640f6 (`music-oracle: chiptune-8bit (score 7.7)`) — same genre,
 > same lanes, emitted by an earlier oracle run before the dedupe guard existed.
 > Both resolve to THIS brief; the brief is keyed by genre, not by card.
-> **Written:** 2026-10-16 (CDT), profile `music-producer`, run 77
-> **Repo:** `/home/j_kro/ai-content-pipeline` @ `ade6e87` (main) — NOT `~/Projects/ai-content-pipeline`,
+> **Written:** 2026-10-16T13:17-05:00 (CDT), profile `music-producer`, run 77
+> **Verified (duplicate-card pass, `t_05b640f6`):** 2026-10-16T13:40-05:00 (CDT) — see §12.
+> One claim was withdrawn (§8.4); three items were corrected (§6.1, §8.3, §8.5). The canonical
+> card `t_9cc9b48f` is `done`; this brief is the one artifact both oracle cards resolve to.
+> **Repo:** `/home/j_kro/ai-content-pipeline` @ `afa242e` (main) at this pass — NOT `~/Projects/ai-content-pipeline`,
 > which is a second clone without a `music/` tree (both verified below).
 > **Oracle score:** 7.5/10 (quota headroom 10.0, lane coverage 6.0, revenue 8.0,
 > cadence fit 6.7, policy risk 9.0, trend signal 3.0). Threshold 5.0 → produce.
@@ -37,7 +40,7 @@ and every gate that imports `music/lyrics/lyrics.py` fail on it (measured in §8
 |---|---|
 | Genre | `chiptune-8bit` |
 | Family | `gamer` |
-| Prompt template | `music/prompts/chiptune-8bit.md` — resolves; style block measures **844 chars** (the template header claims "567/1000" — stale, see §8.4) |
+| Prompt template | `music/prompts/chiptune-8bit.md` — resolves; style block measures **567 chars / 568 bytes** (1 line) — the header’s "567/1000" is accurate, see §8.4 |
 | Visual style | `music/visuals/pixel-scene.md` — resolves |
 | Lanes | `game-assets`, `youtube-gaming`, `streaming` |
 | Cadence | 2/wk |
@@ -227,13 +230,16 @@ local `main` branch. It does exist on `origin/main`, added by `ba28f55`. Measure
 $ git log --oneline -1 main          → ade6e87
 $ git log --oneline -1 origin/main   → ba28f55
 $ git merge-base main origin/main    → e278f61
-$ git rev-list --left-right --count main...origin/main → 6   15
+$ git rev-list --left-right --count main...origin/main → 6   15   # 22   15 at the t_05b640f6 pass
 $ git cat-file -e origin/main:music/suno-gen.py → EXISTS on origin/main
 $ ls music/suno-gen.py               → No such file or directory
 ```
 
-The two lineages have diverged: local main is 6 ahead, 15 behind. The generate stage as
-written cannot run in this tree. Fix is a branch reconciliation, not a rewrite.
+The two lineages have diverged: `rev-list --left-right --count main...origin/main` measured
+**22  15** at the verification pass — up from `6  15` when this brief was written, because
+this wave's brief commits landed on local main. `music/suno-gen.py` is still absent from
+local main and still present on `origin/main`. The generate stage as written cannot run in
+this tree. Fix is a branch reconciliation, not a rewrite.
 
 ### 6.2 The live engine and its exact contract (probed, not assumed)
 
@@ -397,14 +403,32 @@ Two independent problems, both measured:
 regress the live wrapper back to direct-ComfyUI. The instrumental-flag fix in §6.3 has to land
 in the chart's wrapper (and be back-ported to the repo), not the other way round.
 
-### 8.3 The gate suite reports 2 BAD checks — and it is an interpreter problem
+### 8.3 The gate suite's interpreter hazard — FIXED since the brief stage
+
+At the brief stage the suite reported:
 
 ```
 $ bash music/gates/check_gate_suite.sh ; tail -1
 BROKEN: 2 check(s) misbehaved
 ```
 
-The two are both `gate_lyrics_original` fixtures (`BAD chill-lounge lyrics pass`,
+**Re-measured at the `t_05b640f6` pass — the suite is green:**
+
+```
+$ bash music/gates/check_gate_suite.sh ; tail -3
+FAILS no approval record fails (exit 1, as expected)
+
+OK: every gate passed its good artifact and failed its broken one
+```
+
+The fix landed in `757f3ab` (2026-10-16T13:21:38-05:00, card `t_d3b9e218`), which reworked
+`music/gates/check_gate_suite.sh` (+81/−27) to prefer `/usr/bin/python3` — or an explicit
+`PY=` override — and to abort loudly when no PyYAML-capable interpreter exists. The hazard the
+brief identified is unchanged and still real: re-measured at this pass, bare `python3` on this
+host is Hermes's bundled **3.14.7** and `import yaml` raises `ModuleNotFoundError`. The two
+fixtures were never a gate defect — they pass under the right interpreter.
+
+At the brief stage the two failing checks were both `gate_lyrics_original` fixtures (`BAD chill-lounge lyrics pass`,
 `BAD trance lyrics pass`) with `ModuleNotFoundError: No module named 'yaml'` — the suite calls
 bare `python3`, and this worker's bare `python3` is Hermes's bundled 3.14.7 without PyYAML.
 Same file, right interpreter, live:
@@ -421,16 +445,30 @@ PASS gate_lyrics_original
   suno markers : none
 ```
 
-The gates are not broken; the suite's interpreter is not pinned. Every other gate section
-passes its fixtures (quota, stems, loudness, quality, sync-ready, release-ready, loop-points,
-youtube-authentic, human-approval). This genre's own loop gate is among the passing ones.
+The gates were never broken — the suite's interpreter was unpinned, and it is pinned now.
+Every section passes its fixtures (quota, stems, loudness, quality, sync-ready, release-ready,
+loop-points, youtube-authentic, human-approval), and this genre's own loop gate is among the
+passing ones. Re-confirmed verbatim at this pass: `PASS seamless loop (1.6x curvature)` /
+`FAILS phase-slip loop (6.0x curvature) fails`.
 
-### 8.4 Cosmetic: the template's own style-field character count is stale
+### 8.4 WITHDRAWN — the template's style-field count was already accurate
 
-`music/prompts/chiptune-8bit.md` header says "Style field (paste into Suno \"Styles\",
-**567/1000 chars**)". Measured between the first ```` ```text ```` fences with newlines
-stripped: **844 chars**. Still inside a 1000-character Styles box, so nothing breaks today —
-but a count that is 277 chars wrong will eventually let a template exceed the field silently.
+The brief stage claimed the header's "567/1000 chars" was stale and that the style block
+measured **844 chars**. Re-measured at the `t_05b640f6` pass, on the same file — clean
+against HEAD, mtime `2026-10-09 03:22:34`, exactly one commit in its history (`96aece4`),
+and byte-identical to the deployed ConfigMap copy `music__prompts__chiptune-8bit.md`:
+
+```
+style block : 1 line · 568 bytes · 568 chars · 567 with the newline stripped
+header claim: "567/1000 chars"
+file        : 4103 bytes · 4075 chars · 83 lines
+```
+
+**567**, exactly as the header says — the header was never stale. A brute-force sweep of
+every fence-to-fence slice of the template found **no** 844-character slice, and no other
+genre template has a text block of 844 chars. The number is not reproducible from any
+artifact, so the defect is withdrawn instead of carried forward. No template edit is
+warranted.
 
 ### 8.5 Two cards for one genre on the board
 
@@ -444,7 +482,10 @@ t_05b640f6|music-oracle: chiptune-8bit (score 7.7)|ready|music-producer
 `ade6e87` added an open-card guard to `music/oracle.py`, so new runs no longer duplicate. The
 existing pair was created before it. Both resolve to this one genre-keyed brief; the duplicate
 should be closed rather than worked, or the generate stage will render the same track twice.
-Board-wide the residue is larger: 15 `ready` and 7 `running` `music-oracle:*` cards.
+**Status at the `t_05b640f6` pass (re-measured):** `t_9cc9b48f` is **done** — it wrote this
+brief (`c3e2f23`) — and `t_05b640f6` is the running duplicate whose pass produced §12. The
+pair is resolved, not duplicated. Board-wide residue has shrunk as this wave closed out:
+**6 `ready` and 3 `running`** `music-oracle:*` cards (was 15 / 7 at the brief stage).
 
 ---
 
@@ -490,8 +531,8 @@ pads, four voices, ending on the loop phrase — plus a second take for curation
 
 Human queue raised by this brief (reported, not fixed here — none of these is this stage's
 work): the payload-sync source path and wrapper drift (§8.2), the missing game-assets gate
-wiring in `stages.yaml` (§8.1), the branch divergence that hides `suno-gen.py` (§6.1), and the
-duplicate chiptune card (§8.5).
+wiring in `stages.yaml` (§8.1), and the branch divergence that hides `suno-gen.py` (§6.1). The
+duplicate chiptune card (§8.5) is **closed** by the `t_05b640f6` pass recorded in §12.
 
 ---
 
@@ -515,3 +556,90 @@ duplicate chiptune card (§8.5).
   this lane's profile, `stages.yaml`, `genres.yaml`, `lanes.yaml`, `autonomy.yaml`,
   `gates/README.md` and the gate docstrings — the file does not exist in this repo. Section
   numbers quoted from it (§3, §5, §11.2, §13) cannot be checked.
+
+---
+
+## 12. Duplicate-card verification pass (`t_05b640f6`, 2026-10-16T13:40-05:00 CDT)
+
+This brief is genre-keyed, so both oracle cards for `chiptune-8bit` resolve to it. `t_9cc9b48f`
+(score 7.5) wrote it at 13:17 and is `done`; `t_05b640f6` (score 7.7 — the earlier emission,
+created before `ade6e87` added the open-card guard) is the duplicate and owns this pass. No
+second brief was written and no stage chain was started from the duplicate.
+
+Everything below was re-measured live at this pass. Nothing was changed in the registry, the
+gates, the plans, the chart, or the cluster; no new card was created.
+
+### Held as written (re-measured, unchanged)
+
+- `registry.py validate` → `registry OK: 14 genres, 10 lanes`; `gate_quota` → `period 2026-10,
+  standard dl used: 0/60`, `studio exports: 0`; `quota-ledger.json` = 0/60 · 0 studio · 0/10000
+  credits · warn 55 · hard stop 58.
+- The genre block and the five `defaults:` keys are as quoted, and the genre block still has
+  **no** `notes:` key.
+- Lanes → gates: `game-assets` → `gate_sync_ready` (`requires: [stems, loop_point,
+  seamless_loop, metadata]`), `youtube-gaming` → `gate_youtube_authentic`,
+  `streaming` → `gate_release_ready` (DistroKid, alt TuneCore). All three rungs `advisory` with
+  `clean_publishes 0 / platform_strikes 0 / revenue_usd 0`.
+- `music/rubrics/gamer.json`: `pass_threshold 7.0`; `chip_timbre_authenticity` weight 3 and
+  `loop_safety` weight 3; both `reject_signals` quoted in §2 verbatim.
+- Template `music/prompts/chiptune-8bit.md`: instrumental ("leave the lyrics box empty"),
+  150 BPM, weirdness 35%, Style Influence 85%, six exclude terms, loop-point ending. Blueprints
+  are still only `activist, chill-lounge, trance`; still no chiptune lyric dir, no
+  `loop_points.json`, no master, no stems.
+- Bar arithmetic (1.600 s/bar), the planner cap `MAX_DURATION_S = 420`, and the fallback
+  `bpm_anchor or 100` (`music/planner/planner.py:470`).
+- `ffprobe`: `loop_10min.mp4` = 600.000000 s · 1280×720 · 25/1 fps; `pixel_scene.mp4` =
+  5.000000 s · 14 244 bytes. `gate_youtube_authentic --visual music/visuals/loop_10min.mp4`
+  still **FAILS** with the §3.4 string, plus the missing-disclosure reason
+  (`disclosure.txt` / `ai_disclosure.txt`).
+- `gate_loop_points` fixtures, verbatim: `PASS seamless loop (1.6x curvature) passes` /
+  `FAILS phase-slip loop (6.0x curvature) fails`; the ceiling is `CLICK_RATIO_MAX` 3.0.
+- Rail A live: CronJobs `music-pipeline` (`17 */6 * * *`) and `music-pipeline-render`
+  (`41 */4 * * *`). The last render job's log is identical to §6.1 to the line
+  (`done: found=3 rendered=0 skipped=3 failed=0`); the last plan job logged
+  `done: 1/1 planned`. `/var/lib/music-plans/` holds only `final-round`, `smoke-chill-lounge`
+  and `testplan`, all `.rendered`; `smoke-chill-lounge.rendered` and `testplan.rendered` both
+  contain `refused`. ConfigMap `music-pipeline-briefs` still carries exactly one entry,
+  `smoke-chill-lounge` (196 bytes), and **no chiptune plan exists**.
+- Engine: Deployment `sunolocal-source` runs `localhost/sunolocal:v0.1.2` (age 2d14h) with
+  `SUNOLOCAL_ACESTEP_SCRIPT=/opt/sunolocal/music/scripts/acestep_plan_direct.py`. `spec.py`
+  (100 lines) has **no** `bpm` field. `translate.py` (85 lines): `bpm = 120`;
+  `if req.style_weight is not None: bpm = int(60 + req.style_weight * 120)`; clamp 30–240; the
+  instrumental branch appends `, instrumental, no vocals`. `ace_comfy.py:70` passes
+  `--allow-empty`. The pod copies are byte-identical to the chart copies.
+- The three §6.3 blockers, all re-confirmed against the **deployed** wrapper (ConfigMap
+  `music-pipeline-payload`, key `music__scripts__acestep_plan.py`, 261 lines): line 87
+  `"instrumental": False`, line 93 `"style_weight": None`, and the render CronJob invokes
+  `acestep_plan.py <plan> --name <stem>` with **no** `--allow-empty` — the wrapper defines the
+  flag at line 115, but the CronJob never passes it.
+- Rail B: `music/suno-gen.py` is absent from local `main` **and** from all of local `main`'s
+  history (`git log main -- music/suno-gen.py` → empty), present on `origin/main` from
+  `ba28f55`; merge-base `e278f61`.
+- §8.1: `stages.yaml` references exactly seven gates and neither `gate_sync_ready` nor
+  `gate_loop_points` is among them; `gate_sync_ready.py:204-207` only asserts that
+  `loop_points.json` exists and then says `run gate_loop_points.py for the seam check`.
+- §8.2: `check-payload-sync.sh` → `DRIFT ×3` (`music/planner/planner.py`, `music/genres.yaml`,
+  `music/scripts/acestep_plan.py`), `SRC` defaults to `/home/j_kro/Projects/ai-content-pipeline`,
+  that tree has no `music/` directory, and the chart wrapper is 261 lines against the repo's 173
+  — so `sync-payload.sh` would regress the live wrapper, exactly as §8.2 argues. All 14 deployed
+  prompt-template copies are byte-identical to the repo's.
+- Prompt templates: all 14 resolve; every deployed ConfigMap prompt copy matches the repo copy.
+
+### Corrections applied
+
+| # | Section | Claimed at the brief stage | Measured at this pass |
+|---|---|---|---|
+| 1 | §1, §8.4 | style block measures **844 chars**; the template header's "567/1000" is stale | **567** chars (568 bytes, 1 line) — the header is accurate. Claim withdrawn |
+| 2 | §8.3 | `BROKEN: 2 check(s) misbehaved`; suite interpreter unpinned | suite green — `OK: every gate passed its good artifact and failed its broken one`; interpreter pinned by `757f3ab` |
+| 3 | §6.1 | lineages diverged `6 ahead, 15 behind` | **22 ahead, 15 behind** — this wave's brief commits landed on local `main` |
+| 4 | §8.5 | residue 15 `ready` + 7 `running` oracle cards; the pair was running/ready | **6 `ready` + 3 `running`**; the pair is `t_9cc9b48f` done / `t_05b640f6` this pass |
+
+### Not changed, not re-filed
+
+No registry value, gate, plan, blueprint, chart file, or cluster object was modified. No child
+card was created: every item §8 and §10 raise already has an owner — `t_8c5a6b91` (nexus-core,
+the wrapper `instrumental`/`--allow-empty` fix plus the payload-sync path), `t_bf0e5edd` (the
+pre-guard duplicate-card sweep), and `t_41f354be` (the two-dispatcher ownership question).
+
+Hotspot, flagged rather than piled on: `music/briefs/` — ten-plus workers of this wave commit to
+one working tree; this file has two commits, both mine on this genre.
