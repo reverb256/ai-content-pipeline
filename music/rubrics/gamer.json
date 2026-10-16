@@ -47,7 +47,7 @@
       "weight": 1,
       "type": "measured",
       "anchor": "Streaming -14 LUFS; game-asset delivery favours consistent loudness with real dynamics (boss cues need wide dynamic range — 'quiet dread to full assault', tunee).",
-      "evidence": "mean_volume_db vs -14 for streaming-lane tracks.",
+      "evidence": "integrated_lufs vs -14 for streaming-lane tracks.",
       "guide": "10 = within +/-1 dB. 7 = within +/-3 dB. 4 = 3-6 dB off. 1 = 6+ dB off."
     }
   ],

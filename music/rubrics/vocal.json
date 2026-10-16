@@ -56,7 +56,7 @@
       "weight": 1,
       "type": "measured",
       "anchor": "Streaming -14 LUFS (pipeline gate_loudness spec). Ad-suitability risk: audience-funded > ad-funded for this family (genres.yaml note) — loudness follows streaming target regardless.",
-      "evidence": "mean_volume_db vs -14.",
+      "evidence": "integrated_lufs vs -14.",
       "guide": "10 = within +/-1 dB. 7 = within +/-3 dB. 4 = 3-6 dB off. 1 = 6+ dB off."
     }
   ],

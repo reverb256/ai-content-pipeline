@@ -46,8 +46,8 @@
       "name": "Master hits the lane loudness target",
       "weight": 1,
       "type": "measured",
-      "anchor": "Streaming lanes: -14 LUFS integrated (pipeline gate_loudness spec, music-lane-architecture.md S5; Spotify/Apple normalization era). Sync lanes: -16 LUFS. Tolerance +/-1 dB (measured as volumedetect mean_volume, the pipeline's loudness dialect).",
-      "evidence": "mean_volume_db vs the lane target implied by the genre's registry lanes.",
+      "anchor": "Streaming lanes: -14 LUFS integrated (pipeline gate_loudness spec, music-lane-architecture.md S5; Spotify/Apple normalization era). Sync lanes: -16 LUFS. Tolerance +/-1 LUFS, measured as ebur128 integrated loudness (the pipeline's ruler: card t_9546841b).",
+      "evidence": "integrated_lufs vs the lane target implied by the genre's registry lanes.",
       "guide": "10 = within +/-1 dB of target. 7 = within +/-3 dB. 4 = 4-6 dB off. 1 = 7+ dB off."
     },
     {

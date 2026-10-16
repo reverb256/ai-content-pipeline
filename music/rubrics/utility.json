@@ -47,7 +47,7 @@
       "weight": 1,
       "type": "measured",
       "anchor": "Sync/direct-license targets -16 LUFS (pipeline gate_loudness spec). Beds sit under voice: the bed is mixed ~20-30 dB under the host, so the master itself masters to -16 for sync use.",
-      "evidence": "mean_volume_db vs -16.",
+      "evidence": "integrated_lufs vs -16.",
       "guide": "10 = within +/-1 dB of -16. 7 = within +/-3 dB. 4 = 3-6 dB off. 1 = 6+ dB off."
     }
   ],
