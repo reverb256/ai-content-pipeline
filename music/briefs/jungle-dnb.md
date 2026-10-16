@@ -11,8 +11,10 @@
 > re-measured live, and every claim that no longer held was corrected in place (§1.2's
 > recomputed total and its decay forecast, §6.1's CronJob schedule and clone divergence, §6.3's
 > three quoted code blocks, §11.1's driver log, §13's RAM figure, the `genres.yaml`
-> default-block range in §1 and §13, and the board snapshot in §11.6). Two cards were created
-> where no owner existed — one of them superseded inside the same pass by an in-flight fix (§12).
+> default-block range in §1 and §13, and the board snapshot in §11.6). The operator's oracle
+> re-score ruling (true score **6.5**, not this title's 7.2) is recorded at §14. Two cards were
+> created where no owner existed — one of them superseded inside the same pass by an in-flight
+> fix (§12).
 > **Superseded revision of this file (before that pass):**
 > `sha256 675813e634f36c882b1f846b71a1995cc096f70471557ab96dde3bad5e23045c` (836 lines).
 > **Repo, re-measured at that pass:** `main` @ `456d525`, **30 ahead / 15 behind** `origin/main`
@@ -23,12 +25,15 @@
 > **Repo:** `/home/j_kro/ai-content-pipeline` @ `0e4fe5b` (main; the working tree moved twice
 > while this brief was being written — sibling cards are committing to the same clone).
 > NOT `~/Projects/ai-content-pipeline`, which has no `music/` tree at all (§11.1).
-> **Oracle score:** 7.0/10 as emitted on 2026-10-09 (quota headroom 10.0, lane coverage 6.0,
-> revenue 5.5, cadence fit 6.7, policy risk 9.0, trend signal 3.0). Threshold 5.0 → produce.
-> **Recomputed today: 6.7/10** — `cadence_fit` decayed (6.7 → 3.33, a function of the days
-> left in the quota period, which ends 2026-10-31) and `trend_signal` moved 3.0 → 5.0 because
-> the DuckDuckGo fetch now fails and the exception branch returns 5.0. Re-measured at the §14
-> pass; the two components and the floor the total flattens at are in §1.2.
+> **Oracle score:** the surviving card `t_006db63d` emitted **7.0/10** on 2026-10-09 (quota
+> headroom 10.0, lane coverage 6.0, revenue 5.5, cadence fit 6.7, policy risk 9.0, trend signal
+> 3.0); this card's title says 7.2 (identical vector except `trend_signal` 5.0). **True score
+> 6.5/10** — re-scored live on 2026-10-16 against the current registry, quota ledger and
+> calendar at `music/oracle.py` @ `b2d11f7`: `cadence_fit` decayed 6.7 → 3.33 (days left in the
+> period, which ends 2026-10-31) and `trend_signal` is 3.0 again now that a failed fetch no
+> longer earns the 5.0 premium. Threshold 5.0 → produce: the number moved, the routing verdict
+> did not. Both live components and the floor the total flattens at are in §1.2; the oracle
+> ruling and the re-scored digest are in §14.
 
 Every number and quoted string below comes from a command run or a file read during this
 stage. Nothing is recalled. Where something is unknown, it says so and names the test.
@@ -145,8 +150,8 @@ pocket (tempo fraud: wrong genre wearing the label)" and "clipped master
 | Revenue Potential | 0.20 | 5.5 | 5.5 |
 | Cadence Fit | 0.15 | 6.7 | **3.33** |
 | Policy Risk | 0.10 | 9.0 | 9.0 |
-| Trend Signal | 0.10 | 3.0 | **5.0** (the fetch fails — see below) |
-| **Total** | | **7.0** | **6.7** |
+| Trend Signal | 0.10 | 3.0 | **3.0** (post-`b2d11f7`; 5.0 while the old fallback stood) |
+| **Total** | | **7.0** | **6.5** |
 
 Each number reproduces from `music/oracle.py`:
 
@@ -154,43 +159,47 @@ Each number reproduces from `music/oracle.py`:
 - `lane_coverage` = 3 viable lanes × 2 = 6.0
 - `revenue_potential` = (youtube 500 + distributor 200 + own-site 400) / 200 = 5.5
 - `policy_risk` = 10 − 1 (a `youtube-mix` lane) = 9.0
-- `trend_signal` = **5.0 in this worker shell** — `music/oracle.py:272–289`, measured on
-  2026-10-16 14:10 CDT at HEAD `456d525`, wraps a 5 s DuckDuckGo fetch and returns **5.0 on
-  any exception**, **3.0 when the fetch succeeds with 0 result snippets**, and
-  `3.0 + count/5 × 7` otherwise. (An uncommitted working-tree diff owned by the card for this
-  defect, `t_bf0e5edd`, seen at 14:25, replaces that 5.0 with `TREND_NO_SIGNAL = 3.0` and adds
-  `music/scripts/check_oracle_determinism.py`; the line numbers above are the committed file's,
-  and card `t_eb648761` raised here for the same defect is superseded by that work.)
-  Re-measured live:
+- `trend_signal` = **3.0, live** — re-measured on 2026-10-16 14:26 CDT at `b2d11f7`:
 
   ```
-  $ /usr/bin/python3 probe_trend.py
-  trend_signal_score('jungle-dnb') = 5.0
-  fetch RAISED: URLError <urlopen error timed out>
+  $ /usr/bin/python3 probe_oracle3.py
+    warn: trend fetch failed for jungle-dnb (URLError(TimeoutError('timed out'))); scoring it
+    as no signal (3.0)
+  {"trend_signal": 3.0, "cadence_fit": 3.3333, "quota_headroom": 10.0, "lane_coverage": 6,
+   "revenue_potential": 5.5, "policy_risk": 9.0, "total": 6.5}
   ```
 
-  The 2026-10-09 card's 3.0 was a *successful* scrape that returned nothing; today's 5.0 is a
-  *failed* fetch. So the fallback scores higher than the measured-null reading, and the twin
-  card `t_f8b2fa7f` (7.2) is 0.2 above `t_006db63d` (7.0) for that reason alone — its
-  component vector is identical in all five other fields (re-read off the board at §14). Never
-  read 5.0 here as market heat; read it as "the oracle could not measure". Carded for its
-  owner, `oracle`: the fallback's semantics need a decision and a test.
+  **The fetch still fails; the score no longer rises for it.** `oracle.py` @ `456d525` (the
+  revision this pass started against) returned **5.0 on any exception** — 0.2 ABOVE the
+  successful-but-empty reading of 3.0, so a broken probe earned the genre a *premium*. That
+  premium is the whole of this card's 7.2 title against its **6.5** true score, and the same
+  pattern sits behind the `elemental-fire` pair (7.5 vs 7.7). It was fixed at `b2d11f7`
+  (card `t_bf0e5edd`, ~14:17 today): the exception branch now returns
+  `TREND_NO_SIGNAL = 3.0` and warns on stderr. A card this pass raised for the same defect
+  before finding that fix in the same working tree, `t_eb648761`, is superseded by it and
+  should be closed.
+
+  Consequence for reading this brief: while the pre-fix fallback stood, this pass's own
+  recompute read **6.70**; the authoritative value is **6.5**, which is what the oracle
+  ruling re-scored (§14). Never read a trend component of 5.0 as market heat; it is a failed
+  measurement.
 - `cadence_fit` = f(days left in period). 2/wk with 21 days left → 6.67 on 2026-10-09;
   2/wk with 14 days left → 3.33 today (live `cadence_fit_score("2/wk")` = 3.3333).
 
 **Consequence for the board — corrected at the §14 pass.** Every oracle card's score decays
-with the calendar until `cadence_fit` hits its floor. `music/oracle.py:250–251` (as committed
-at `456d525`) returns **0.0** once
-`expected_tracks < 2`, i.e. once `days_left < 7` (2026-10-24 and later), and
-`weeks_remaining` never goes below 0.5. The other components are calendar-independent, so
-this genre's total flattens at **6.0** (trend 3.0) / **6.2** (trend 5.0) and does **not** fall
-to 5.4 by 2026-10-26: it cannot cross the 5.0 threshold inside the 2026-10 period at all.
-Measured across the curve (`probe_decay2.py`, the source's arithmetic verbatim):
+with the calendar until `cadence_fit` hits its floor. `music/oracle.py:250–251` (unchanged at
+`b2d11f7`) returns **0.0** once `expected_tracks < 2`, i.e. once `days_left < 7` (2026-10-24
+and later), and `weeks_remaining` never goes below 0.5. The other components are
+calendar-independent, so with `trend_signal` back at its no-signal value this genre's total
+flattens at **6.00** and does **not** fall to 5.4 by 2026-10-26: it cannot cross the 5.0
+threshold inside the 2026-10 period at all. Measured across the curve (`probe_decay2.py`, the
+source's arithmetic verbatim; the right-hand column is the pre-`b2d11f7` failed-fetch premium,
+kept to show what the fix removed):
 
 | Days left | `expected_tracks` | `cadence_fit` | Total (trend 3.0 / 5.0) |
 |---|---|---|---|
 | 21 (2026-10-09) | 6.00 | 6.67 | 7.00 / 7.20 |
-| 14 (today) | 4.00 | 3.33 | 6.50 / 6.70 |
+| 14 (today) | 4.00 | 3.33 | **6.50** / 6.70 |
 | 8 | 2.29 | 0.48 | 6.07 / 6.27 |
 | 7 → 0 (2026-10-24 → 10-31) | 2.00 → 1.00 | **0.00** | 6.00 / 6.20 |
 
@@ -974,7 +983,7 @@ object or campaign artifact was modified.
 | §1 | the `defaults:` block is lines **19–25** | the block is lines **20–25**; line 19 is blank | **corrected** |
 | §1 | deployed template + registry md5s match the repo | `kubectl` payload md5 `c91b4d0e0f53d3abf9c17dc501801088` (template) and `3386db64eb5780da5988cdb5a37f8f03` (registry) — both identical to the worktree files | ok |
 | §1.1 | rubric `edm.json`: 6 criteria, weights 3/3/2/2/1/1, threshold 7.0, `genres: [trance, jungle-dnb]` | every value exact | ok |
-| §1.2 | components 10 / 6 / 5.5 / 6.7 / 9 / 3 → 7.0; recomputed **6.5** | live `score_genre()`: `cadence_fit_score("2/wk")` = 3.3333, `trend_signal` = **5.0** → total **6.70**; with trend 3.0 → 6.50 | **corrected to 6.7** |
+| §1.2 | components 10 / 6 / 5.5 / 6.7 / 9 / 3 → 7.0; recomputed **6.5** | live `score_genre("jungle-dnb")` (registry loader, live quota) → `trend_signal` **3.0**, `cadence_fit` **3.3333**, **total 6.5** at `b2d11f7`; it read 6.70 between this pass's start and `b2d11f7`, while the pre-fix fallback returned 5.0 | **6.5 (re-scored)** |
 | §1.2 | "will be 5.4 on 2026-10-26 … ages out of its own justification" | `cadence_fit` returns 0.0 once `expected_tracks < 2` (`days_left < 7`), and `weeks_remaining` floors at 0.5, so the total floors at **6.00 / 6.20** — it cannot cross 5.0 in this period | **corrected** |
 | §2 | every quoted template string (168 BPM, two speeds, 40–60 Hz, 12-bit crunch, exclude list, weirdness 55% / style influence 80%, instrumental fallback) | all present in `music/prompts/jungle-dnb.md`, verbatim | ok |
 | §2 | lyrics-guidance block is 473 chars | 474 chars raw, **473** under the lane's own `.strip()` rule (`music/prompts/validate_templates.py:67`, `extract_fenced_blocks` → `[m.strip() for m in re.findall(...)]`) — the same rule that gives 653 for the style field | ok |
@@ -1001,8 +1010,8 @@ object or campaign artifact was modified.
 | # | Section | Claimed at the brief stage | Measured at this pass |
 |---|---|---|---|
 | 1 | §1, §13 | the registry `defaults:` block was cited as `19–25` | lines **20–25**; line 19 is blank (see the regression below) |
-| 2 | §1.2 | recomputed total **6.5** with `trend_signal` 3.0 | **6.7** — the live fetch fails (`URLError: <urlopen error timed out>`) and the exception branch returns 5.0. The same total reads 6.5 or 6.7 depending only on whether the scrape succeeds-empty or fails |
-| 3 | §1.2 | "will be **5.4** on 2026-10-26 … any card not worked this month ages out of its own justification" | **6.00 / 6.20** — `cadence_fit` clamps at 0.0 for `days_left < 7`, so this genre cannot fall below 6.0 inside the 2026-10 period |
+| 2 | §1.2, header | recomputed total **6.5** with `trend_signal` 3.0 | This pass first measured **6.70**, because the DuckDuckGo fetch fails (`URLError: <urlopen error timed out>`) and the pre-`b2d11f7` fallback returned 5.0 for that. `b2d11f7` landed mid-pass (`t_bf0e5edd`) and removed the premium, so the authoritative value is back to **6.5** — the number the oracle ruling re-scored. Both readings are dated in §1.2 |
+| 3 | §1.2 | "will be **5.4** on 2026-10-26 … any card not worked this month ages out of its own justification" | **6.00** — `cadence_fit` clamps at 0.0 for `days_left < 7`, so this genre cannot fall below 6.0 inside the 2026-10 period |
 | 4 | §6.1 | `music-pipeline` CronJob schedule `17 */6 * * * *` | `17 */6 * * *` — five fields, per live `kubectl` output |
 | 5 | §6.1 | clone divergence `ahead 19` | `ahead 30` (`behind 15` unchanged; the local tip moves every few minutes) |
 | 6 | §6.3 | three `python` blocks carrying editorial annotation (`# <-- no bpm, no key, no style`; a comment re-inlined onto the code line; `"key": req.style or "C major",`) | replaced with the deployed source, verbatim, with line numbers and the read path named |
@@ -1010,6 +1019,7 @@ object or campaign artifact was modified.
 | 8 | §11.6 | the two cards `running` / `ready` | `done` 13:31:08 / `running` (this card); `t_97c92df2` added |
 | 9 | §13 | RAM available 17 GiB | 16 GiB (VRAM unchanged at 885/8 192 MiB) |
 | 10 | §1, §4, §8 | **3** of 14 genres have a lyric blueprint (activist, chill-lounge, trance) | **4** of 14 — `music/lyrics/blueprints/anime-ending.yaml` landed at 14:03 (commit `1356e28`) while this pass was running. Caught by the sibling `music/scripts/check_brief_drift.py` (`t_b7dd5655`), which recomputes this census live; the value is correct at the time of this commit |
+| 11 | header, §1.2 | this card's title score **7.2** (and the twin's 7.0) | **6.5 true** — the operator's oracle ruling, re-scored at `b2d11f7`; the 0.7 delta is the failed-fetch premium (0.20, now fixed) plus `cadence_fit` decay (0.505). Recorded in full below |
 
 Nothing else needed correcting. Both of the brief's counter-intuitive findings reproduced
 exactly: the artifact's measured **76.0 BPM** (§6.3 — neither the 120 the chain carries nor the
@@ -1039,6 +1049,38 @@ Repo-wide **after this file's fix: 3 of 62 citations FAIL** — `anime-opening.m
 `chiptune-8bit.md:51,541` (the same one-line error in two other genres; 59 OK, 40 skipped as
 unresolvable, never guessed). Card `t_e86c2110` owns that sweep; the check goes green when it
 lands.
+
+### Oracle ruling (operator note, 2026-10-16) — true score **6.5**
+
+The oracle re-scored this genre against the live registry, quota ledger and calendar at
+`music/oracle.py` @ `b2d11f7`, and ruled:
+
+- **True score 6.5/10**, not the 7.2 in this card's title. The delta is two effects:
+  `trend_signal` 5.0 → 3.0 (0.20 — the failed-fetch premium removed at `b2d11f7`) plus
+  `cadence_fit` 6.67 → 3.33 (0.505 — days left in the current period). Measured independently
+  at this pass: `score_genre("jungle-dnb")` → **6.5**, `trend_signal` 3.0.
+- **Rule applied (scoring gate):** the NEWEST scoring run owns the genre, and the
+  higher-scoring twin is never automatically right — the score is a function of live state plus
+  a live web fetch, so an older number cannot be reproduced and cannot win a tie. All 14 genres
+  stay above the 6.0 produce line (true scores 6.5–8.4), so the ruling corrects a number, not a
+  routing verdict.
+- **Superseded cards:** the twin `t_006db63d` (7.0) is closed `done`; the chain continues from
+  this genre-keyed brief, not from a second brief.
+- **Route:** the brief stage is already delivered — **do not re-run it**. The surviving chain
+  resumes at the stage after `brief` (`genre-select`), which is what this card's stage marker
+  now carries; `t_97c92df2` (`ready`, nexus-core) holds the generation-path queue entry.
+- **Board invariant:** `music/scripts/check_oracle_board.py` — one open oracle card per genre.
+  Re-run at this pass: `rc=0`, *"every one of the 14 open oracle genre(s) carries exactly one
+  open card; every open title parses into a genre"*.
+
+**Digest caution.** The ruling quoted this brief as 66 222 B /
+`sha256 6da17333e6a04a40…`. That was a **mid-edit** state — this pass was still writing the
+file. The artifact at the first §14 commit (`973a38c`) is **1 054 lines / 66 293 B /
+`sha256 d6be6da5d1ad62d3d1f8a3a0e3527af35d575010bdef6121a76d535c17028a51`**, and this ruling
+pass edits the file again. Re-measure before citing a digest (`sha256sum`, or
+`git rev-parse HEAD:music/briefs/jungle-dnb.md` to name the committed blob): a digest is not
+stable while a worker is editing, and the correct response to a moving digest is to measure it,
+never to trust the last number seen.
 
 ### Not changed, not re-filed
 
