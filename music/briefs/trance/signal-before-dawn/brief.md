@@ -124,22 +124,50 @@ The live brief queue holds one entry today:
   "genre":"chill-lounge","lyricsMode":"draft","name":"smoke-chill-lounge","title":"Kitchen Light"}]
 ```
 
-### Defect found while resolving this brief
+### Defects found while resolving this brief
 
-`music/stages.yaml` gives the generate stage the instruction
-"generate 2 tracks via Suno CDP (music/suno-gen.py)". That file does not exist:
-a repo-wide search for `suno-gen` returns no match. The Suno CDP path in the
-stage prompt is stale. The live engine is the ACE-Step cluster path above.
-Until `stages.yaml` is corrected, the generate stage tells its bot to run a
-missing script.
+**1. The checkout cannot run the generate stage as written.** `music/stages.yaml`
+tells the generate stage: "generate 2 tracks via Suno CDP (music/suno-gen.py)".
+No `music/suno-gen.py` exists in the working tree of `/home/j_kro/ai-content-pipeline`,
+and the file never appears in the history of the local `main` branch. It does exist
+on `origin/main`, added by commit `ba28f55` ("music: instrumental mode in generation
+path", 2026-10-14, card t_82ed3b8a).
 
-Second defect: no music stage prompt calls
-`scripts/automation/advance-stage.sh`, and that script hardcodes
-`BOARD=faceless-youtube`. A music card can therefore never advance its own stage
-marker; it re-dispatches the same stage. The oracle, in addition, creates cards
-with no `idempotency_key`, so each daily run re-emits the same 14 genre cards
-(observed: 14 cards at 03:27 and 14 more at 03:37 on 2026-10-09, including a
-second trance card `t_1a6a7d74` at score 8.5).
+Measured 2026-10-16 13:0x, after a concurrent worker fetched:
+
+| Ref | Tip | Gap |
+|---|---|---|
+| local `main` | `9c2d2d3` | 2 commits ahead of the merge base `e278f61` |
+| `origin/main` | `ba28f55` | 15 commits ahead of the merge base `e278f61` |
+
+The lineages have diverged. The local checkout — the tree the systemd
+`music-pipeline-driver.service` runs against — is missing 15 commits of this lane's
+own work (`music/suno-gen.py`, `music/sunolocal/`, the instrumental-mode handling),
+while the stage map assumes that work is present.
+
+Fix: reconcile the branches (merge `origin/main` into `main`), not "delete the
+reference". The engine actually in service is still the ACE-Step cluster path in the
+table above; the Suno CDP path needs a logged-in browser session on a host.
+
+**2. The oracle re-emits every card on every run.** `music/oracle.py`
+(`create_kanban_card`) creates board cards with no `idempotency_key` and no check for
+an open card for the same genre. Observed 2026-10-09: 14 cards at 03:27 and 14 more
+at 03:37 — including a second trance card, `t_1a6a7d74` (score 8.5, still `ready`),
+which duplicates this one. The `music-oracle.timer` runs daily, so the board grows by
+~14 cards per day and each duplicate card is independently dispatched.
+
+**3. No music stage advanced its card's stage marker (fixed during this run).**
+Every music stage prompt omitted `advance-stage.sh`, and that script hardcoded
+`BOARD=faceless-youtube`, so a music card re-dispatched the same stage forever.
+Commit `9c2d2d3` (card t_38e84953, another worker) added the
+`advance-stage.sh {card} <next-stage> --board music` step to every stage prompt. No
+action needed; recorded here so the finding is not lost.
+
+### Repo state for this deliverable
+
+Commit `4daf132` on local `main`, files under `music/briefs/trance/signal-before-dawn/`.
+It is **not** on `origin/main` (local `main` is 2 ahead, 15 behind). Pushing it needs
+the branch reconciliation in defect 1.
 
 ## 7. Queue entry for this track
 
