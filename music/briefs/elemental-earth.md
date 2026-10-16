@@ -290,12 +290,13 @@ Two constraints pinch from opposite sides:
 
 - **The registry's video shape is `loop-10min` = 600 s = 220 bars.**
 - **The planner cap is now 600 s — this genre is the reason it moved.** When this brief was
-  written the guard rail was `MAX_DURATION_S = 420` (`music/planner/planner.py`), so 600 s could
-  only be reached through the `sunolocal` API by hand. The cap was raised to the longest shape
-  the registry names, and the code comment records the measurement this genre supplied
-  (`planner.py:98-101`: "t_909069f0 measured the consequence — elemental-earth's documented entry
-  is 220 whole bars at 88 BPM = 600.0 s, the planner refused it"). Live read of the guard rails:
-  `MIN_DURATION_S = 30` (`planner.py:103`), `MAX_DURATION_S = 600` (`planner.py:104`).
+  written the guard rail was `MAX_DURATION_S = 420` (**anchored**) at `music/planner/planner.py`,
+  so 600 s could only be reached through the `sunolocal` API by hand. The cap was raised to the
+  longest shape the registry names, and the code comment records the measurement this genre
+  supplied (`planner.py:98-101`: "t_909069f0 measured the consequence — elemental-earth's
+  documented entry is 220 whole bars at 88 BPM = 600.0 s, the planner refused it"). Live read of
+  the guard rails — card `t_ae1d9243`, 2026-10-16:
+  `MIN_DURATION_S = 16` (`music/planner/planner.py:147`), `MAX_DURATION_S = 600` (`:148`).
 
 So the planner queue **can** express this genre's own video shape now, and it already does: the
 live entry for this genre is `elemental-earth-chamber-loop`, `instrumental`, `duration 600`
@@ -842,7 +843,7 @@ included), 6 tag-sheet sections in the order quoted, and the instrumental marker
 `prompts/elemental-earth.md:15` with **8 of 14** templates carrying it — all four `loop-10min`
 genres among them (`video_shape` re-read for all four elementals). Visual style 1088 B. Bar math
 exact: 88 BPM → bar 2.727273 s, 420 s = 154.000 bars, 480 s = 176.000, 600 s = 220.000, 4 bars =
-10.909 s, 5 bars = 13.636 s. `planner.py:82-83` `MIN_DURATION_S = 30` / `MAX_DURATION_S = 420`;
+10.909 s, 5 bars = 13.636 s. `planner.py:82-83` `MIN_DURATION_S = 30` / `MAX_DURATION_S = 420` — **anchored** (§14 is that pass's record);
 `planner.py:528` `--lyrics-mode choices=["draft","ai"]`, no `--instrumental`. `packages/welcome-asset-pack`
 extracted from `origin/main` (`83cd0ce`) → `gate_sync_ready --lane game-assets` **FAIL, the same 12
 findings verbatim**; 5 loops / 12 stems / 8 one-shots / 6 SFX; `gate_loop_points` on the 1.3 s loop
@@ -974,7 +975,7 @@ genre's only open one.
 | 2 | §1 | registry transcript short of the stage-gate rule | live transcript + `gate-for-stage` resolution for this genre |
 | 3 | §3 | `gate_sync_ready` FAIL, 12 findings, lane "not passable" | **PASS `mode: pack`** (`t_5ed495eb` closed); pack loops **5.201270 s** not 1.3 s; 7 one-shots not 8 |
 | 4 | §3 | seam PASS on a 51.605 s stem (curvature only) | the gate now has **three** rulers; that stem FAILs the level ruler at 34.2 dB, `--pack-dir` PASSes all 5 loops |
-| 5 | §4 | planner refuses > 420 s, so the queue cannot express `loop-10min` | cap is **600 s** (`planner.py:103-104`), raised because of this genre's own measurement; the entry exists |
+| 5 | §4 | planner refuses > 420 s, so the queue cannot express `loop-10min` | cap is **600 s** (`planner.py:147-148` — card `t_ae1d9243`; the constant moved from `:103-104`), raised because of this genre's own measurement; the entry exists |
 | 6 | §5, §7a | anchor reachable only via `styleWeight 0.2334`; `key` = the caption | engine **v0.1.3**: explicit `bpm`/`keyscale` win; variants A–G re-measured in-pod |
 | 7 | §7b | briefs ConfigMap = 1 entry; no `--lyrics-mode instrumental`; payload 38 keys | 11 entries including this genre; `instrumental` is a mode; payload 39 keys; earth plan exists, marker 0 B (rc=0) |
 | 8 | §7c | D1–D5 open or filed | all five **closed**, each with the card/commit that closed it |
