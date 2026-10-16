@@ -6,13 +6,29 @@
 > same lanes, emitted 10 minutes after this one on an earlier oracle run. Both resolve to
 > THIS brief; the brief is keyed by genre, not by card. Close one, do not work both.
 > **Written:** 2026-10-16 (CDT), profile `music-producer`, run 83
+> **Verified (duplicate-card pass, `t_f8b2fa7f`):** 2026-10-16T14:15-05:00 (CDT) — see §14.
+> The twin card met this file instead of writing a second brief: every checkable figure was
+> re-measured live, and every claim that no longer held was corrected in place (§1.2's
+> recomputed total and its decay forecast, §6.1's CronJob schedule and clone divergence, §6.3's
+> three quoted code blocks, §11.1's driver log, §13's RAM figure, the `genres.yaml`
+> default-block range in §1 and §13, and the board snapshot in §11.6). Two cards were created
+> where no owner existed — one of them superseded inside the same pass by an in-flight fix (§12).
+> **Superseded revision of this file (before that pass):**
+> `sha256 675813e634f36c882b1f846b71a1995cc096f70471557ab96dde3bad5e23045c` (836 lines).
+> **Repo, re-measured at that pass:** `main` @ `456d525`, **30 ahead / 15 behind** `origin/main`
+> — the 15-commit upstream deficit has not moved all day; the local tip moves every few minutes.
+> **This card (`t_f8b2fa7f`, 7.2) is the twin.** Both cards' component vectors were re-read off
+> the board: identical except `trend_signal` — 5.0 here, 3.0 on `t_006db63d`. That 0.2 gap is
+> the oracle's network-failure fallback (§1.2), not market heat.
 > **Repo:** `/home/j_kro/ai-content-pipeline` @ `0e4fe5b` (main; the working tree moved twice
 > while this brief was being written — sibling cards are committing to the same clone).
 > NOT `~/Projects/ai-content-pipeline`, which has no `music/` tree at all (§11.1).
 > **Oracle score:** 7.0/10 as emitted on 2026-10-09 (quota headroom 10.0, lane coverage 6.0,
 > revenue 5.5, cadence fit 6.7, policy risk 9.0, trend signal 3.0). Threshold 5.0 → produce.
-> **Recomputed today: 6.5/10** — only `cadence_fit` decayed (6.7 → 3.33), because the score
-> is a function of the days left in the quota period and the period ends 2026-10-31.
+> **Recomputed today: 6.7/10** — `cadence_fit` decayed (6.7 → 3.33, a function of the days
+> left in the quota period, which ends 2026-10-31) and `trend_signal` moved 3.0 → 5.0 because
+> the DuckDuckGo fetch now fails and the exception branch returns 5.0. Re-measured at the §14
+> pass; the two components and the floor the total flattens at are in §1.2.
 
 Every number and quoted string below comes from a command run or a file read during this
 stage. Nothing is recalled. Where something is unknown, it says so and names the test.
@@ -59,10 +75,11 @@ That is not trivia: it is the root cause of a live dispatch failure (§11.3).
 | Lanes | `streaming`, `youtube-mix`, `direct-license` |
 | Cadence | 2/wk |
 | Video shape | `mix-60min` |
-| Lyric blueprint | **none** — 3 of 14 genres have one (activist, chill-lounge, trance) |
+| Lyric blueprint | **none for this genre** — 4 of the 14 genres have one (activist, anime-ending, chill-lounge, trance; `anime-ending.yaml` landed mid-pass, §14) |
 | Registry note | `"Same Beatport ban applies. Amen-break / ragga vocal direction."` |
 
-Registry `defaults:` that bind every track (`music/genres.yaml` lines 19–25):
+Registry `defaults:` that bind every track (`music/genres.yaml` lines 20–25; line 19 is blank,
+and this range was cited as 19–25 before the §14 pass):
 export `studio`, stems `true`, lyrics `human-original`, release_private `true`,
 gate_profile `reviewer-deepseek`.
 
@@ -128,8 +145,8 @@ pocket (tempo fraud: wrong genre wearing the label)" and "clipped master
 | Revenue Potential | 0.20 | 5.5 | 5.5 |
 | Cadence Fit | 0.15 | 6.7 | **3.33** |
 | Policy Risk | 0.10 | 9.0 | 9.0 |
-| Trend Signal | 0.10 | 3.0 | 3.0 |
-| **Total** | | **7.0** | **6.5** |
+| Trend Signal | 0.10 | 3.0 | **5.0** (the fetch fails — see below) |
+| **Total** | | **7.0** | **6.7** |
 
 Each number reproduces from `music/oracle.py`:
 
@@ -137,14 +154,45 @@ Each number reproduces from `music/oracle.py`:
 - `lane_coverage` = 3 viable lanes × 2 = 6.0
 - `revenue_potential` = (youtube 500 + distributor 200 + own-site 400) / 200 = 5.5
 - `policy_risk` = 10 − 1 (a `youtube-mix` lane) = 9.0
-- `trend_signal` = 3.0 — the DuckDuckGo scrape returned **0** result snippets. This is a
-  null reading, not a signal that jungle is cold. Do not read it as market intelligence.
-- `cadence_fit` = f(days left in period). 2/wk with 22 days left → 6.7 on 2026-10-09;
-  2/wk with 14 days left → 3.33 today.
+- `trend_signal` = **5.0 in this worker shell** — `music/oracle.py:272–289`, measured on
+  2026-10-16 14:10 CDT at HEAD `456d525`, wraps a 5 s DuckDuckGo fetch and returns **5.0 on
+  any exception**, **3.0 when the fetch succeeds with 0 result snippets**, and
+  `3.0 + count/5 × 7` otherwise. (An uncommitted working-tree diff owned by the card for this
+  defect, `t_bf0e5edd`, seen at 14:25, replaces that 5.0 with `TREND_NO_SIGNAL = 3.0` and adds
+  `music/scripts/check_oracle_determinism.py`; the line numbers above are the committed file's,
+  and card `t_eb648761` raised here for the same defect is superseded by that work.)
+  Re-measured live:
 
-**Consequence for the board:** every oracle card's score silently decays with the calendar.
-A card that scored 7.0 on 2026-10-09 is a 6.5 today and will be 5.4 on 2026-10-26. The
-threshold is 5.0. Any card not worked this month ages out of its own justification.
+  ```
+  $ /usr/bin/python3 probe_trend.py
+  trend_signal_score('jungle-dnb') = 5.0
+  fetch RAISED: URLError <urlopen error timed out>
+  ```
+
+  The 2026-10-09 card's 3.0 was a *successful* scrape that returned nothing; today's 5.0 is a
+  *failed* fetch. So the fallback scores higher than the measured-null reading, and the twin
+  card `t_f8b2fa7f` (7.2) is 0.2 above `t_006db63d` (7.0) for that reason alone — its
+  component vector is identical in all five other fields (re-read off the board at §14). Never
+  read 5.0 here as market heat; read it as "the oracle could not measure". Carded for its
+  owner, `oracle`: the fallback's semantics need a decision and a test.
+- `cadence_fit` = f(days left in period). 2/wk with 21 days left → 6.67 on 2026-10-09;
+  2/wk with 14 days left → 3.33 today (live `cadence_fit_score("2/wk")` = 3.3333).
+
+**Consequence for the board — corrected at the §14 pass.** Every oracle card's score decays
+with the calendar until `cadence_fit` hits its floor. `music/oracle.py:250–251` (as committed
+at `456d525`) returns **0.0** once
+`expected_tracks < 2`, i.e. once `days_left < 7` (2026-10-24 and later), and
+`weeks_remaining` never goes below 0.5. The other components are calendar-independent, so
+this genre's total flattens at **6.0** (trend 3.0) / **6.2** (trend 5.0) and does **not** fall
+to 5.4 by 2026-10-26: it cannot cross the 5.0 threshold inside the 2026-10 period at all.
+Measured across the curve (`probe_decay2.py`, the source's arithmetic verbatim):
+
+| Days left | `expected_tracks` | `cadence_fit` | Total (trend 3.0 / 5.0) |
+|---|---|---|---|
+| 21 (2026-10-09) | 6.00 | 6.67 | 7.00 / 7.20 |
+| 14 (today) | 4.00 | 3.33 | 6.50 / 6.70 |
+| 8 | 2.29 | 0.48 | 6.07 / 6.27 |
+| 7 → 0 (2026-10-24 → 10-31) | 2.00 → 1.00 | **0.00** | 6.00 / 6.20 |
 
 ---
 
@@ -249,8 +297,9 @@ be written by j_kro. Plan the card around that, not as a blocker discovered late
 
 Two live counterexamples make the rule concrete rather than theoretical:
 
-1. There is **no blueprint for jungle-dnb**. Blueprints exist for 3 of 14 genres
-   (`music/lyrics/blueprints/{activist,chill-lounge,trance}.yaml`). The planner's
+1. There is **no blueprint for jungle-dnb**. Blueprints exist for 4 of 14 genres
+   (`music/lyrics/blueprints/{activist,anime-ending,chill-lounge,trance}.yaml` — the
+   `anime-ending` one landed at 14:03 during this pass, commit `1356e28`). The planner's
    `load_blueprint()` returns `{}` for this genre, so `bpm_anchor_for()` falls through to
    the caption — which works (§6.3), but the `[theme]` and `title_candidates` a blueprint
    would supply are absent.
@@ -296,18 +345,20 @@ Two live counterexamples make the rule concrete rather than theoretical:
 
 | Rail | Entry point | Live? |
 |---|---|---|
-| A — `sunolocal` (in-cluster, CPU-plan + GPU render via ComfyUI on zephyr) | `music-pipeline` CronJob (17 */6 * * * * → planner) → `music-pipeline-render` CronJob (41 */4 * * *) → `/payload/music/scripts/acestep_plan.py` → `sunolocal.mining.svc.cluster.local:8123` | **YES.** Service answers `{"status":"ok"}`. |
+| A — `sunolocal` (in-cluster, CPU-plan + GPU render via ComfyUI on zephyr) | `music-pipeline` CronJob (17 */6 * * * → planner) → `music-pipeline-render` CronJob (41 */4 * * *) → `/payload/music/scripts/acestep_plan.py` → `sunolocal.mining.svc.cluster.local:8123` | **YES.** Service answers `{"status":"ok"}`. |
 | B — Suno CDP (Premier session, `music/suno-gen.py`) | `music/suno-gen.py` | **NO — the file does not exist in this tree.** `ls music/suno-gen.py` → `No such file or directory` |
 
 ```
 $ cd /home/j_kro/ai-content-pipeline && git status -sb | head -1
-## main...origin/main [ahead 19, behind 15]
+## main...origin/main [ahead 30, behind 15]      # re-measured at the §14 pass; was ahead 19
 ```
 
-The clone is 19 commits ahead and 15 behind its own origin (`origin/main` carries the
-missing `suno-gen.py`; card t_8a715681 tracks the reconciliation). Until that lands, the
-only rail a queued jungle-dnb brief can use is Rail A. A generate stage that plans around
-Suno CDP has planned around a file that is not there.
+The clone is ahead of its own origin by a count that moves every few minutes (sibling briefs
+commit to this one tree — 19 at write time, **30** at the §14 pass) and **15 behind**
+(`origin/main` carries the missing `suno-gen.py`; card t_8a715681 tracks the reconciliation;
+that deficit has not moved all day). Until it lands, the only rail a queued jungle-dnb brief
+can use is Rail A. A generate stage that plans around Suno CDP has planned around a file that
+is not there.
 
 The live render CronJob, verbatim from its template:
 
@@ -390,12 +441,20 @@ Three facts fall straight out of that table and they matter for this genre:
 
 ### 6.3 THE BLOCKER: the plan's tempo is dropped and replaced with 120 BPM
 
-The planner resolves this genre's tempo correctly. `planner.py`:
+The planner resolves this genre's tempo correctly. The live payload planner
+(`music__planner__planner.py` lines 169–180 — the deployed copy; the repo's planner is a
+different file, §11.4):
 
 ```python
-def bpm_in_caption(caption):
-    """The BPM the genre's own caption states, e.g. "ragga jungle, 168 BPM". ...
-    jungle-dnb came out at 100 against its own stated 168"""
+def bpm_in_caption(caption: str):
+    """The BPM the genre's own caption states, e.g. "ragga jungle, 168 BPM".
+
+    Every template in music/prompts/ states one. It is the researched tempo for
+    the genre and the only tempo signal available for the 11 genres that have no
+    blueprint yet - without it the draft path fell back to a flat 100, which is
+    right for almost nothing: jungle-dnb came out at 100 against its own stated
+    168, and anime-opening at 100 against its stated 160.
+    """
     m = re.search(r"(\d{2,3})\s*BPM", caption or "", re.I)
     return int(m.group(1)) if m else None
 ```
@@ -404,33 +463,56 @@ The jungle caption opens `ragga jungle, 168 BPM, chopped and resequenced Amen br
 `template_bpm = 168`, and with no blueprint present `bpm_anchor_for()` returns **168**. The
 plan says 168. That is the last point in the chain where anyone sees 168.
 
-The payload's API client then throws it away:
+The payload's API client then throws it away — verbatim, the deployed
+`music__scripts__acestep_plan.py` lines 79–100 (md5 `d18f779a`, §11.4):
 
 ```python
 def build_suno_request(plan: dict) -> dict:
+    """Map plan fields to SunoGenerateRequest JSON."""
+    # Required fields: prompt (caption), lyrics, title, duration.
+    # Optional: we set defaults for others.
     return {
         "prompt": plan.get("caption", ""),
         "lyrics": plan.get("lyrics", ""),
         "title": plan.get("title", ""),
-        "instrumental": False,
+        "instrumental": False,  # we assume lyrics present; if empty and allow-empty, still instrumental?
+        "model": "v6",
+        "custom_mode": False,
+        "negative_tags": None,
+        "vocal_gender": None,
         "duration": int(plan.get("duration", 180)),
-        "style_weight": None,        # <-- no bpm, no key, no style
-        ...
+        "style_weight": None,
+        "weirdness_constraint": None,
+        "audio_weight": None,
+        "variety": None,
+        "callback_url": None,
+        "seed": None,  # we will pass seed separately if needed
+        "engine": os.environ.get("SUNOLOCAL_ENGINE", "ace"),
     }
 ```
 
+Read the fields it does NOT carry: no `bpm`, no `key`, no `style`, and `style_weight` is
+hardcoded `None`. The plan's tempo, key and style have no wire field to travel in.
+
 There is no `bpm` field to send (the wire model `SunoGenerateRequest` has none) and
-`style_weight` is hardcoded `None`. So `translate.py` takes its default branch:
+`style_weight` is hardcoded `None`. So `translate.py` takes its default branch — verbatim,
+`/opt/sunolocal/music/sunolocal/translate.py` lines 41–49, read inside the running pod
+`sunolocal-source-65fcc845d-fd5r6`:
 
 ```python
-# BPM: default 120; could derive from style_weight or variety
-bpm = 120
-if req.style_weight is not None:
-    bpm = int(60 + req.style_weight * 120)      # 0-1 -> 60-180
-bpm = max(30, min(240, bpm))
-...
-"key": req.style or "C major",                  # style is never sent -> always "C major"
+    # BPM: default 120; could derive from style_weight or variety
+    bpm = 120
+    if req.style_weight is not None:
+        # map 0-1 to 60-180
+        bpm = int(60 + req.style_weight * 120)
+    # Clamp BPM to reasonable range
+    bpm = max(30, min(240, bpm))
+    # Key: default C major; we could leave empty
+    key = req.style or "C major"
 ```
+
+and lines 55–56 of the same file hand both straight into the ACE plan: `"bpm": bpm,` and
+`"key": key,`.
 
 | Plan says | Client sends | `translate.py` yields | ACE node receives |
 |---|---|---|---|
@@ -588,7 +670,7 @@ The genre's own 5-second stub is not a mix and cannot be stretched into one.
 | Prompt template | `music/prompts/jungle-dnb.md` | complete, 4 032 B, style field 653/1000 |
 | Visual style doc | `music/visuals/urban-grain.md` | complete, 1 157 B |
 | Visual render | `music/visuals/urban_grain.mp4` | 5 s stub — fails the gate (§7) |
-| Lyric blueprint | — | **does not exist** (3 of 14 genres have one) |
+| Lyric blueprint | — | **does not exist for jungle-dnb** (4 of the 14 genres have one at the §14 re-read) |
 | Lyrics/track dir | — | none (`music/lyrics/` has activist, chill-lounge, trance only) |
 | Cluster payload | `music-pipeline-payload` ConfigMap | carries the template + registry, md5-verified (§1) |
 | Plans | `/var/lib/music-plans/` | **no jungle-dnb plan** |
@@ -686,13 +768,17 @@ ls: cannot access ... : No such file or directory
 
 That tree is at HEAD `9aa1a23` and its driver is dated Sep 3 (12 618 B) — the
 pre-parameterization copy that cannot route by board. Its own log
-(`.../performance/pipeline-driver.log`, 1 564 983 B, last written 13:19 today) runs every
-30 minutes and never names a board:
+(`.../performance/pipeline-driver.log`, 1 565 253 B, last written 13:50 today — 1 564 983 B /
+13:19 at write time) runs every 30 minutes and never names a board:
 
 ```
-2026-10-16T13:19:37-05:00 pipeline driver run start
-2026-10-16T13:19:40-05:00 pipeline driver run complete (dispatched 0, running 0/1)
+2026-10-16T13:50:37-05:00 pipeline driver run start
+2026-10-16T13:50:40-05:00 pipeline driver run complete (dispatched 0, running 0/1)
 ```
+
+(re-measured at the §14 pass; the same two lines with 13:19 timestamps are what the brief
+recorded at write time. The log grows ~270 B every 30 minutes and has still never named a
+board.)
 
 The correct tree's log names the board but has not dispatched since 2026-10-09. Filed as
 t_41f354be (`ready`, nexus-core) and t_19d0714b (`blocked`, ops — the dispatcher-ownership
@@ -770,14 +856,25 @@ describing the same chain from two ends, which is why §6.2 spells the whole cha
 ```
 $ sqlite3 -readonly ~/.hermes/kanban/boards/music/kanban.db \
     "select id,title,status from tasks where title like '%jungle%';"
-t_006db63d|music-oracle: jungle-dnb (score 7.0)|running
-t_f8b2fa7f|music-oracle: jungle-dnb (score 7.2)|ready
+t_006db63d|music-oracle: jungle-dnb (score 7.0)|running     # write time; §14 re-read: done 13:31
+t_f8b2fa7f|music-oracle: jungle-dnb (score 7.2)|ready       # write time; §14 re-read: running
 ```
 
 `ade6e87` added the open-card guard, so no new duplicates are created; these two predate it
-(2026-10-09 03:27 and 03:37). Both resolve to this one genre-keyed brief. Already enumerated
-in t_19d0714b Decision 5, which lists 10 genres carrying two open cards each. Working both
-would render the same track twice.
+(2026-10-09 03:27:53 and 03:37:53 CDT — 600 s apart, re-read from the board's `created_at`).
+Both resolve to this one genre-keyed brief. Already enumerated in t_19d0714b Decision 5, which
+lists 10 genres carrying two open cards each. Working both would render the same track twice.
+
+**Re-read at the §14 pass — the pair is resolved, and a third card now carries the handoff:**
+
+```
+t_006db63d|done|music-producer|created 2026-10-09 03:27:53|done 13:31:08
+t_f8b2fa7f|running|music-producer|created 2026-10-09 03:37:53|started 13:52:32   <- this card
+t_97c92df2|ready|nexus-core|created 13:30:42                                      <- §12 handoff
+```
+
+The twin (`t_f8b2fa7f`) met this file rather than writing a second one, so nothing is left
+open for this genre at the brief stage.
 
 ---
 
@@ -799,6 +896,15 @@ would render the same track twice.
 **New, created by this brief (one card, because the genre needs a queue entry no existing
 card covers):** nexus-core — *queue the jungle-dnb brief into the generation path*, carrying
 the four generate-stage preconditions from §10 and the §6.3 A/B test as its acceptance.
+→ `t_97c92df2`, `ready`, nexus-core, created 13:30:42 — verified on the board at the §14 pass.
+
+**New, created by the §14 verification pass — two cards, each for a defect no existing card
+covers:**
+
+| Card | Assignee | Defect |
+|---|---|---|
+| `t_eb648761` | oracle | `trend_signal`'s fallback scores a **failed** fetch (5.0) above a measured-null scrape (3.0) — the whole of this genre's 7.2-vs-7.0 spread (§1.2). **Superseded before dispatch:** the card that owns this defect, `t_bf0e5edd`, had an uncommitted fix in the same working tree by 14:25 (`TREND_NO_SIGNAL = 3.0` + `music/scripts/check_oracle_determinism.py`), so this card should be closed as a duplicate, not worked. |
+| `t_e86c2110` | music-producer | `anime-opening` and `chiptune-8bit` still cite `genres.yaml` **lines 19–25** for a block that is **20–25** (line 19 is blank). `music/scripts/check_brief_line_refs.py`, added by the §14 pass, is the regression and currently FAILs on exactly those two sites. |
 
 **Open item for j_kro (creative direction, not this lane's call):** the brief queue entry
 needs a `title`, and this genre has no blueprint supplying `title_candidates`. Nothing in
@@ -808,29 +914,141 @@ this brief invents one.
 
 ## 13. Provenance
 
-- Registry: `music/genres.yaml` (lines 19–25 defaults, 47–54 this genre), `music/lanes.yaml`,
+- Registry: `music/genres.yaml` (lines 20–25 defaults, 47–54 this genre), `music/lanes.yaml`,
   `music/autonomy.yaml` — validated live (`registry OK: 14 genres, 10 lanes`)
 - Rubric: `music/rubrics/edm.json` read in full; anchors quote EDMProd, Veena Studio,
   Transmission Samples (URLs in its `sources`)
 - Template: `music/prompts/jungle-dnb.md` read in full; style-field length measured (653)
 - Oracle: `music/oracle.py` — weights, `REVENUE_BANDS`, `BANNED_SURFACES`, `OPEN_STATUSES`;
-  this card's components recomputed live (6.5 today vs 7.0 at emit)
+  this card's components recomputed live (**6.7** today with the trend fetch failing, 6.5 when
+  it succeeds with 0 snippets; 7.0 at emit — §1.2)
 - Board: `~/.hermes/kanban/boards/music/kanban.db` (read-only SQL) — tasks, comments
 - Schedulers: `systemctl --user` units, timers, `performance/pipeline-driver.log` in both
   trees, `DRY_RUN=1` A/B run at 13:28
 - Cluster: `kubectl -n mining` — CronJobs `music-pipeline` (17 */6 * * *),
-  `music-pipeline-render` (41 */4 * * *); Deployment `sunolocal-source` (2d14h);
-  ConfigMaps `music-pipeline-payload` (21 keys, md5-compared to the repo),
+  `music-pipeline-render` (41 */4 * * *); Deployment `sunolocal-source` (2d15h at the §14
+  re-read); ConfigMaps `music-pipeline-payload` (21 keys, md5-compared to the repo),
   `music-pipeline-briefs`; plans on nexus at `/var/lib/music-plans/`
-- Engine: ComfyUI `GET /object_info` + `/queue` at `http://localhost:32188` (200);
-  sunolocal `/health` → `{"status":"ok"}`; `jobs.sqlite3` and the artifacts copied out of the
-  pod and measured with `music/rubrics/measure.py` under the numpy-bearing interpreter
+- Engine: ComfyUI `GET /object_info` + `/queue` at `http://localhost:32188` (200); sunolocal
+  `/health` → `{"status":"ok"}` (both re-probed at the §14 pass, all four node schemas
+  re-read); `jobs.sqlite3` and the artifacts copied out of the pod and measured with
+  `music/rubrics/measure.py` under the numpy-bearing interpreter
 - Gates: `gate_quota` executed (PASS); `gate_youtube_authentic` executed on both visuals
-  (FAIL, 2 and 4 signatures); `gate_lyrics_original`, `gate_stems_present`, `gate_loudness`,
-  `gate_quality`, `gate_sync_ready`, `gate_release_ready` help-read
+  (FAIL, 2 and 4 signatures — both re-executed at the §14 pass with identical output);
+  `gate_lyrics_original`, `gate_stems_present`, `gate_loudness`, `gate_quality`,
+  `gate_sync_ready`, `gate_release_ready` help-read
 - Media: ffprobe/ffmpeg 9.0.1 (`/home/j_kro/.hermes/tools/ffmpeg-9.0.1-linux-x64/bin`)
 - Resources before the read-heavy probes (standing rule): VRAM 885/8 192 MiB used, RAM
-  available 17 GiB — no render was launched, no GPU window consumed
+  available 17 GiB at write time (16 GiB at the §14 re-read) — no render was launched, no GPU
+  window consumed
+- Standing checks at the §14 pass: `check_brief_figures.py` (5 figures recomputed for this
+  brief, 0 failed), `check_brief_line_refs.py` (new, this card), `check_brief_drift.py` (the
+  live-count check; it caught the blueprint census moving 3 → 4 mid-pass, clean after the §14
+  update), `check_brief_bpm_solutions.py` (the 0.9 → 168 claim), `check_brief_paths.py`,
+  `check_prompt_style_counts.py`, `check_stage_scripts.py` (FAILs only on `music/suno-gen.py`,
+  the divergence t_8a715681 owns — not this brief) — the jungle-dnb brief is clean in all of them
 - **Still dangling:** `brain/playbooks/music-lane-architecture.md` does not exist in this
   repo (t_b0a4db92), so section numbers quoted from it elsewhere in this lane cannot be
   verified.
+
+---
+
+## 14. Duplicate-card verification pass — `t_f8b2fa7f`, 2026-10-16T14:15 CDT
+
+This card is the twin of `t_006db63d`: same genre, same lanes, same cadence, emitted 600 s
+later by the pre-`ade6e87` second oracle wave. The two cards' component vectors are identical
+except `trend_signal` (5.0 here vs 3.0 there) — the 0.2 spread is `oracle.py`'s fetch-failure
+fallback, not market heat (§1.2). The brief is keyed by **genre**, so both cards resolve to
+this file: the twin owes a verification pass, not a second brief. No second brief was written,
+no stage chain was started, and no registry value, gate, plan, blueprint, chart file, cluster
+object or campaign artifact was modified.
+
+### Every checkable figure re-measured, live
+
+| Section | Claim | Re-measured 2026-10-16 (14:00–14:15 CDT) | Verdict |
+|---|---|---|---|
+| §1 | `registry OK: 14 genres, 10 lanes`; quota `0/60` | `/usr/bin/python3 music/registry.py validate` → rc=0, identical lines; `gate_quota` → PASS 0/60, 0 studio exports | ok |
+| §1 | template 4 032 B, style field 653/1000, 347 chars headroom | `wc -c` 4032; fenced block 653 chars / 653 bytes (pure ASCII — both counting conventions agree); 1000−653 = 347 | ok |
+| §1 | visual style doc 1 157 bytes | `wc -c` 1157 **bytes** / 1151 characters — the unit label is right this time | ok |
+| §1 | this genre's block is `genres.yaml` lines 47–54 | line 47 is `  jungle-dnb:`, line 54 is the `notes:` line — exact | ok |
+| §1 | the `defaults:` block is lines **19–25** | the block is lines **20–25**; line 19 is blank | **corrected** |
+| §1 | deployed template + registry md5s match the repo | `kubectl` payload md5 `c91b4d0e0f53d3abf9c17dc501801088` (template) and `3386db64eb5780da5988cdb5a37f8f03` (registry) — both identical to the worktree files | ok |
+| §1.1 | rubric `edm.json`: 6 criteria, weights 3/3/2/2/1/1, threshold 7.0, `genres: [trance, jungle-dnb]` | every value exact | ok |
+| §1.2 | components 10 / 6 / 5.5 / 6.7 / 9 / 3 → 7.0; recomputed **6.5** | live `score_genre()`: `cadence_fit_score("2/wk")` = 3.3333, `trend_signal` = **5.0** → total **6.70**; with trend 3.0 → 6.50 | **corrected to 6.7** |
+| §1.2 | "will be 5.4 on 2026-10-26 … ages out of its own justification" | `cadence_fit` returns 0.0 once `expected_tracks < 2` (`days_left < 7`), and `weeks_remaining` floors at 0.5, so the total floors at **6.00 / 6.20** — it cannot cross 5.0 in this period | **corrected** |
+| §2 | every quoted template string (168 BPM, two speeds, 40–60 Hz, 12-bit crunch, exclude list, weirdness 55% / style influence 80%, instrumental fallback) | all present in `music/prompts/jungle-dnb.md`, verbatim | ok |
+| §2 | lyrics-guidance block is 473 chars | 474 chars raw, **473** under the lane's own `.strip()` rule (`music/prompts/validate_templates.py:67`, `extract_fenced_blocks` → `[m.strip() for m in re.findall(...)]`) — the same rule that gives 653 for the style field | ok |
+| §4 | `lyrics.py scaffold` / `claim`; schema `music/track-lyrics-manifest v1`; the activist manifest quote; 4 of 14 blueprints (was 3 — `anime-ending.yaml` landed 14:03, commit `1356e28`); `final-round.json` `authorship: AI-GENERATED` + `lyrics_mode: ai` | all read live and identical to the quoted text | **updated** |
+| §5 | `gate_quota` PASS; 2/wk over 31 days ≈ 9 tracks; a 60-min mix is ≥6 renders | `gate_quota` PASS 0/60; 2 × 31/7 = 8.86; 3600 s ÷ 600 s = 6 | ok |
+| §6.1 | CronJob schedules; `music/suno-gen.py` absent; plans dir; the live briefs queue; clone divergence | `music-pipeline` is `17 */6 * * *` — **five** fields, the brief had six; `music-pipeline-render` `41 */4 * * *` exact; `suno-gen.py` still absent from the worktree; `/var/lib/music-plans/` holds the same three plans; `briefs.json` still the single `smoke-chill-lounge` entry; divergence measured on 2026-10-16 14:05 CDT at `456d525`: **30 ahead / 15 behind** (the pair read 38/15 at 14:25 — the local tip is the moving part; it was 19/15 at write time) | **corrected (2)** |
+| §6.2 | ComfyUI node schemas — `bpm` INT default 100 min 30 max 300, `duration` FLOAT default 160 max 600, `keyscale` default `B minor`, Loader default 4B, Artist `instrumental` BOOLEAN, empty queue, sunolocal `/health` ok | all re-read from `http://localhost:32188/object_info` and the service — identical | ok |
+| §6.3 | the tempo is dropped: `translate.py:41–49` (`bpm = 120`, `int(60 + style_weight × 120)`, the clamp, `key = req.style or "C major"`), and the API client carries no bpm / key / style | read inside pod `sunolocal-source-65fcc845d-fd5r6`; line numbers exact. The three `python` blocks in §6.3 were **editorial paraphrases inside a fence** (invented inline comments, a merged key line); all three are now verbatim source with the read path named | **corrected** |
+| §6.3 | `int(60 + 0.8 × 120)` = 156, four below the pocket floor; 0.9 → 168 | `check_brief_bpm_solutions.py` PASSes the 0.9 → 168 claim | ok |
+| §6.3 | the smoke artifact: 30.0 s / 48 kHz / stereo / flac, mean −16.8, max 0.0, crest 17.1, bpm 76.0 (conf 0.24) with a 152.0 octave, silence 19.98→30.00 s, 1.69% energy >8 kHz, RMS spread 48.3 | copied `suno-260e4b344cef4b668c94d8871ad5723c.flac` out of the pod and re-ran `music/rubrics/measure.py`: every figure identical to the digit | ok |
+| §6.3 | the stored request carries no `styleWeight` key; the store holds 6 jobs | `jobs.sqlite3` out of the pod: 6 rows, 0 requests contain `styleWeight`, and the chill job's `style_weight` is `null` | ok |
+| §6.4 | `ace_comfy.py` passes `--allow-empty` unconditionally | pod source lines 62–71: `--seed`, `--allow-empty`, `--timeout` | ok |
+| §7 | both visuals — bytes, duration, frames, resolution, and the gate verdicts (2 and 4 signatures) | ffprobe: 14 151 B / 5.000 s / 125 frames / 1280×720 and 42 857 593 B / 3600.000 s / 90 000 frames / 1280×720; `gate_youtube_authentic` FAILed on both, output word-for-word identical | ok |
+| §11.1 | the driver unit walks the `Projects/` checkout, HEAD `9aa1a23`, driver 12 618 B dated Sep 3, log grows every 30 min without naming a board | all reproduced; the log is now 1 565 253 B, last written 13:50 | **corrected (log)** |
+| §11.2 | `advance-stage.sh` ends in a fenced `hermes kanban` call | the script's tail is that call; from this worker `hermes kanban --board music list` → `kanban: delegate_task child contexts cannot mutate Kanban tasks or boards`, rc=1 | ok |
+| §11.3 | driver A/B: default PATH → `ModuleNotFoundError: No module named 'yaml'`, exit 2; `/usr/bin` first → exit 0 | re-ran both; identical, and the correct tree's log carries the matching `ERROR: failed to parse stage config` line | ok |
+| §11.4 | payload client 9 027 B md5 `d18f779a`; repo `acestep_plan.py` md5 `068c80fa`; pod direct renderer 9 190 B md5 `2b66e525`; live planner 759 lines `47839397` vs repo 545 lines `e2cb6eea` with the flat `or 100` at line 470 | every figure reproduced from the ConfigMap and the pod | ok |
+| §11.6 | two cards `running` / `ready`, created 2026-10-09 03:27 and 03:37 | `created_at` → 03:27:53 and 03:37:53 (600 s apart); states now `done` 13:31:08 / `running` (this card), plus `t_97c92df2` | **refreshed** |
+| §12 | every cited card exists with the stated assignee and status | all eight re-read as cited; `t_97c92df2` (the queue-entry handoff) is `ready`, `nexus-core` | ok |
+| §13 | the payload ConfigMap carries 21 keys; VRAM/RAM at write time | 21 keys counted; VRAM 885/8 192 MiB unchanged; RAM available 16 GiB (was 17) | ok (RAM updated) |
+
+### The corrections applied
+
+| # | Section | Claimed at the brief stage | Measured at this pass |
+|---|---|---|---|
+| 1 | §1, §13 | the registry `defaults:` block was cited as `19–25` | lines **20–25**; line 19 is blank (see the regression below) |
+| 2 | §1.2 | recomputed total **6.5** with `trend_signal` 3.0 | **6.7** — the live fetch fails (`URLError: <urlopen error timed out>`) and the exception branch returns 5.0. The same total reads 6.5 or 6.7 depending only on whether the scrape succeeds-empty or fails |
+| 3 | §1.2 | "will be **5.4** on 2026-10-26 … any card not worked this month ages out of its own justification" | **6.00 / 6.20** — `cadence_fit` clamps at 0.0 for `days_left < 7`, so this genre cannot fall below 6.0 inside the 2026-10 period |
+| 4 | §6.1 | `music-pipeline` CronJob schedule `17 */6 * * * *` | `17 */6 * * *` — five fields, per live `kubectl` output |
+| 5 | §6.1 | clone divergence `ahead 19` | `ahead 30` (`behind 15` unchanged; the local tip moves every few minutes) |
+| 6 | §6.3 | three `python` blocks carrying editorial annotation (`# <-- no bpm, no key, no style`; a comment re-inlined onto the code line; `"key": req.style or "C major",`) | replaced with the deployed source, verbatim, with line numbers and the read path named |
+| 7 | §11.1 | driver log 1 564 983 B, last written 13:19 | 1 565 253 B, last written 13:50 |
+| 8 | §11.6 | the two cards `running` / `ready` | `done` 13:31:08 / `running` (this card); `t_97c92df2` added |
+| 9 | §13 | RAM available 17 GiB | 16 GiB (VRAM unchanged at 885/8 192 MiB) |
+| 10 | §1, §4, §8 | **3** of 14 genres have a lyric blueprint (activist, chill-lounge, trance) | **4** of 14 — `music/lyrics/blueprints/anime-ending.yaml` landed at 14:03 (commit `1356e28`) while this pass was running. Caught by the sibling `music/scripts/check_brief_drift.py` (`t_b7dd5655`), which recomputes this census live; the value is correct at the time of this commit |
+
+Nothing else needed correcting. Both of the brief's counter-intuitive findings reproduced
+exactly: the artifact's measured **76.0 BPM** (§6.3 — neither the 120 the chain carries nor the
+75 its own caption states, which is why §6.3 still refuses to pick between "the caption steers
+tempo" and "the estimate is unreliable here"), and **both visuals failing their own lane gate**
+(§7).
+
+### Regression check added (FAILURE → TEST)
+
+The first correction is not a wrong number: it is a **range citation that opens on a blank
+line** — the one citation class `check_brief_figures.py` cannot see, because a bare line number
+carries no unit token. Nothing measured it, so the same one-line error sat in three briefs.
+`music/briefs/anime-opening.md` shows why a hand fix does not hold: that genre's own
+duplicate-card pass corrected the range to 20–25 inside its comparison table while the body
+kept `19–25`.
+
+`music/scripts/check_brief_line_refs.py` (new, this pass) reads every `music/briefs/**/*.md`
+and measures each line citation — `<path>:A`, `<path>:A-B`, `<path> lines A–B`, and the
+inherited `line A` / `, A–B` forms — against the referent file in the worktree. It FAILs when
+a range or point lies outside the file, or opens or closes on a blank line. It **skips, never
+guesses**, a referent it cannot resolve uniquely: this lane carries `gate_sync_ready.py` at
+both `music/` and `music/gates/`, so a bare basename is a real ambiguity, and revision- or
+pod-qualified paths are out of the worktree by construction. `--selftest` builds the incident
+shape in a throwaway repo and asserts the FAIL, the PASS and the skip.
+
+Repo-wide **after this file's fix: 3 of 62 citations FAIL** — `anime-opening.md:54` and
+`chiptune-8bit.md:51,541` (the same one-line error in two other genres; 59 OK, 40 skipped as
+unresolvable, never guessed). Card `t_e86c2110` owns that sweep; the check goes green when it
+lands.
+
+### Not changed, not re-filed
+
+No registry value, gate, plan, blueprint, chart file, cluster object or campaign artifact was
+modified. One child card was created for a defect with no owner — `t_e86c2110` (the two stale
+citations in `anime-opening` / `chiptune-8bit`). A second, `t_eb648761` (the trend fallback),
+was created before this pass found that the card owning that defect, `t_bf0e5edd`, already had
+an uncommitted fix for it in the same working tree at 14:25: **close `t_eb648761` as a
+duplicate, do not work it.** Everything else this brief raises already has an owner in §12.
+
+hotspot: `music/briefs/` — 14 briefs written and re-verified by ~8 concurrent `music-producer`
+workers on one shared working tree. Every write needs a path-scoped `git add` and a lock retry;
+this file now has two commits, both on this genre.
