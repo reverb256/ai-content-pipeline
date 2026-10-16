@@ -1,0 +1,13 @@
+# genre: commentary-beds
+# title: Warm Jazz Bed
+# theme: A loopable podcast talk bed. Warm lo-fi jazz palette. No melody, no lead instrument. Sits quietly under a speaking voice.
+# provenance: human-original (writer profile) — do not paste Suno-generated lyrics here
+
+[Intro]
+(the motif, alone)
+
+[Instrumental]
+(full soft arrangement, motif repeats once)
+
+[Outro]
+(the motif clipped short, one hit, hard stop, one beat of silence)
