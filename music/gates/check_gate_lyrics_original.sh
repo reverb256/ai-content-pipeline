@@ -130,6 +130,18 @@ expect_pass "claim records over a copy of the anisong sheet" \
 expect_pass "language + section-tag regressions (music/tests)" \
   $PY -m unittest music.tests.test_lyrics_gate_language
 
+# --- direction text that WRAPS (card t_bc6a0c00, 2026-10-16) -----------------
+# The genre templates' tag sheets are directions in parentheses and no lyrics.
+# A direction can wrap onto a second line, and that continuation does not start
+# with "(" — so the placeholder rule, which rejected a line only when it began
+# AND ended with a parenthesis, read it as a lyric: the epic-orchestral-boss
+# sheet produced 3 problems instead of 14 and cleared this gate. The suite reads
+# that sheet from music/prompts/ and asserts both this gate and the renderer's
+# own refusal (acestep_plan.py, which the render CronJob runs without
+# --allow-empty) report every one of its 8 sections empty.
+expect_pass "wrapped direction lines are not lyrics (music/tests)" \
+  $PY -m unittest music.tests.test_acestep_sheet_guard
+
 # --- usage errors ------------------------------------------------------------
 expect_fail "no target is a usage error" 2 $GATE
 expect_fail "both targets is a usage error" 2 \
