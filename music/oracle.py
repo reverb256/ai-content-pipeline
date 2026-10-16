@@ -83,6 +83,77 @@ BANNED_SURFACES = {
     "soundstripe", "premiumbeat", "musicbed", "bandcamp", "beatport", "cd-baby",
 }
 
+# ── Card identity ───────────────────────────────────────────────────────────
+# The board this oracle emits to, and the title grammar every card carries.
+# BOTH live here: the dedupe guard parses the titles create_kanban_card writes,
+# so the two must never drift apart.
+BOARD = "music"
+CARD_TITLE_PREFIX = "music-oracle: "
+
+# Statuses that mean "this card is still in flight". A card in one of these
+# states already owns the genre's stage chain; a second card for the same
+# genre duplicates that whole chain.
+OPEN_STATUSES = frozenset({
+    "triage", "todo", "scheduled", "ready", "running", "blocked", "review",
+})
+
+
+def card_title(genre: str, total: float) -> str:
+    """The title of the card for a genre. Single source of truth."""
+    return f"{CARD_TITLE_PREFIX}{genre} (score {total})"
+
+
+def genre_from_title(title: str) -> str | None:
+    """Return the genre named by an oracle card title, else None.
+
+    'music-oracle: chill-lounge (score 8.9)' -> 'chill-lounge'
+    Any other title -> None.
+    """
+    if not title.startswith(CARD_TITLE_PREFIX):
+        return None
+    rest = title[len(CARD_TITLE_PREFIX):]
+    genre = rest.split(" (score ")[0].strip()
+    return genre or None
+
+
+def open_oracle_genres(board: str = BOARD) -> dict[str, str] | None:
+    """Map genre -> open card id for every genre already carrying an open card.
+
+    WHY: the oracle runs daily and scores are live (trend_signal does a web
+    fetch), so an unguarded run re-creates a card for every genre above the
+    threshold. On 2026-10-09 two runs 10 minutes apart produced 28 cards for
+    14 genres (performance/music-oracle-runs.log), and each duplicate put a
+    whole stage chain in flight.
+
+    Returns None when the board cannot be read. The caller MUST treat None as
+    "create nothing" — a failed read must never become duplicate cards.
+    """
+    cmd = ["hermes", "kanban", "--board", board, "list", "--json"]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"ERROR: cannot list cards on board '{board}': "
+              f"{result.stderr.strip() or result.stdout.strip()}", file=sys.stderr)
+        return None
+    try:
+        tasks = json.loads(result.stdout or "[]")
+    except json.JSONDecodeError as exc:
+        print(f"ERROR: board '{board}' list --json is not JSON: {exc}", file=sys.stderr)
+        return None
+    if not isinstance(tasks, list):
+        print(f"ERROR: board '{board}' list --json is not a list", file=sys.stderr)
+        return None
+
+    open_cards: dict[str, str] = {}
+    for task in tasks:
+        if not isinstance(task, dict):
+            continue
+        if str(task.get("status", "")) not in OPEN_STATUSES:
+            continue
+        genre = genre_from_title(str(task.get("title", "")))
+        if genre and genre not in open_cards:
+            open_cards[genre] = str(task.get("id", ""))
+    return open_cards
+
 
 def load_quota() -> dict:
     """Load the quota ledger."""
@@ -246,8 +317,14 @@ def score_genre(genre_name: str, genre_spec: dict, lanes: dict, quota: dict) -> 
     }
 
 
-def create_kanban_card(score_data: dict, dry_run: bool = False) -> str | None:
-    """Create a scored card on the music kanban board."""
+def create_kanban_card(score_data: dict, dry_run: bool = False,
+                       skip_genres: dict | None = None) -> str | None:
+    """Create a scored card on the music kanban board.
+
+    skip_genres: genre -> open card id for genres that already carry an OPEN
+    card. A genre in this mapping is skipped — one open card owns a genre's
+    stage chain (see open_oracle_genres).
+    """
     if score_data["total"] < 5.0:
         return None
 
@@ -257,7 +334,11 @@ def create_kanban_card(score_data: dict, dry_run: bool = False) -> str | None:
     lanes = score_data["lanes"]
     cadence = score_data["cadence"]
 
-    title = f"music-oracle: {genre} (score {total})"
+    if skip_genres and genre in skip_genres:
+        print(f"  skip: {genre} already has an open card ({skip_genres[genre]})")
+        return None
+
+    title = card_title(genre, total)
     body = f"""# Music Oracle Card — {genre}
 
 **Score:** {total}/10
@@ -301,7 +382,7 @@ stage: brief
     try:
         # title is a POSITIONAL arg for `hermes kanban create`, not --title.
         cmd = [
-            "hermes", "kanban", "--board", "music", "create",
+            "hermes", "kanban", "--board", BOARD, "create",
             title,
             "--body-file", body_path,
             "--assignee", "music-producer",
@@ -352,11 +433,30 @@ def run_oracle(dry_run: bool = False) -> dict:
     print()
     print("=== Creating Cards (score >= 5.0) ===")
 
+    # Dedupe: one OPEN card per genre. Without this guard a second run
+    # re-creates a card for every genre above the threshold and puts a whole
+    # second stage chain in flight (2026-10-09: 28 cards for 14 genres).
+    open_cards = open_oracle_genres(BOARD) if not dry_run else {}
+    board_read_ok = open_cards is not None
+    if not board_read_ok:
+        print("ERROR: the board could not be read — creating NO cards "
+              "(a failed read must never become duplicate cards).", file=sys.stderr)
+        open_cards = {}
+    else:
+        print(f"Open oracle cards on board '{BOARD}': {len(open_cards)} genre(s)")
+
     created = []
+    skipped = []
     for r in results:
-        card_id = create_kanban_card(r, dry_run=dry_run)
+        # Fail closed: with no readable board we cannot know which genres are
+        # already open, so no card may be created.
+        if not board_read_ok:
+            break
+        card_id = create_kanban_card(r, dry_run=dry_run, skip_genres=open_cards)
         if card_id:
             created.append(card_id)
+        elif not dry_run and r["genre"] in open_cards:
+            skipped.append(r["genre"])
 
     summary = {
         "timestamp": datetime.now().isoformat(),
@@ -365,6 +465,8 @@ def run_oracle(dry_run: bool = False) -> dict:
         "genres_scored": len(results),
         "cards_created": len(created),
         "created_ids": created,
+        "skipped_existing": skipped,
+        "board_read_ok": board_read_ok,
         "top_genre": results[0]["genre"] if results else None,
         "top_score": results[0]["total"] if results else 0,
     }
@@ -373,6 +475,7 @@ def run_oracle(dry_run: bool = False) -> dict:
     print(f"=== Oracle Complete ===")
     print(f"Genres scored: {summary['genres_scored']}")
     print(f"Cards created: {summary['cards_created']}")
+    print(f"Cards skipped (genre already open): {len(summary['skipped_existing'])}")
     print(f"Top genre: {summary['top_genre']} ({summary['top_score']}/10)")
 
     return summary
@@ -392,7 +495,14 @@ def main():
         f.write(f"{summary['timestamp']} — oracle run: "
                 f"{summary['genres_scored']} scored, "
                 f"{summary['cards_created']} created, "
+                f"{len(summary['skipped_existing'])} skipped (open), "
+                f"board_read_ok={summary['board_read_ok']}, "
                 f"top={summary['top_genre']}({summary['top_score']})\n")
+
+    # Fail loud: if the board could not be read, no cards were created. That is
+    # a broken run, not a quiet success.
+    if not summary["board_read_ok"]:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
