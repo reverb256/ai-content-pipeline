@@ -6,7 +6,17 @@
 > genre, same lanes, second oracle wave. Both resolve to THIS brief; the brief is keyed by
 > genre, not by card.
 > **Written:** 2026-10-16T13:16-05:00 (CDT), music-producer
-> **Repo:** `/home/j_kro/ai-content-pipeline` (branch `main`, HEAD `d491663`)
+> **Verified (duplicate-card pass, `t_67fc5307`):** 2026-10-16T13:42-05:00 (CDT) — see §14.
+> The pass re-measured every checkable claim and fixed four: §1 (the payload checkout
+> root — `mining-k8s/...` is relative to `$HOME`, not to this repo), §8b (job ages
+> replaced with job names), §8c/§8d (the section split's real source, and the scaffold's
+> 8-of-8 empty result), §13 (tip, divergence, gate census). Pre-pass revision:
+> `sha256 fcf97717…`, 542 lines. New regression check:
+> `music/scripts/check_brief_paths.py`.
+> **Repo:** `/home/j_kro/ai-content-pipeline` — the lane repo. Its `main` tip at write time
+> was `d491663`; re-measured 13:38 it is `afa242e` (this lane commits constantly, so the tip
+> is a timestamp, not an identity). **`/home/j_kro/mining-k8s` is a second checkout**; every
+> `mining-k8s/...` citation below is relative to `$HOME`.
 > **Oracle score:** 7.55/10 — quota headroom 10.0, lane coverage 8.0, revenue 10.0,
 > cadence fit 1.7, policy risk 9.0, trend signal 3.0. Threshold 5.0 → produce.
 > **Genre class:** **choral vocal** (choir/chant, no solo singing). NOT instrumental —
@@ -46,8 +56,12 @@ The shell's bare `python3` is the Hermes bundled interpreter and has no PyYAML.
 
 The registry note for this genre is empty; the template's own header carries the intent.
 Measured live: the same template is present in the chart payload
-(`mining-k8s/helm/charts/music-pipeline/files/music/prompts/epic-orchestral-boss.md`) and
-is **byte-identical** to the lane repo copy (`cmp` → identical).
+(`/home/j_kro/mining-k8s/helm/charts/music-pipeline/files/music/prompts/epic-orchestral-boss.md`)
+and is **byte-identical** to the lane repo copy (`cmp` → identical, no output). Note the
+root: `mining-k8s` is a **second checkout** at `/home/j_kro/mining-k8s`, so that citation
+resolves from `$HOME`, never from inside this repo. Read against the lane repo it looks like
+the payload is missing — the pass hit exactly that and fixed the citation here. A regression
+check now guards the class: `music/scripts/check_brief_paths.py` (PASS, 13 citations).
 
 ## 2. Intent — the three-act trailer contract
 
@@ -106,7 +120,11 @@ What the gates actually require, read from the gate code (not from prose):
   half-period phase slip 6.0x.
 - `gate_release_ready` — `master.wav`; `artwork.jpg|jpeg|png`; `manifest.json` with
   `title, artist, isrc, genre`; non-empty `ai_disclosure.txt`. ISRC must match
-  `^[A-Z]{2}[A-Z0-9]{3}\d{2}\d{5}$` — 12 characters, **no check digit**.
+  `^[A-Z]{2}[A-Z0-9]{3}\d{2}\d{5}$` — 12 characters, **no check digit** (verified in the
+  pass: `ISRC_RE` plus `isrc_syntax()` test shape only — 2 letters, 3 alphanumeric, 2-digit
+  year, 5-digit designation; there is no checksum to fail. The gate's own docstring claims it
+  enforces "the ISRC check digit (ISO 3901)", which the code does not do. A shape-valid but
+  invented ISRC passes. Doc-vs-code gap, recorded here, not filed as its own card).
 - `gate_loudness` — `TARGETS = {"streaming": -14.0, "sync": -16.0}`, tolerance 1.0 dB.
   (The ruler itself is contested: t_9546841b.)
 - `gate_youtube_authentic` — real video ≥ 640x360; **≥ 10 distinct frame signatures** when
@@ -184,7 +202,8 @@ FAIL gate_youtube_authentic
 ```
 
 (The album-shape render next to it, `album_30_60min.mp4` — 1280x720, 1800.0 s — fails the
-same way with 4 distinct signatures.) So the `visual` stage must render a real 240 s
+same way with 4 distinct signatures; re-measured in the pass, unchanged.) So the `visual`
+stage must render a real 240 s
 showpiece and place a disclosure file beside it. The 5 s template render is a colour
 reference, not a deliverable.
 
@@ -251,15 +270,25 @@ FAIL gate_lyrics_original
 $ python3 music/gates/gate_lyrics_original.py --lyrics-file <the template's own lyric block>
 FAIL gate_lyrics_original
   - [Choir] placeholder guidance left in: '(low male chant murmurs, one held chord, no drums)'
+  - [Instrumental] placeholder guidance left in: '(brass states the fanfare theme over full percussion)'
+  - [Choir] placeholder guidance left in: '(chant doubles the theme, medium intensity, syllabic)'
 ```
+
+(Re-run in the verification pass. The verdict reproduces, and the real output lists **three**
+placeholder findings — both Choir lines and the Instrumental direction — not the one quoted
+here. The pass's chant-sheet probe also reported **8** unique words against the
+`MIN_UNIQUE_WORDS = 25` floor rather than the 13 recorded above; which words the probe sheet
+uses changes that count, and the FAIL verdict is the same either way. The floor and the
+verdict are the load-bearing facts. §14.)
 
 Three hard requirements follow, plus one defect:
 
 - **≥ 25 distinct tokens** (`MIN_UNIQUE_WORDS = 25` in `music/lyrics/lyrics.py`; the gate
   imports the same constant). The tokenizer is `re.findall(r"[a-z']+", line.lower())`, so
   **hyphenated chant syllables split at the hyphen** — "for-tis" yields two tokens "for" and
-  "tis". Write chant words unhyphenated. A five-word "Fortis Astra Dominus" chant repeated
-  eight times FAILS this gate.
+  "tis". Measured in the pass: `unique_word_count([("Choir", ["for-tis as-tra"])])` = **4**,
+  against **3** for the same syllables written unhyphenated. Write chant words unhyphenated.
+  A five-word "Fortis Astra Dominus" chant repeated eight times FAILS this gate.
 - **No parenthetical-only lines** in any section: they are rejected as "placeholder guidance
   left in". Every Choir/Build section needs real chant lines.
 - **≥ 2 content sections** (`MIN_SECTIONS = 2`) and the 8 template sections in order.
@@ -332,9 +361,11 @@ The live queue holds one entry (ConfigMap read, verbatim):
 
 The chart's own list is empty — `mining-k8s/helm/charts/music-pipeline/values.yaml:39`
 reads `briefs: []` — so **chart values and the live ConfigMap have drifted** (GitOps will
-revert the ConfigMap on the next sync). Both job histories are healthy and quiet:
-`music-pipeline-29869517` Complete 56 m ago, `music-pipeline-render-29869541` Complete 32 m
-ago. The markers record what the queue produced:
+revert the ConfigMap on the next sync). Both job histories are healthy and quiet. Measured
+at 13:42 (the pass replaced the relative ages that were here — ages decay, names do not):
+`music-pipeline-29869517` Complete (created 79 m before the write, run 7 s),
+`music-pipeline-render-29869541` Complete (created 55 m before the write, run 5 s), both
+still the newest of their series. The markers record what the queue produced:
 `smoke-chill-lounge.rendered` = `refused`, `testplan.rendered` = `refused`,
 `final-round.rendered` = empty (rendered).
 
@@ -380,7 +411,16 @@ Read off that measurement:
 - The empty-section note matters for the lyrics stage: `Intro`, `Build`, `Breakdown`,
   `Chorus` and `Outro` count as *non-empty* to the checker only because their wrapped
   parenthetical direction lines continue on a second line that does not start with "(".
-  Three sections are genuinely empty. See D5.
+  Three sections are genuinely empty. See D5. Measured in the pass, with the splitter named:
+  the `sections` list does **not** come from `translate.py` (the plan dict it returns has no
+  `sections` key); it comes from `music/scripts/acestep_plan.py`'s own regex
+  `^\[([^\]]+)\][ \t]*\n(.*?)(?=\n\[|\Z)`. Fed the template's tag sheet verbatim it returns
+  **8 sections, 3 empty — `['Choir', 'Instrumental', 'Choir']`**, exactly as recorded here.
+  Fed the *planner's own scaffold* for this genre (which puts every direction line on one
+  line) it returns **8 of 8 empty**, and `check_lyrics(plan, allow_empty=False)` refuses:
+  `FATAL: 8 section(s) have no lyrics: Intro, Choir, Build, Instrumental, Choir, Breakdown,
+  Chorus, Outro.` So the "3 of 8" hole is a property of the raw template sheet; the CronJob
+  route's own scaffold is refused as it should be. Both measurements are in §14.
 
 ### 8d. Planner dry-run (measured, no network)
 
@@ -519,8 +559,10 @@ stage and both are handed off: the lyric blueprint (§6, payload change) and the
   gate-run
 - Rubric: `music/rubrics/gamer.json` (family criteria `battle_energy`, `loop_safety`,
   `asset_packaging`, `loudness_target`; `pass_threshold` 7.0)
-- Gates: `music/gates/` — 10 gate scripts + 2 shell checks present; `gate_quota`,
-  `gate_lyrics_original`, `gate_youtube_authentic` exercised live this stage
+- Gates: `music/gates/` — measured in the pass: **10 `gate_*.py` + 2 `*.sh`** present, plus
+  two private fixture modules (`_loop_fixtures.py`, `_visual_fixtures.py`). `gate_quota`,
+  `gate_lyrics_original`, `gate_youtube_authentic` exercised live this stage and re-run in
+  the pass. `check_gate_suite.sh` runs the suite; `music/gates/README.md` is the index.
 - Planner: `music/planner/planner.py` (`MIN_DURATION_S=30`, `MAX_DURATION_S=420`,
   `load_blueprint`)
 - Lyrics mechanics: `music/lyrics/lyrics.py` (`MIN_UNIQUE_WORDS=25`, `MIN_SECTIONS=2`,
@@ -534,9 +576,116 @@ stage and both are handed off: the lyric blueprint (§6, payload change) and the
 - Oracle: `music/oracle.py` (`WEIGHTS`, `cadence_fit_score`) — measured today, `1/wk`
   scores **0.0** with 14 days left in the period (`weeks_remaining` 2.0, `expected_tracks`
   2.0); the card records 1.7 from the 2026-10-09 scoring wave. The duplicate card carries
-  7.75. Both resolve to this brief.
+  7.75. Both resolve to this brief. Re-computed in the pass with `oracle.WEIGHTS`: the
+  survivor's components total **7.555 → 7.55** and the duplicate's **7.755 → 7.75** — the
+  two differ only in `trend_signal` (3.0 vs 5.0), so the duplicate's higher score is not a
+  better genre and nothing needs re-scoring.
+- **Repo state (measured 2026-10-16 13:38):** local `main` = `afa242e`, **22 commits ahead**
+  of the merge base with `origin/main` = `ba28f55`, 15 behind (`git rev-list --left-right
+  --count main...origin/main` → `22  15`). `origin/main` carries `music/suno-gen.py` and
+  `music/sunolocal/`; this checkout carries neither. `music/scripts/check_stage_scripts.py`
+  (commit `7f2ded8`) stays **red** on exactly that
+  (`FAIL … 1 of 11 referenced path(s) absent … music/suno-gen.py … CHECKOUT DIVERGENCE`), so
+  the gap cannot go quiet; the merge is owned by `t_8a715681`. Both are facts about the
+  checkout, not about this brief's artifacts.
+- **Checks added by neighbouring passes:** `music/scripts/check_stage_scripts.py` (`7f2ded8`)
+  and, from this pass, `music/scripts/check_brief_paths.py` — a brief that cites
+  `mining-k8s/...` must have that citation resolve under `$HOME`, and the pass fixed this
+  brief's ambiguous paths (§14).
 - **Dangling reference (unchanged):** `brain/playbooks/music-lane-architecture.md` and
   `brain/research/music-monetization-2026.md` are cited by this lane's profile, `stages.yaml`,
   `genres.yaml`, `lanes.yaml`, `autonomy.yaml`, `gates/README.md`, `gates/*.py` and
   `rubrics/gamer.json` (`"arch"` source) but do not exist on this machine. Section numbers
   quoted from them cannot be checked. Filed as t_b0a4db92.
+
+## 14. Verification pass — the duplicate card `t_67fc5307` (2026-10-16 13:42)
+
+This brief is keyed by **genre**, so the twin oracle card `t_67fc5307` (`music-oracle:
+epic-orchestral-boss (score 7.75)`, the 2026-10-09 03:37 wave) resolves to this same file.
+That card **wrote no second brief and started no second stage chain**. The surviving queue
+handoff is `t_78bd4754` (assignee `nexus-core`, `ready`, created 13:17:40), already created
+from the survivor `t_2a798908`. Nothing was re-scored; no registry value, gate, plan or
+cluster config was changed.
+
+Every checkable claim was re-measured against live state. Results:
+
+| Claim (section) | Re-measured how | Result |
+|---|---|---|
+| `registry OK: 14 genres, 10 lanes`; ledger period 2026-10, 0/60, warn 55, hard 58 (§1) | `/usr/bin/python3 music/registry.py validate` | reproduced, rc=0 |
+| Template 4525 B, caption **640** chars, the 8 sections in order, weirdness 40%, Style Influence 80%, 6 exclude terms (§2, §4) | `wc -c`, `awk length`, `grep`, tag grep | reproduced exactly |
+| Payload copy byte-identical (§1) | `cmp` against `/home/j_kro/mining-k8s/...` | identical — **but the bare `mining-k8s/...` path resolves nowhere inside the lane repo**; root now stated in §1 |
+| `dark-fantasy.md` 1387 B; `dark_fantasy.mp4` 1280x720 / 25 fps / 5.0 s / 14552 B (§5) | `wc -c`, `ffprobe` | reproduced |
+| `gate_youtube_authentic` FAILs the 5 s render with 2 distinct signatures; the album render fails with 4 (§5) | gate run on both | reproduced, rc=1 both |
+| `MIN_STEMS = 4`; loop ratio PASS ≤ 3.0 (clean 1.6 / slip 6.0); `TARGETS {"streaming": -14.0, "sync": -16.0}` tolerance 1.0; ISRC `^[A-Z]{2}[A-Z0-9]{3}\d{2}\d{5}$` (§3) | grep of the four gate sources | reproduced |
+| 8 of 14 templates declare the instrumental path; this genre **0** (§6) | `grep -Eci 'is instrumental\|leave the lyrics box empty\|lyrics box empty'` over all 14 | reproduced, name by name |
+| Deployed `translate.py` lists this genre as instrumental (D3) | read from the running pod | reproduced verbatim |
+| style_weight 0.80 → **156** BPM; 0.75 → **150** BPM; `key` = the 640-char caption (D1, D2, §8c) | pod package copied out and imported, run with the real caption | reproduced (156 / 150; `key_chars` 640; `key == caption`) |
+| Instrumental variant: caption **665** chars, tail `…cinematic scale, instrumental, no vocals`, `lyrics='[Instrumental]\n'` (§6, §8c) | same probe | reproduced exactly |
+| Template tag sheet → 8 sections, **3 empty `['Choir','Instrumental','Choir']`** (§8c, D5) | `acestep_plan.py`'s regex (the splitter's real home; `translate.py`'s dict has no `sections` key) | reproduced |
+| **NEW** planner scaffold → **8 of 8** sections empty; refusal fires (§8d, D5) | planner run, then `acestep_plan.check_lyrics(plan, allow_empty=False)` | `FATAL: 8 section(s) have no lyrics: Intro, Choir, Build, Instrumental, Choir, Breakdown, Chorus, Outro.` — the "3 of 8" hole belongs to the raw sheet, not the scaffold |
+| `[Choir]` absent from `KNOWN_SECTIONS`; `--strict` fails (§6, D4) | gate run with `--strict` | reproduced: `unknown section tag [Choir] (not a Suno metatag)` ×2 |
+| Hyphenated chant splits at the hyphen (§6) | `unique_word_count` on `"for-tis as-tra"` = **4** vs **3** unhyphenated | reproduced |
+| Planner dry-run: 8 sections in order, **100 BPM · C minor · 4/4**, 240 s, `language: en`, `validation: PASS`, `"blueprint": false` (§8d) | `planner.py plan … --duration 240` | reproduced verbatim |
+| `sunolocal-source` 1/1, image `localhost/sunolocal:v0.1.2`; `/health` `{"status":"ok"}`; models `ace`/`yue2`; ClusterIP `10.43.164.190:8123` (§8a) | `kubectl get deploy/svc -o wide`, `curl` | reproduced |
+| CronJobs `17 */6 * * *` and `41 */4 * * *`; ConfigMap queue holds `smoke-chill-lounge` only; chart `briefs: []` (§8b) | `kubectl get cronjob`, ConfigMap jsonpath, `grep values.yaml` | reproduced (job ages now given as names + creation offsets) |
+| `/var/lib/music-plans/`: three plans; `.rendered` markers `refused`, `refused`, empty (§8b) | `ls -l` | reproduced |
+| `check-payload-sync.sh` defaults to the dead `~/Projects/ai-content-pipeline`; with the right `SRC` DRIFT on `planner.py` + `acestep_plan.py`; payload carries no `music/visuals/**` (§9 D6) | script run both ways, `ls files/music/` | reproduced (the default-`SRC` run additionally reports `genres.yaml`) |
+| `oracle.cadence_fit_score("1/wk")` = **0.0** today (§13) | direct call | reproduced |
+| Both cards are one genre: 7.555 → 7.55 and 7.755 → 7.75, differing only in `trend_signal` (§header, §13) | weighted sum with `oracle.WEIGHTS` | reproduced; no re-scoring needed |
+| Blueprints absent (only `activist`, `chill-lounge`, `trance`); lyric sheets for those three only (§6, §7) | `ls music/lyrics/blueprints`, `ls music/lyrics` | reproduced |
+| Every cross-referenced card exists (§9) | board read (`sqlite3 -readonly`) | `t_25a6499c`, `t_bc6a0c00`, `t_a14e5d52`, `t_75aacf8b`, `t_78bd4754`, `t_b0a4db92`, `t_9546841b` — all `ready`, all carrying this genre's evidence |
+
+### Corrections applied by this pass
+
+1. **§1 — the payload citation had no root.** `mining-k8s` is a second checkout
+   (`/home/j_kro/mining-k8s`). Resolved from the lane repo the cited payload path looks
+   missing, which is how the pass found it (`cmp` → "No such file or directory"). The brief
+   now names the root, and §1 says the same for every later reader.
+2. **§8b — relative job ages replaced with job names.** "56 m ago" was true when written and
+   decays; the names `music-pipeline-29869517` / `music-pipeline-render-29869541` and their
+   creation offsets are stable.
+3. **§8c/§8d — the section splitter named, and the scaffold measured.** The brief implied the
+   section list came from the engine translation; it comes from `acestep_plan.py`'s regex.
+   With that named, the same probe shows the planner's *own scaffold* reports 8 of 8 sections
+   empty and is refused — the D5 wrapped-parenthetical hole is narrower than the §8c wording
+   suggests.
+4. **§13/§1 — repo and check census refreshed.** `main` moved `d491663` → `061b5dc` →
+   `afa242e` within the hour; divergence is now 22 ahead / 15 behind (owned by `t_8a715681`);
+   the gate directory census is exact (10 `gate_*.py` + 2 `*.sh` + 2 fixture modules).
+
+### Regression check added (FAILURE → TEST)
+
+The citation defect above is now guarded: `music/scripts/check_brief_paths.py` (new in this
+pass) fails if any `mining-k8s/...` citation in any brief resolves nowhere under `$HOME`, and
+warns when a brief cites that checkout without naming its root. Measured on this tree, before
+this pass's §1 fix (which clears the second warning):
+
+```
+$ /usr/bin/python3 music/scripts/check_brief_paths.py
+PASS check_brief_paths: 13 `mining-k8s/...` citation(s) across 14 brief(s) resolve under /home/j_kro
+  WARN music/briefs/activist.md: cites `mining-k8s/` without naming the checkout root ...
+  WARN music/briefs/epic-orchestral-boss.md: cites `mining-k8s/` without naming the checkout root ...
+  WARN music/briefs/sentimental-piano/room-with-the-light-going/brief.md: cites `mining-k8s/` ...
+rc=0
+```
+
+The second warning is cleared by this pass's own §1 fix. The other two briefs belong to
+`t_ace3bfb1` (activist) and `t_9f7d6889` (sentimental-piano); they are one-line fixes for
+whoever next touches those files, and this pass did not edit another card's artifact. It
+deliberately does **not** assert that every cited path exists — briefs legitimately cite
+artifacts that must not exist yet (the absent blueprints, the unbuilt `music/assets/` and
+`music/publish/` trees).
+
+### Not fixed here (already owned, no new cards)
+
+`t_25a6499c` (deployed engine: BPM/key/instrumental comment — D1–D4), `t_bc6a0c00` (draft
+guard, D5), `t_a14e5d52` + `t_75aacf8b` (payload drift + the `SRC` default, D6),
+`t_78bd4754` (queue this brief), `t_8a715681` (checkout divergence), `t_bf0e5edd` (oracle
+duplicate-card sweep), `t_b0a4db92` (the dangling `brain/` citations). One further
+un-filed observation, recorded rather than carded because it is prose, not behaviour:
+`music/gates/gate_release_ready.py`'s docstring claims it enforces "the ISRC check digit
+(ISO 3901)"; the code enforces shape only (§3).
+
+hotspot: `/home/j_kro/ai-content-pipeline/music/briefs/` — the 14 briefs under it were
+written and re-verified by ~8 concurrent `music-producer` workers on 2026-10-16; every write
+needs a path-scoped commit and a lock retry. This file has two commits, both on this genre.
