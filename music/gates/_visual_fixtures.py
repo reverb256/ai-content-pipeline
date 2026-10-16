@@ -9,6 +9,7 @@ upload_index.json — the prior-upload signature index.
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 
@@ -22,11 +23,42 @@ def make_scene(color, out, dur):
         check=True)
 
 
-def concat(files, out):
-    lst = "concat_list.txt"
+def list_path(out):
+    """The concat demuxer's list file for `out`, NEXT TO its output.
+
+    REGRESSION (2026-10-16, card t_7ab98781). This path used to be the bare
+    relative name `concat_list.txt`, and `check_gate_suite.sh` cd's to the repo
+    root before calling the builder, so EVERY matrix run overwrote the TRACKED
+    repo file `concat_list.txt` at the repo root with that run's own fixture
+    paths and left the shared checkout dirty - which is how a fixture byproduct
+    gets swept into somebody's commit by `git add -A`. Per-output names also
+    stop two concurrent runs racing on one list.
+    """
+    return f"{out}.concat_list.txt"
+
+
+def write_list(files, out):
+    """Write the list for `files` next to `out`; return the list path.
+
+    REFUSES a relative path. A relative list lands in the CALLER's CWD, which is
+    the repo root here - that is exactly the incident above, and it must fail
+    loudly rather than dirty the tree in silence. `build_fixtures` in
+    check_gate_suite.sh turns any failure into FATAL, so the matrix cannot pass
+    with a relative list.
+    """
+    lst = list_path(out)
+    if not os.path.isabs(lst):
+        raise SystemExit(
+            f"FATAL: the concat list must be an absolute path, got {lst!r} - a "
+            f"relative list lands in the caller's CWD (t_7ab98781)")
     with open(lst, "w") as f:
         for p in files:
             f.write(f"file '{p}'\n")
+    return lst
+
+
+def concat(files, out):
+    lst = write_list(files, out)
     subprocess.run(
         ["ffmpeg", "-y", "-v", "error", "-f", "concat",
          "-safe", "0", "-i", lst, "-c", "copy", out],

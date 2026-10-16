@@ -934,6 +934,26 @@ pass "pack key: no fabricated key below the analyser's window, and --key still w
   "$PY" "$REPO/music/tests/test_pack_key.py"
 
 # ------------------------------------------------------------------
+# 19. the fixture builders write nothing into the repo (card t_7ab98781)
+# ------------------------------------------------------------------
+# `music/gates/_visual_fixtures.py` wrote its ffmpeg concat demuxer list to the
+# BARE RELATIVE name `concat_list.txt`. This suite cd's to the repo root before
+# it builds fixtures, and `concat_list.txt` is a TRACKED file there, so EVERY
+# matrix run overwrote it with that run's own fixture paths and left the shared
+# checkout dirty - measured on nexus 2026-10-16: `git diff concat_list.txt`
+# held three `file '<that run's scratch>/pscene_N.mp4'` lines. A tree dirtied by
+# a fixture byproduct is how that byproduct gets swept into somebody's commit by
+# `git add -A`. The builder now derives the list from its OUTPUT path and
+# refuses a relative one; these cases hold that down without needing ffmpeg.
+#
+# The sibling half of the same card - the planner suite writing its plans to
+# fixed names in the shared temp dir - is section 8 of `test_planner.py`, which
+# leg 14 above runs.
+say "the fixture builders write only into the scratch they are given (t_7ab98781)"
+pass "fixtures: the concat list goes next to its output, and a relative output is refused" \
+  "$PY" "$REPO/music/tests/test_gate_fixture_scratch.py"
+
+# ------------------------------------------------------------------
 rm -f /tmp/gate_out.$$
 if [ "$fails" -eq 0 ]; then
   echo

@@ -6,17 +6,59 @@ deliberately standalone (no pytest) so they run anywhere python3 does, which is
 the same requirement the planner itself has.
 """
 
+import ast
+import atexit
 import importlib.util
 import json
 import os
 import pathlib
 import re
+import shutil
+import stat
 import subprocess
 import sys
+import tempfile
 
 HERE = pathlib.Path(__file__).resolve().parent
 REPO = HERE.parent.parent
 PLANNER = REPO / "music" / "planner" / "planner.py"
+
+# ---------------------------------------------------------------------------
+# The suite's scratch is PRIVATE to the run (card t_7ab98781)
+# ---------------------------------------------------------------------------
+# REGRESSION (2026-10-16). Every intermediate plan used to be written to a FIXED
+# name in the SHARED temp directory: `/tmp/_tp-<genre>.json`,
+# `/tmp/_tp-rail-16.json`, `/tmp/_tp-kit-bed.json`, and so on. That directory is
+# world-writable but STICKY, so what decides who may replace a file there is its
+# OWNER, not its mode. A sibling card ran THIS suite from a root shell at
+# 17:52-17:53 and left `/tmp/_tp-activist.json` behind as root:root 644. From
+# then on every j_kro run died on it:
+#     FAIL  activist: plans  [PermissionError: [Errno 13] Permission denied]
+#     PermissionError: [Errno 1] Operation not permitted: '/tmp/_tp-rail-16.json'
+# (EACCES opening a foreign file for write, EPERM unlinking in a sticky
+# directory). The scheduled matrix read the unhandled exception as a gate that
+# misbehaved:
+#     BROKEN: 1 check(s) misbehaved      # 19 PASS / 26 expected FAILS / 1 BAD
+# with every gate green - a gate regression that was not one. ONE run by ANY
+# other user broke this suite for EVERY other user, permanently.
+#
+# The failure needs the PATH to be shared, so the path is not shared any more:
+# one private directory per run, made by mkdtemp (mode 0700, unique name, so no
+# other user can place a file in it and two runs cannot collide), removed at
+# exit. Section 8 is the check that keeps it that way.
+SCRATCH = pathlib.Path(tempfile.mkdtemp(prefix=f"_tp-suite-{os.getuid()}-"))
+atexit.register(shutil.rmtree, SCRATCH, True)
+
+
+def scratch(name: str) -> pathlib.Path:
+    """A path in THIS run's private scratch directory.
+
+    Every file the suite writes goes through here, so no assertion can depend on
+    a path another user may create. A stale file owned by someone else was the
+    whole incident; inside a mkdtemp directory the only possible author is this
+    process, and the directory does not outlive the run.
+    """
+    return SCRATCH / name
 
 spec = importlib.util.spec_from_file_location("planner", PLANNER)
 pl = importlib.util.module_from_spec(spec)
@@ -66,7 +108,7 @@ print("1. every genre plans, and gets a tempo from its own research")
 # validation then could not catch, because validation read the same anchor and
 # found nothing to disagree with.
 for g in genres():
-    out = pathlib.Path(f"/tmp/_tp-{g}.json")
+    out = scratch(f"plan-{g}.json")
     r = subprocess.run(
         [sys.executable, str(PLANNER), "plan", "--brief", BRIEF,
          "--genre", g, "--lyrics-mode", "draft", *style_args(g),
@@ -139,7 +181,7 @@ VOCAL = ["activist", "anime-ending", "anime-opening", "epic-orchestral-boss",
          "jungle-dnb", "trance"]
 
 for g in INST:
-    out = pathlib.Path(f"/tmp/_tp-inst-{g}.json")
+    out = scratch(f"inst-{g}.json")
     r = subprocess.run(
         [sys.executable, str(PLANNER), "plan", "--brief", BRIEF,
          "--genre", g, "--lyrics-mode", "instrumental", *style_args(g),
@@ -168,14 +210,14 @@ for g in INST:
 for g in VOCAL:
     r = subprocess.run(
         [sys.executable, str(PLANNER), "plan", "--brief", BRIEF, "--genre", g,
-         "--lyrics-mode", "instrumental", "--out", f"/tmp/_tp-instvocal-{g}.json"],
+         "--lyrics-mode", "instrumental", "--out", str(scratch(f"instvocal-{g}.json"))],
         capture_output=True, text=True)
     check(f"{g}: instrumental mode refused (rc={r.returncode})", r.returncode == 2,
           (r.stdout + r.stderr)[:140])
 
 # The refusal must NOT be relaxed: a draft plan still carries no `instrumental`
 # flag, which is what keeps acestep_plan.py refusing it.
-out = pathlib.Path("/tmp/_tp-draftflag.json")
+out = scratch("draftflag.json")
 subprocess.run([sys.executable, str(PLANNER), "plan", "--brief", BRIEF,
                 "--genre", "sentimental-piano", "--lyrics-mode", "draft",
                 "--out", str(out)], capture_output=True, text=True)
@@ -184,7 +226,7 @@ check("a draft plan is not marked instrumental", draft.get("instrumental") is Fa
 
 # An instrumental plan is STRUCTURE, never words: that is what makes it
 # acceptable to the renderer without relaxing the draft refusal.
-esc = json.loads(pathlib.Path("/tmp/_tp-inst-sentimental-piano.json").read_text())
+esc = json.loads(scratch("inst-sentimental-piano.json").read_text())
 check("an instrumental plan carries no singable lines",
       not [ln for ln in esc["lyrics"].splitlines()
            if ln.strip() and not ln.strip().startswith(("[", "#", "("))],
@@ -234,7 +276,7 @@ print("5. the plan's key is what an artifact states, never a default (t_f65b0f4c
 # the only key claim backed by an artifact (the genre template) and the only
 # text the engine receives.
 for g in genres():
-    out = pathlib.Path(f"/tmp/_tp-key-{g}.json")
+    out = scratch(f"key-{g}.json")
     r = subprocess.run(
         [sys.executable, str(PLANNER), "plan", "--brief", BRIEF,
          "--genre", g, "--lyrics-mode", "draft", *style_args(g),
@@ -262,10 +304,10 @@ check("the three are elemental-water, epic-orchestral-boss, trance",
 
 # The exact case the incident was found on (card t_791b48f7), and the case that
 # proves no default replaced the fabrication.
-trance = json.loads(pathlib.Path("/tmp/_tp-key-trance.json").read_text())
+trance = json.loads(scratch("key-trance.json").read_text())
 check("trance states 'A minor', not the old 'C minor'",
       trance["key"] == "A minor", repr(trance["key"]))
-cl = json.loads(pathlib.Path("/tmp/_tp-key-chill-lounge.json").read_text())
+cl = json.loads(scratch("key-chill-lounge.json").read_text())
 check("chill-lounge (no key in its caption) emits null, not an invention",
       cl["key"] is None, repr(cl["key"]))
 
@@ -321,11 +363,11 @@ for phrase in ("FINAL CHORUS JUMPS UP ONE KEY - the defining anison gesture",
 # print both run BEFORE it, so reaching the failure proves the wrapper carried
 # `keyscale: null` without raising, and the print must not present that null as
 # a key.
-if pathlib.Path("/tmp/_tp-inst-chill-lounge.json").is_file():
+if scratch("inst-chill-lounge.json").is_file():
     env = dict(os.environ, SUNOLOCAL_HOST="http://127.0.0.1:9")
     rr = subprocess.run(
         [sys.executable, str(REPO / "music" / "scripts" / "acestep_plan.py"),
-         "/tmp/_tp-inst-chill-lounge.json", "--name", "tf-key-cl"],
+         str(scratch("inst-chill-lounge.json")), "--name", "tf-key-cl"],
         capture_output=True, text=True, env=env, timeout=120)
     check("acestep_plan.py renders a null-key plan without raising (no 'missing key')",
           "missing 'key'" not in (rr.stdout + rr.stderr), repr((rr.stdout + rr.stderr)[-200:]))
@@ -374,9 +416,10 @@ STING_BRIEF = ("the audio sting for an interview podcast's brand kit: one 4-6 no
 
 
 def plan_instrumental(genre, duration, tag):
-    out = pathlib.Path(f"/tmp/_tp-rail-{tag}.json")
-    if out.exists():
-        out.unlink()
+    # No stale-file step is needed: the scratch is fresh and private, so this
+    # name cannot already exist (and an unlink of a foreign file in a sticky
+    # directory was the crash this card fixed).
+    out = scratch(f"rail-{tag}.json")
     r = subprocess.run(
         [sys.executable, str(PLANNER), "plan", "--brief", STING_BRIEF,
          "--genre", genre, "--lyrics-mode", "instrumental",
@@ -478,9 +521,10 @@ BED_BRIEF = ("the loopable talk bed for an interview podcast: same warm lo-fi ja
 
 
 def plan_kit(style_field, tag, duration=None):
-    out = pathlib.Path(f"/tmp/_tp-kit-{tag}.json")
-    if out.exists():
-        out.unlink()
+    # Same as plan_instrumental: the private scratch makes a stale file
+    # impossible, and the unlink that a stale file used to require was the
+    # crash site (t_7ab98781).
+    out = scratch(f"kit-{tag}.json")
     cmd = [sys.executable, str(PLANNER), "plan", "--brief", BED_BRIEF,
            "--genre", KIT, "--lyrics-mode", "instrumental",
            "--bpm", "120", "--keyscale", "C minor"]
@@ -538,7 +582,7 @@ check(f"omitting it on a two-field genre is a hard failure (rc={r_omit.returncod
 # commentary-beds by name, because any kit genre has this shape): a synthetic
 # two-field template resolves by the named section under any genre name, and a
 # single-field template is untouched.
-two = {"path": "/tmp/_tp-two.md",
+two = {"path": str(scratch("two.md")),
        "style_fields": [{"name": "ALPHA", "caption": "alpha caption"},
                         {"name": "BETA", "caption": "beta caption"}]}
 check("the resolver picks the SECOND field by name, whatever the genre is called",
@@ -562,8 +606,97 @@ check("naming an unknown field on a single-field genre is a hard failure",
       exits_loudly(pl.resolve_style_caption, chip, "NOPE", "chiptune-8bit"))
 check("naming a field on a genre whose template declares none is a hard failure",
       exits_loudly(pl.resolve_style_caption,
-                   {"path": "/tmp/_tp-none.md", "style_fields": []},
+                   {"path": str(scratch("none.md")), "style_fields": []},
                    "ALPHA", "no-template-genre"))
+
+# ---------------------------------------------------------------------------
+print()
+print("8. the suite's scratch is private to the run, and no path is shared (t_7ab98781)")
+
+# REGRESSION (2026-10-16). A foreign file must never be able to collide with
+# this suite's scratch, and the suite must never name a path under the SHARED
+# temp directory. Both are asserted here rather than assumed: the incident was a
+# root-run sibling's leftover at a fixed shared path, and the fix holds only as
+# long as neither property is given back.
+
+# (a) The home: per-run, owned by the runner, closed to everyone else.
+st = SCRATCH.stat()
+check("the scratch is a directory owned by this run's user",
+      SCRATCH.is_dir() and st.st_uid == os.getuid(),
+      f"uid={st.st_uid} runner={os.getuid()} path={SCRATCH}")
+check("the scratch is closed to every other user (mode 0700)",
+      stat.S_IMODE(st.st_mode) == 0o700, oct(stat.S_IMODE(st.st_mode)))
+check("the scratch is a fresh entry IN the temp dir, not the temp dir itself",
+      SCRATCH.parent == pathlib.Path(tempfile.gettempdir()),
+      f"{SCRATCH} (temp dir {tempfile.gettempdir()})")
+check("the scratch name carries the uid and a per-run suffix",
+      re.fullmatch(rf"_tp-suite-{os.getuid()}-\S+", SCRATCH.name) is not None
+      and SCRATCH.name != f"_tp-suite-{os.getuid()}-",
+      SCRATCH.name)
+
+# (b) The evidence of the files this run actually wrote: they are all in the
+# scratch, and not one belongs to another user - the incident itself, inverted.
+made = sorted(p.name for p in SCRATCH.glob("*.json"))
+check("the plans this run wrote live in the private scratch",
+      {"plan-activist.json", "key-trance.json", "inst-chill-lounge.json",
+       "rail-16.json", "kit-bed.json"} <= set(made), str(made[:8]))
+check("every swept genre planned into it, on all three sweeps",
+      len(made) >= 2 * len(genres()) + len(INST), f"{len(made)} files")
+foreign = [p.name for p in SCRATCH.iterdir() if p.stat().st_uid != os.getuid()]
+check("no file in the scratch belongs to another user", not foreign, str(foreign))
+
+
+# (c) The CLASS of defect, not just this instance. The pre-fix file was full of
+# fixed paths under the shared temp dir; this reads the file's own source and
+# fails if one comes back. Comments are not AST string literals, so the incident
+# record above cannot trip it - only code can.
+SHARED_TEMPS = {"/tmp", "/var/tmp", tempfile.gettempdir()}
+
+
+def fixed_shared_temp_literals(source: str) -> list[str]:
+    """Literals in `source` that name a FIXED path under a shared temp dir.
+
+    Fixed means the path's own directory IS the shared temp dir. A plan written
+    to a name in the shared dir is a violation; a file under a per-run mkdtemp
+    directory is not, whatever the shared dir is on this host.
+    """
+    hits: list[str] = []
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            parts = [node.value]
+        elif isinstance(node, ast.JoinedStr):
+            # Only the LEADING literal of an f-string can name a directory.
+            parts = [v.value for v in node.values
+                     if isinstance(v, ast.Constant) and isinstance(v.value, str)][:1]
+        else:
+            continue
+        for part in parts:
+            if part.startswith("/") and \
+                    str(pathlib.PurePosixPath(part).parent) in SHARED_TEMPS:
+                hits.append(part)
+    return sorted(set(hits))
+
+
+offenders = fixed_shared_temp_literals(
+    pathlib.Path(__file__).read_text(encoding="utf-8"))
+check("the suite's own source names no fixed path under a shared temp dir",
+      not offenders, str(offenders))
+# Positive control, taken from the incident: the PRE-FIX line. The reader must
+# call it a violation, or it is not testing anything. The expected hit is cut
+# OUT of that line rather than written as its own literal - this check reads the
+# file it lives in, so a literal `/tmp/_tp-` expectation would flag itself (it
+# did, on the first run of this section).
+PREFIX_LINE = 'out = pathlib.Path(f"/tmp/_tp-{g}.json")'
+EXPECTED_HIT = PREFIX_LINE.split('f"')[1].split("{")[0]
+check("...and it flags the pre-fix line that caused the incident",
+      fixed_shared_temp_literals(PREFIX_LINE) == [EXPECTED_HIT],
+      str(fixed_shared_temp_literals(PREFIX_LINE)))
+# Negative control: the form that replaced it must NOT read as a violation, or
+# the check would forbid the very fix it exists to protect.
+FIXED_LINE = 'out = scratch(f"plan-{g}.json")'
+check("...and it does not flag the private-scratch form that replaced it",
+      fixed_shared_temp_literals(FIXED_LINE) == [],
+      str(fixed_shared_temp_literals(FIXED_LINE)))
 
 # ---------------------------------------------------------------------------
 print()
