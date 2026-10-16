@@ -139,14 +139,6 @@ expect_pass "language + section-tag regressions (music/tests)" \
 # that sheet from music/prompts/ and asserts both this gate and the renderer's
 # own refusal (acestep_plan.py, which the render CronJob runs without
 # --allow-empty) report every one of its 8 sections empty.
-#
-# The same suite also holds the COMMITTED-SHEET CORPUS (card t_450e7f39,
-# 2026-10-16): every committed sheet is either a NEGATIVE control (it carries a
-# sung line, so no line of it may be read as direction text) or a POSITIVE
-# control (it carries none — an instrumental bed whose genre template leaves the
-# lyrics box empty — so every line of it must be). Three such beds landed
-# (commit ce845f6) after this suite first assumed every sheet is singable, which
-# made THIS check report "FAILED (failures=3)" for sheets that are correct.
 expect_pass "wrapped direction lines are not lyrics (music/tests)" \
   $PY -m unittest music.tests.test_acestep_sheet_guard
 

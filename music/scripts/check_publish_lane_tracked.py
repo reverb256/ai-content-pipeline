@@ -21,11 +21,13 @@ Run:  /usr/bin/python3 music/scripts/check_publish_lane_tracked.py [--repo PATH]
 Exit: 0 when every deliverable is tracked in the checked-out branch; 1 otherwise.
 
 Cited: t_9682a610 (this check), t_ce063b87 (publish adapters), t_14d438ea
-(GLASS-BREAK checklist), t_8a715681 (the reconcile that carded the strand).
+(GLASS-BREAK checklist), t_8a715681 (the reconcile that carded the strand),
+t_7a528617 (credentials.md + verify-credentials.sh landed, both added here).
 """
 from __future__ import annotations
 
 import argparse
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -43,6 +45,8 @@ DELIVERABLES: dict[str, str] = {
     "music/publish/playwright/splice.py": "t_f247f8cd playwright adapter",
     "music/publish/playwright/unity.py": "t_f247f8cd playwright adapter",
     "music/docs/GLASS-BREAK.md": "t_14d438ea provisioning checklist",
+    "music/docs/credentials.md": "t_14d438ea credential map (names + locations, never values)",
+    "music/scripts/verify-credentials.sh": "t_14d438ea credential verifier (PASS/FAIL per surface)",
     "music/analytics/__init__.py": "lane ROI analytics lane",
     "music/analytics/__main__.py": "lane ROI analytics lane",
     "music/analytics/digest.py": "lane ROI analytics lane",
@@ -85,7 +89,18 @@ def refs_carrying(repo: Path, rel: str) -> list[str]:
 
 
 def syntax_error(path: Path) -> str:
-    """compile() without writing a .pyc, so the check never dirties the tree."""
+    """compile() without writing a .pyc, so the check never dirties the tree.
+    Shell deliverables get `bash -n` — the same guard for the other language a
+    deliverable in this list is written in (t_7a528617 added the first .sh)."""
+    if path.suffix == ".sh":
+        bash = shutil.which("bash")
+        if not bash:
+            return ""
+        proc = subprocess.run([bash, "-n", str(path)], capture_output=True, text=True, check=False)
+        if proc.returncode != 0:
+            first = (proc.stderr.strip().splitlines() or ["bash -n failed"])[0]
+            return f"bash -n: {first}"
+        return ""
     try:
         compile(path.read_text(encoding="utf-8"), str(path), "exec")
     except (SyntaxError, UnicodeDecodeError) as exc:
@@ -110,8 +125,9 @@ def main(argv: list[str] | None = None) -> int:
     for rel, owner in sorted(DELIVERABLES.items()):
         state = ""
         if rel in tracked:
-            # Only Python is compiled: GLASS-BREAK.md is prose and must not be parsed.
-            err = syntax_error(repo / rel) if rel.endswith(".py") else ""
+            # Python is compiled and shell is `bash -n`-checked: GLASS-BREAK.md and
+            # credentials.md are prose and must not be parsed.
+            err = syntax_error(repo / rel) if rel.endswith((".py", ".sh")) else ""
             if err:
                 state = f"SYNTAX ERROR ({err})"
         elif (repo / rel).exists():
@@ -125,9 +141,13 @@ def main(argv: list[str] | None = None) -> int:
     for rel in sorted(DELIVERABLES):
         if rel not in tracked:
             continue
-        ref_blob = _git(repo, "rev-parse", f"{STRAND_REF}:{rel}").strip()
+        # --verify --quiet: plain `rev-parse <ref>:<path>` on a path the ref does
+        # NOT carry prints the argument itself and exits 128, which used to read as
+        # a blob id and report false drift (measured 2026-10-16, t_7a528617).
+        ref_blob = _git(repo, "rev-parse", "--verify", "--quiet",
+                        f"{STRAND_REF}:{rel}").strip()
         if not ref_blob:
-            continue  # ref not in this repo: nothing to compare, not a finding
+            continue  # ref does not carry the path: nothing to compare, not a finding
         head_blob = _git(repo, "rev-parse", f"HEAD:{rel}").strip()
         if head_blob and head_blob != ref_blob:
             drifted.append(rel)

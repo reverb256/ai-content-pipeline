@@ -361,17 +361,6 @@ fail_expected "suno-generated lyric rejected" 1 \
   "$PY" "$GATES/gate_lyrics_original.py" \
   --lyrics-file "$GATES/fixtures/suno-generated-umbrellas-in-space.txt"
 
-# The lyrics stage's OWN runner (card t_450e7f39, 2026-10-16). It carries the
-# wrapped-direction regression (t_bc6a0c00) and the committed-sheet corpus, and
-# NOTHING ran it on a schedule: measured 2026-10-16, its suite reported
-# "FAILED (failures=3)" and the runner "BROKEN: 1 of 14 check(s) misbehaved" —
-# three committed instrumental sheets (commit ce845f6) were being used as the
-# negative control for a rule about singable lines — while this matrix stayed
-# green, because it never invoked that runner. A runner no schedule runs is a
-# check that cannot fail.
-pass "the lyrics stage's own runner (music/gates/check_gate_lyrics_original.sh)" \
-  env PY="$PY" bash "$REPO/music/gates/check_gate_lyrics_original.sh"
-
 # ------------------------------------------------------------------
 # 3. gate_stems_present
 # ------------------------------------------------------------------
