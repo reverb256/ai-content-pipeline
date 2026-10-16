@@ -47,7 +47,8 @@ instances the check had never seen — the shapes, with the pre-correction examp
                                                                      chill-lounge,trance}.yaml`
   S7  a bare `<n> blueprints` / `<n> lyric blueprints`             — `activist.md:582` "3 blueprints only"
 
-S1-S3 are the original three classes. S4-S7 are the widening. Three notes on how the widening stays
+S1-S3 are the original three classes. S4-S7 are the widening. S8 is the planner's duration rail
+(card `t_ae1d9243`, below). Three notes on how the widening stays
 signal and not noise:
 
   * A census count inside quotation marks is a QUOTATION, not a claim: the brief is reporting
@@ -71,9 +72,38 @@ signal and not noise:
   * S6 compares the NAMES too, not just their number: a brace expansion of the blueprints
     directory lists that directory, so the set must equal the live set.
 
+S8 — the planner's duration rail (card `t_ae1d9243`)
+----------------------------------------------------
+INCIDENT: `music/planner/planner.py` carries this lane's one duration guard rail, and eleven
+briefs quote it — as a VALUE (`MIN_DURATION_S = 30`) and as a LINE (`planner.py:103`). Card
+`t_96dfc521` moved the floor 30 → 16 and card `t_3497b627` inserted a style-field reader above
+the guard block, so both halves of every quote went stale at once: 18 live claims stated a floor
+the code no longer had, against a line that now holds something else. The sibling check
+`check_brief_line_refs.py` cannot see it — it fails only when a cited line is BLANK or outside the
+file, and `:103`/`:104` landed on non-blank code. So S8 recomputes the VALUE against
+`planner.py` and re-resolves the LINE a citation names, over the `.md` briefs AND their
+`.json` siblings (a `*_basis` value carries the same claim as the prose).
+
+Three rules, all deliberately narrow:
+
+  * IN SCOPE = a line naming `MIN_DURATION_S`/`MAX_DURATION_S`; a bare `NN-NNN s` duration range
+    counts only on a line that names the rail in words too (`planner.py`, rail, guard, cap,
+    floor, outside). A `planner.py:NNN` citation is checked only on a line that names a
+    constant — `elemental-earth.md` cites `planner.py:528` (`--lyrics-mode`) one line below a rail
+    claim, and that is a different subject.
+  * A citation must land on a line of `planner.py` that NAMES a constant. The rail is not a byte
+    offset; a pointer at the module docstring's closing quote is a pointer at nothing.
+  * The ANCHOR is `ANCHORED`'s shapes plus the one-word marker `anchored`, tested on the claim's
+    own line — the convention the census classes already use, so this lane draws the
+    history/claim line in one way only. A `*_basis` value is ONE long line holding history and a
+    live claim in one breath, so on a line longer than 220 characters the SENTENCE carrying the
+    claim is the unit instead. `was` alone is NOT an anchor: "the cap was 420 when this brief was
+    written" anchors the cap's history and must not also hide a live floor claim beside it.
+
 Rules, kept narrow so the check is signal and not noise
 -------------------------------------------------------
-1. A claim is checked only when the marker words are present ("behind"/"ahead"; "blueprint").
+1. A claim is checked only when the marker words are present ("behind"/"ahead"; "blueprint";
+   `MIN_DURATION_S`/`MAX_DURATION_S`).
 2. Number words are accepted (`three`, `seven`, `eleven`, …) because this lane writes both, and
    so is emphasis around them (`**eleven**`, `*three*`, `` `6` ``) — the lane writes that too.
 3. A brief may state the counts for a PAST revision if it says so on the same line ("at
@@ -110,6 +140,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 BRIEF_GLOB = "music/briefs/**/*.md"
 
@@ -421,8 +452,204 @@ def check_text(label: str, text: str, live: dict,
     return findings, checked
 
 
+# ---------------------------------------------------------------------------
+# S8: the planner's duration rail (card t_ae1d9243)
+# ---------------------------------------------------------------------------
+# INCIDENT (2026-10-16, card t_96dfc521, filed as card t_ae1d9243)
+#
+# `music/planner/planner.py` carries the lane's ONE duration guard rail, and eleven briefs quote
+# it. Two things about that quote age badly, and nothing recomputed either:
+#
+#   1. the two VALUES — `MIN_DURATION_S` / `MAX_DURATION_S`. Card `t_96dfc521` moved the floor
+#      30 -> 16 (the commentary-beds kit's own 8-bar sting at 120 BPM), so every brief stating
+#      "the lane's guard rail is `MIN_DURATION_S = 30`" states a value the code no longer has;
+#   2. the LINE the constant sits on. Card `t_3497b627` inserted a style-field reader above the
+#      guard block and every citation to `planner.py:103`/`:104` became a pointer at something
+#      else. `check_brief_line_refs.py` cannot see this: it fails only when a cited line is BLANK
+#      or outside the file, and the old pointer landed on non-blank code (the module docstring's
+#      closing quotes / a blank line / `DEFAULT_ENDPOINT`).
+#
+# So S8 recomputes BOTH: every `MIN_DURATION_S`/`MAX_DURATION_S` value a brief states, and every
+# `planner.py:<line>` citation standing next to one.
+#
+# Three rules keep it signal and not noise:
+#
+#   * IN SCOPE = a line that names `MIN_DURATION_S` / `MAX_DURATION_S`, plus (for a bare
+#     `NN-NNN s` duration range) a line that names the rail in words. A `planner.py:NNN`
+#     citation is checked only on a line that names a constant — `planner.py:528`
+#     (`--lyrics-mode`) sits one line below a rail claim in `elemental-earth.md` and is not one.
+#   * A citation must land on a line of `planner.py` that actually NAMES a constant. The rail
+#     is not a byte offset; it is those lines or nothing.
+#   * The ANCHOR rule is `ANCHORED`'s, plus the one-word marker `anchored`, kept on the claim's
+#     OWN LINE — the same line-anchored convention the census classes use, so this lane draws the
+#     history/claim line in one way only. A `*_basis` value in a `brief.json` is ONE long line
+#     carrying history and live claims at once, so on a line longer than 220 characters the
+#     SENTENCE that carries the claim is the unit instead.
+RAIL_FILE = "music/planner/planner.py"
+
+RAIL_TOKEN = re.compile(r"\b(?:MIN|MAX)_DURATION_S\b")
+# `MIN_DURATION_S = 30`, `MAX_DURATION_S=420`, `MAX_DURATION_S` 420, `MIN_DURATION_S is 16`,
+# `MIN_DURATION_S was 30` — the separators this lane actually writes. The digit lookups after
+# `<=`/`and` are rejected because no separator shape matches them.
+RAIL_ASSIGN = re.compile(
+    rf"\b(MIN|MAX)_DURATION_S\b[\s`*_]*(?:=|:|is|are|was|were|reads?|now|of)?[\s`*_]*(\d+)\b")
+# The rail written as a RANGE: `30-600 s`, `30–600s`, `16s outside 30-600s`.
+RAIL_RANGE = re.compile(r"(?<![\w.])(\d{1,4})\s*[-\u2013]\s*(\d{1,4})\s*s\b")
+# A citation of the constant's line: `planner.py:103`, `planner.py:103-104`, `planner.py lines
+# 103-104`, `planner.py` line 83.
+RAIL_CITE_LONG = re.compile(r"planner\.py`?\s*(?::\s*|lines?\s+)(\d+)(?:\s*[-\u2013]\s*(\d+))?")
+# The same citation with the filename established earlier in the sentence: `:696`, `:103`.
+RAIL_CITE_SHORT = re.compile(r"`:(\d+)(?:\s*[-\u2013]\s*(\d+))?`")
+# ...or established earlier in the sentence as a bare path: "planner.py MIN_DURATION_S=30 at
+# line 103" — the shape the `*_basis` values use.
+RAIL_CITE_WORD = re.compile(r"\blines?\s+(\d+)(?:\s*[-\u2013]\s*(\d+))?")
+# A line that talks about the rail in words, so a bare range on it is the rail's range.
+RAIL_REF = re.compile(r"planner\.py|\brail\b|\bguard\b|\bcap\b|\bfloor\b|\boutside\b", re.I)
+# `ANCHORED` plus the one-word marker, plus the two historical phrasings that name the moment
+# the rail was read. Narrow on purpose: `was` alone is NOT an anchor — "the cap was 420 when
+# this brief was written" anchors the CAP's history, and a checkbox on the same line would hide a
+# live floor claim beside it (the defect this class exists for).
+RAIL_ANCHOR = re.compile(
+    r"`[0-9a-f]{7,40}`|\b20\d{2}-\d{2}-\d{2}\b|\b\d{1,2}:\d{2}\b"
+    r"|\banchored\b|\bSTALE\b|\bCORRECTED\b|\bsuperseded\b"
+    r"|\bwhen written\b|\bat write time\b|\bat filing\b|\bmeasured (?:at|on|in)\b", re.I)
+
+RAIL_LONG_LINE = 220      # a line this long is a machine-readable basis string, not prose
+
+
+def live_rail(repo: Path) -> dict:
+    """The rail as `planner.py` states it: each bound's VALUE and the LINE it sits on, plus
+    every line of the file that NAMES either constant (the only lines a citation may point at)."""
+    path = repo / RAIL_FILE
+    text = path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    rail: dict = {"lines": {i for i, ln in enumerate(lines, 1) if RAIL_TOKEN.search(ln)}}
+    for i, ln in enumerate(lines, 1):
+        m = re.match(r"\s*(MIN|MAX)_DURATION_S\s*=\s*(\d+)\s*$", ln)
+        if m:
+            rail[m.group(1).lower()] = {"value": int(m.group(2)), "line": i}
+    missing = [k for k in ("min", "max") if k not in rail]
+    if missing:
+        raise SystemExit(f"FATAL: {RAIL_FILE} states no {'/'.join(missing)}_DURATION_S")
+    return rail
+
+
+def _rail_window(line: str, pos: int) -> str:
+    """The text an anchor is looked for in: the line, unless it is a `*_basis` string — then the
+    sentence carrying the claim, because such a line holds history and a live claim in one breath."""
+    if len(line) <= RAIL_LONG_LINE:
+        return line
+    bounds = [0] + [m.end() for m in re.finditer(r"[.;]\s+", line) if m.end() <= pos]
+    start = bounds[-1]
+    nxt = next((m.start() for m in re.finditer(r"[.;]\s+", line) if m.start() >= pos), len(line))
+    return line[start:nxt]
+
+
+def rail_findings(label: str, text: str, rail: dict, skips: list[str] | None = None,
+                  md: bool = True) -> tuple[list[str], int, int]:
+    """Recompute every rail value and rail-line citation a brief states.
+
+    Returns (findings, checked, skipped). `md=False` marks a machine-readable `brief.json`, whose
+    strings are the brief's own claims and so are not tested for the double-quote escape.
+    """
+    findings: list[str] = []
+    checked = skipped = 0
+    lines = text.splitlines()
+    fenced = _fence_mask(lines) if md else [False] * len(lines)
+    qstate = quote_states(lines, fenced) if md else [False] * len(lines)
+
+    for idx, line in enumerate(lines):
+        if fenced[idx]:
+            continue
+        lineno = idx + 1
+        claims: list[tuple[str, str, Any, int]] = []      # (kind, token, value, pos)
+        has_token = bool(RAIL_TOKEN.search(line))
+        for m in RAIL_ASSIGN.finditer(line):
+            if md and in_quotes(qstate[idx], line, m.start(1)):
+                continue
+            claims.append(("value", m.group(1).lower(), int(m.group(2)), m.start(1)))
+        if has_token or RAIL_REF.search(line):
+            for m in RAIL_RANGE.finditer(line):
+                if md and in_quotes(qstate[idx], line, m.start()):
+                    continue
+                claims.append(("range", f"{m.group(1)}-{m.group(2)} s",
+                               (int(m.group(1)), int(m.group(2))), m.start()))
+        if has_token:
+            for rx in (RAIL_CITE_LONG, RAIL_CITE_SHORT, RAIL_CITE_WORD):
+                for m in rx.finditer(line):
+                    lo = int(m.group(1))
+                    hi = int(m.group(2)) if m.group(2) else lo
+                    claims.append(("cite", f"planner.py:{m.group(1)}"
+                                   + (f"-{m.group(2)}" if m.group(2) else ""),
+                                   (lo, hi), m.start()))
+        if not claims:
+            continue
+        claims.sort(key=lambda c: c[3])
+        seen_keys: set[tuple[str, str]] = set()
+        deduped: list[tuple[str, str, Any, int]] = []
+        for c in claims:          # one claim per (kind, quoted token) on a line: a row that
+            key = (c[0], c[1])    # states the same value twice is one claim, not two
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            deduped.append(c)
+        claims = deduped
+
+        anchored = 0
+        for kind, token, value, pos in claims:
+            if RAIL_ANCHOR.search(_rail_window(line, pos)):
+                anchored += 1
+                continue
+            checked += 1
+            if kind == "value":
+                live = rail[token]["value"]
+                if value != live:
+                    findings.append(
+                        f"{label}:{lineno}  claimed \"{token.upper()} = {value}\"  measured "
+                        f"{live} ({RAIL_FILE}:{rail[token]['line']})  [STALE RAIL VALUE]")
+            elif kind == "range":
+                lo, hi = value
+                if (lo, hi) != (rail["min"]["value"], rail["max"]["value"]):
+                    findings.append(
+                        f"{label}:{lineno}  claimed rail \"{token}\"  measured "
+                        f"{rail['min']['value']}-{rail['max']['value']} s  [STALE RAIL RANGE]")
+            else:
+                lo, hi = value
+                off = [n for n in range(lo, hi + 1) if n not in rail["lines"]]
+                if off:
+                    findings.append(
+                        f"{label}:{lineno}  cited \"{token}\" for the rail  measured: "
+                        f"{RAIL_FILE}:{lo}{'-' + str(hi) if hi != lo else ''} does not name "
+                        f"MIN_DURATION_S/MAX_DURATION_S (they live at "
+                        f"{rail['min']['line']}/{rail['max']['line']})  [STALE RAIL CITATION]")
+        skipped += anchored
+        if anchored and anchored == len(claims) and skips is not None:
+            skips.append(f"{label}:{lineno}  {line.strip()[:150]}")
+    return findings, checked, skipped
+
+
 def briefs_worktree(repo: Path) -> list[str]:
     return sorted(str(p.relative_to(repo)) for p in repo.glob(BRIEF_GLOB) if p.is_file())
+
+
+# S8 reads the `.json` sibling too: a `*_basis` value carries the same rail claim as the .md.
+RAIL_GLOB = "music/briefs/**/brief.json"
+
+
+def rail_briefs_worktree(repo: Path) -> list[str]:
+    md = briefs_worktree(repo)
+    js = sorted(str(p.relative_to(repo)) for p in repo.glob(RAIL_GLOB) if p.is_file())
+    return md + js
+
+
+def rail_briefs_rev(repo: Path, rev: str) -> list[str]:
+    res = subprocess.run(["git", "-C", str(repo), "ls-tree", "-r", "--name-only", rev],
+                         capture_output=True, text=True, check=False)
+    if res.returncode != 0:
+        raise SystemExit(f"FATAL: {rev} is not a revision in {repo}")
+    return sorted(f for f in res.stdout.splitlines()
+                  if f.startswith("music/briefs/")
+                  and (f.endswith(".md") or f.endswith("/brief.json")))
 
 
 def briefs_rev(repo: Path, rev: str) -> list[str]:
@@ -519,9 +746,66 @@ def selftest() -> int:
         for f in found:
             if want_f == 0:
                 failures.append(f"  false positive in {name}: {f}")
+
+    # --- S8 (the planner's duration rail, card t_ae1d9243) -------------------
+    # A rail whose live shape is the one card t_96dfc521 left behind: floor 16 at :147, ceiling
+    # 600 at :148, the guard comparison at :1003. The incident cases are the wording the briefs
+    # actually carried before this class existed, so a RED here is a real regression.
+    rail = {"min": {"value": 16, "line": 147}, "max": {"value": 600, "line": 148},
+            "lines": {147, 148, 1003, 1004}}
+    rail_cases: list[tuple[str, str, int, int, int, bool]] = [
+        # name, text, want findings, want checked, want skipped, is-markdown
+        ("rail value stale (the incident wording)",
+         "The lane's guard rail is `MIN_DURATION_S = 30`, `MAX_DURATION_S = 600`\n", 1, 2, 0, True),
+        ("rail value current",
+         "The lane's guard rail is `MIN_DURATION_S = 16`, `MAX_DURATION_S = 600`\n", 0, 2, 0, True),
+        ("rail line stale (103 is the docstring's close, not the rail)",
+         "`music/planner/planner.py:103` `MIN_DURATION_S = 16`\n", 1, 2, 0, True),
+        ("rail line current",
+         "`music/planner/planner.py:147` `MIN_DURATION_S = 16`\n", 0, 2, 0, True),
+        ("rail line pair current (147-148)",
+         "`planner.py:147-148` holds `MIN_DURATION_S = 16` and `MAX_DURATION_S = 600`\n",
+         0, 3, 0, True),
+        ("rail line at the guard comparison (1003)",
+         "inside the guard rail (`MIN_DURATION_S <= dur <= MAX_DURATION_S`, `:1003`)\n", 0, 1, 0,
+         True),
+        ("rail range stale (`30-600s` in the planner's own refusal text)",
+         "`VALIDATION FAILED (1): duration 16s outside 30-600s` and that pod exits 1\n", 1, 1, 0,
+         True),
+        ("rail range current",
+         "the planner's guard rail is now 16-600 s\n", 0, 1, 0, True),
+        ("anchored rail history skipped (the one-word marker)",
+         "the rail read `MIN_DURATION_S = 30`, `MAX_DURATION_S = 420` — anchored\n", 0, 0, 2, True),
+        ("anchored rail history skipped (a clock stamp)",
+         "re-measured 2026-10-16 16:07 CDT: `MAX_DURATION_S = 600`\n", 0, 0, 1, True),
+        ("a fenced transcript is quoted evidence, not a claim",
+         "```\n  duration 16s outside 30-600s\n```\n", 0, 0, 0, True),
+        ("a bare `:` citation beside a rail claim is checked",
+         "the floor is `MIN_DURATION_S = 16` at `:103`\n", 1, 2, 0, True),
+        ("json basis: the live clause is checked even though a later sentence is history",
+         ("  \"_duration_basis\": \"92 BPM, 4/4 -> one bar = 4*60/92 = 2.608696 s. 128 bars = "
+          "333.913 s -> plan duration 334 s (SunoGenerateRequest.duration is Optional[int]). "
+          "Inside the planner rail (planner.py MIN_DURATION_S=30 at line 103, MAX_DURATION_S=600 "
+          "at line 104). The cap read 420 when this brief was written.\",\n"), 3, 4, 0, False),
+        ("json basis, corrected: the same line must come back GREEN",
+         ("  \"_duration_basis\": \"92 BPM, 4/4 -> one bar = 4*60/92 = 2.608696 s. 128 bars = "
+          "333.913 s -> plan duration 334 s (SunoGenerateRequest.duration is Optional[int]). "
+          "Inside the planner rail (planner.py MIN_DURATION_S=16 at line 147, MAX_DURATION_S=600 "
+          "at line 148). The cap read 420 when this brief was written.\",\n"), 0, 4, 0, False),
+    ]
+    for name, text, want_f, want_c, want_s, is_md in rail_cases:
+        rail_skips: list[str] = []
+        found, seen, skipn = rail_findings(name, text, rail, rail_skips, md=is_md)
+        ok = len(found) == want_f and seen == want_c and skipn == want_s
+        if not ok:
+            failures.append(f"{name}: findings={len(found)} (want {want_f}), checked={seen} "
+                            f"(want {want_c}), skipped={skipn} (want {want_s})")
+        for f in found:
+            if want_f == 0:
+                failures.append(f"  false positive in {name}: {f}")
     print(f"SELFTEST {'PASS' if not failures else 'FAIL'} check_brief_drift: "
           f"{len(cases)} case(s), one per shape (S1-S7) plus divergence, the anchored rule and "
-          f"the cluster skip")
+          f"the cluster skip; {len(rail_cases)} rail case(s) (S8)")
     for f in failures:
         print("  " + f)
     return 0 if not failures else 1
@@ -555,11 +839,29 @@ def main() -> int:
         findings.extend(f)
         checked += c
 
+    # --- S8: the planner's duration rail, over the .md briefs AND their .json siblings ---
+    rail = live_rail(repo)
+    rail_rels = (args.briefs or (rail_briefs_rev(repo, args.rev) if args.rev
+                                else rail_briefs_worktree(repo)))
+    rail_skips: list[str] = []
+    rail_checked = rail_skipped = 0
+    for rel in rail_rels:
+        f, c, s = rail_findings(rel, read(repo, rel, args.rev), rail, rail_skips,
+                               md=rel.endswith(".md"))
+        findings.extend(f)
+        rail_checked += c
+        rail_skipped += s
+
     where = f"revision {args.rev}" if args.rev else f"worktree {repo}"
     if skips and not args.quiet_skips:
         print(f"SKIP check_brief_drift: {len(skips)} census claim(s) name the deployed payload "
               f"(cluster state, not repo state) — not recomputed here:")
         for s in skips:
+            print("  " + s)
+    if rail_skips and not args.quiet_skips:
+        print(f"SKIP check_brief_drift: {rail_skipped} rail claim(s) carry an anchor on their own "
+              f"line (history, not a claim about now):")
+        for s in rail_skips:
             print("  " + s)
     if findings:
         print(f"FAIL check_brief_drift: {len(findings)} stale count(s) in {where}")
@@ -567,12 +869,18 @@ def main() -> int:
             print("  " + f)
         print(f"  {checked} count(s) checked; live: {live['behind']} behind / {live['ahead']} "
               f"ahead of {args.branch}, {live['genres']} genres, {live['blueprints']} blueprints")
+        print(f"  {rail_checked} rail claim(s) checked; live rail: MIN_DURATION_S = "
+              f"{rail['min']['value']} ({RAIL_FILE}:{rail['min']['line']}), MAX_DURATION_S = "
+              f"{rail['max']['value']} ({RAIL_FILE}:{rail['max']['line']})")
         print("  Fix: correct the count in the citing brief, or anchor it to a revision on the "
               "same line (a historical count is a fact; an unanchored one is a claim about now).")
         return 1
     print(f"PASS check_brief_drift: {checked} live count(s) across {len(rels)} brief(s) match "
           f"{where} ({live['behind']} behind / {live['ahead']} ahead, {live['genres']} genres, "
-          f"{live['blueprints']} blueprints)")
+          f"{live['blueprints']} blueprints); {rail_checked} rail claim(s) across "
+          f"{len(rail_rels)} brief(s) match MIN_DURATION_S = {rail['min']['value']} "
+          f"({RAIL_FILE}:{rail['min']['line']}) / MAX_DURATION_S = {rail['max']['value']} "
+          f"({RAIL_FILE}:{rail['max']['line']})")
     return 0
 
 
