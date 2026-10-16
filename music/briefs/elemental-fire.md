@@ -454,7 +454,8 @@ Measured:
   epic-orchestral-boss, jungle-dnb, trance).
 - **The render path has since produced this genre's master** (§14 rows 10–12; queued by
   `t_28146d70`, `done`). Measured 2026-10-16:
-  - plan `/var/lib/music-plans/elemental-fire-emberfall.json` (1817 B, 15:07) — `bpm 150`,
+  - plan `/var/lib/music-plans/elemental-fire-emberfall.json` (1843 B, re-planned 16:57 — the rail
+    re-plans the track on every pass) — `bpm 150`,
     `key "D Phrygian"`, `duration 120`, `instrumental true`, `blueprint false`, and `lyrics`
     holding the 7 bare section tags (`[Intro]`, `[Instrumental]`×2, `[Break]`,
     `[Instrumental Break]`, `[Instrumental]`, `[Outro]`) with no singable line;
@@ -636,7 +637,7 @@ volumedetect as the pipeline's measurement tool … a mastering-grade LUFS readi
 instrument"). Card `t_9546841b` is `done`. Measured on the real master by this pass: **PASS,
 mean_volume −13.10 dB, max 0.00 dB, deviation +0.90 dB**) → `gate` (independent review,
 different model than the producer, against `music/rubrics/gamer.json`: pass threshold 7.0 on
-the geometric-median panel aggregate (`music/rubrics/panel.py:462`); **4 criteria apply to
+the geometric-median panel aggregate (`music/rubrics/panel.py:463`; `:462` is blank); **4 criteria apply to
 this genre** — `battle_energy` 3, `loop_safety` 3, `asset_packaging` 1, `loudness_target` 1,
 weights summing to 8 — measured via `panel.applicable_criteria(rubric, "elemental-fire")`. The
 file defines 6 criteria; `chip_timbre_authenticity` is scoped to `chiptune-8bit` and
@@ -958,3 +959,4 @@ that accepts the same language (brute-forced over every string up to length 6: 0
 the repo-wide run takes **0.8 s**, and `--selftest` asserts the incident gap stays under 50 ms.
 
 - **Superseded revision of this file:** `sha256 eac7238cab6cc98e3257200e4828e1fd3d9e866d4c7126263d4095610f080bc4` (67041 B, 921 lines).
+- **Superseded by this pass (card `t_6dd13d76`, 2026-10-16T17:55-05:00 CDT):** `sha256 0fa019b079dd738f1bf4f93ff593e6beb41335fd0fd62262ca4e8df70ac96ef1` (960 lines / 69893 B) — §8's plan reading was refreshed against the live file (`/var/lib/music-plans/` is rewritten by every planning pass; the 15:07 reading was the earlier plan) and §10's panel citation was re-pointed from `music/rubrics/panel.py:462` to `:463` — `:462` is blank and `:463` opens `call_judge`, the block the prose names. The plan's own content claims (bpm 150, `D Phrygian`, 120 s, instrumental, 7 bare section tags) were re-read and still hold. No genre finding was reopened.
