@@ -36,6 +36,21 @@ the blueprint's structure and per-section guidance, for a human to write into.
 (volume catalogue, asset packs) and stamps the output so the difference can
 never be lost.
 
+`--lyrics-mode instrumental` is the third mode, for the genres whose own prompt
+template says the lyrics box stays empty: chill-lounge, chiptune-8bit,
+commentary-beds, elemental-air, elemental-earth, elemental-fire, elemental-water,
+sentimental-piano (8 of the 14 templates, measured). Before it existed the queue
+could not express such a track at all - `draft` produced a scaffold the renderer
+refuses (exit 1, a `.refused` marker) and `ai` wrote words a track must not have,
+which also voids the authorship claim. Both were wrong for the same reason: an
+instrumental has no sung line for a human to author (card t_25a6499c D3).
+
+An instrumental plan carries `"instrumental": true`, a section TAG sheet as
+structure control (never singable text), and an authorship line that says
+plainly there is no human-authored portion - so the difference cannot be lost
+downstream. The renderer's draft refusal is untouched: it is the check that
+stops a scaffold shipping as a track, and an instrumental is not a scaffold.
+
 Output: a plan JSON. Feed it to a generator with `acestep_plan.py`.
 
 Usage:
@@ -79,8 +94,14 @@ MIN_BRIEF_WORDS = 5
 
 # Duration guard rails. ACE-Step renders at 25 semantic tokens/second, so an
 # absurd duration is a long generation, not a long song.
+#
+# MAX_DURATION_S was 420, which silently excluded the registry's own `loop-10min`
+# video shape: 600 s. t_909069f0 measured the consequence - elemental-earth's
+# documented entry is 220 whole bars at 88 BPM = 600.0 s, the planner refused it,
+# and the shape could only be reached through the sunolocal API by hand. The
+# ceiling is now the longest shape the registry actually names.
 MIN_DURATION_S = 30
-MAX_DURATION_S = 420
+MAX_DURATION_S = 600
 
 
 # ---------------------------------------------------------------------------
@@ -191,6 +212,61 @@ def bpm_anchor_for(ctx: dict):
     return ctx["blueprint"].get("bpm_anchor") or ctx.get("template_bpm")
 
 
+def is_instrumental_template(genre: str) -> bool:
+    """True when the genre's own prompt template declares no vocals.
+
+    THE TEMPLATE IS THE SPEC, and the markers below are the ones the 8
+    instrumental templates actually use ("Leave the **lyrics box empty** — that
+    is Suno's instrumental path"). The 6 vocal templates (activist, anime-ending,
+    anime-opening, epic-orchestral-boss, jungle-dnb, trance) never say it.
+
+    This mirrors `music/suno-gen.py:is_instrumental_template` on purpose: the
+    CDP generate rail and this planner must agree on which genres are
+    instrumental, or a genre can be queued as instrumental and generated as
+    vocal. suno-gen.py is not in the CronJob payload (it needs the browser
+    stack), so the predicate is duplicated rather than imported -
+    `music/tests/test_planner.py` asserts the two agree over every genre, which
+    is what keeps the copy honest.
+
+    Only the "## Lyrics guidance" section is searched: a style caption may
+    mention "no vocals" as an arrangement note without the genre being
+    instrumental.
+    """
+    path = PROMPT_DIR / f"{genre}.md"
+    if not path.is_file():
+        return False
+    text = path.read_text(encoding="utf-8")
+    m = re.search(r"##\s*Lyrics guidance(.*?)(?=\n##\s|\Z)", text, re.S | re.I)
+    section = (m.group(1) if m else text).lower()
+    markers = (
+        "lyrics box empty",
+        "leave the lyrics box empty",
+        "suno's instrumental path",
+        "that is suno's instrumental path",
+    )
+    return any(marker in section for marker in markers)
+
+
+def instrumental_lyrics(ctx: dict) -> str:
+    """The `lyrics` value for an instrumental plan: STRUCTURE, never words.
+
+    Suno's instrumental path is an empty lyrics box, so nothing here is
+    singable. What is kept is the template's section tag sheet, because the
+    repeat count of the tags is the arrangement the genre asks for (a boss loop
+    is a fixed seven-part cycle). Each tag is emitted with no body, which is what
+    marks the plan as structure-only: the engine's own `translate.py` replaces a
+    lyrics value of "[Instrumental]" with the canonical header, and
+    `acestep_plan.py` recognises `instrumental: true` and does not refuse.
+    """
+    tmpl = ctx["template"]
+    tags = [s.get("tag") if isinstance(s, dict) else str(s)
+            for s in (ctx["blueprint"].get("structure") or [])] or tmpl["structure"]
+    tags = [t for t in tags if t]
+    if not tags:
+        return "[Instrumental]\n"
+    return "".join(f"[{t}]\n" for t in tags)
+
+
 def context_for(genre: str) -> dict:
     reg = load_registry()
     if genre not in reg["genres"]:
@@ -200,7 +276,8 @@ def context_for(genre: str) -> dict:
     tmpl = load_template(genre)
     bp = load_blueprint(genre)
     return {"genre": genre, "registry": entry, "template": tmpl, "blueprint": bp,
-            "template_bpm": bpm_in_caption(tmpl.get("caption") or "")}
+            "template_bpm": bpm_in_caption(tmpl.get("caption") or ""),
+            "instrumental": is_instrumental_template(genre)}
 
 
 # ---------------------------------------------------------------------------
@@ -368,6 +445,10 @@ def compose_spec(sound: dict, index: dict) -> dict:
                       "avoid": avoid, "bpm_anchor": bpm},
         "template_bpm": bpm,
         "sound_elements": picks,
+        # An ad-hoc sound is composed from registry elements, not from one
+        # genre template, so there is no template to declare it instrumental.
+        # The caller says so explicitly if it wants that.
+        "instrumental": False,
     }
 
 
@@ -554,12 +635,21 @@ def scaffold_lyrics(ctx: dict, brief: str) -> str:
 # validate the plan against the artifacts (do not ship a drifted plan)
 # ---------------------------------------------------------------------------
 
-def validate(plan: dict, ctx: dict, brief: str, language: str) -> list[str]:
+def validate(plan: dict, ctx: dict, brief: str, language: str,
+             instrumental: bool = False) -> list[str]:
+    """Check a plan against the genre's own artifacts.
+
+    `instrumental=True` relaxes exactly the checks that are about SUNG words:
+    an instrumental plan has no lyrics and must not be asked for any. Every
+    other check (structure, tempo, duration, avoid-list) still applies - the
+    point of the mode is to express an instrumental, not to skip validation.
+    """
     problems: list[str] = []
     bp, tmpl = ctx["blueprint"], ctx["template"]
 
     if not plan.get("lyrics", "").strip():
-        problems.append("no lyrics")
+        if not instrumental:
+            problems.append("no lyrics")
 
     # structure must match the blueprint/template exactly when one is known
     want = [s.get("tag") if isinstance(s, dict) else str(s)
@@ -580,13 +670,18 @@ def validate(plan: dict, ctx: dict, brief: str, language: str) -> list[str]:
     # as full. That is exactly how the first version of this check passed a
     # plan whose Intro was bare. Verified with a negative control that empties
     # one section and expects this list to be non-empty.
-    blocks = re.findall(r"^\[([^\]]+)\][ \t]*\n(.*?)(?=\n\[|\Z)",
-                        plan.get("lyrics", ""), re.M | re.S)
-    empty = [tag for tag, content in blocks
-             if not [ln for ln in content.splitlines()
-                     if ln.strip() and not ln.strip().startswith(("#", "("))]]
-    if empty:
-        problems.append(f"section(s) with no lyrics: {', '.join(empty)}")
+    #
+    # An instrumental plan emits bare tags ON PURPOSE (they are structure
+    # control, and there is nothing to sing), so this check is skipped there -
+    # but only there.
+    if not instrumental:
+        blocks = re.findall(r"^\[([^\]]+)\][ \t]*\n(.*?)(?=\n\[|\Z)",
+                            plan.get("lyrics", ""), re.M | re.S)
+        empty = [tag for tag, content in blocks
+                 if not [ln for ln in content.splitlines()
+                         if ln.strip() and not ln.strip().startswith(("#", "("))]]
+        if empty:
+            problems.append(f"section(s) with no lyrics: {', '.join(empty)}")
 
     # bpm anchor
     anchor = bpm_anchor_for(ctx)
@@ -616,11 +711,16 @@ def validate(plan: dict, ctx: dict, brief: str, language: str) -> list[str]:
             problems.append(f"avoid-list term present: {quoted!r}")
 
     # the brief's own words should surface somewhere (subject actually honoured)
-    subject = [w for w in re.findall(r"[a-z]{4,}", brief.lower())
-               if w not in {"about", "track", "song", "that", "with", "keeps", "them", "their"}]
-    body = (plan.get("lyrics", "") + " " + str(plan.get("caption", ""))).lower()
-    if subject and not any(w in body for w in subject[:8]):
-        problems.append(f"brief subject absent — none of {subject[:6]} appear in the plan")
+    # Instrumental plans are exempt: their caption is the genre's researched
+    # style caption and their lyrics are bare tags, so there is no text field
+    # the subject could appear in. The subject is carried in the plan's _meta
+    # brief and rendered as music, not as words.
+    if not instrumental:
+        subject = [w for w in re.findall(r"[a-z]{4,}", brief.lower())
+                   if w not in {"about", "track", "song", "that", "with", "keeps", "them", "their"}]
+        body = (plan.get("lyrics", "") + " " + str(plan.get("caption", ""))).lower()
+        if subject and not any(w in body for w in subject[:8]):
+            problems.append(f"brief subject absent — none of {subject[:6]} appear in the plan")
 
     return problems
 
@@ -645,6 +745,9 @@ def cmd_show(args) -> int:
         "blueprint": bool(ctx["blueprint"]),
         "bpm_anchor": ctx["blueprint"].get("bpm_anchor"),
         "avoid": ctx["blueprint"].get("avoid"),
+        # Whether this genre's own template declares no vocals — the value
+        # `--lyrics-mode instrumental` is valid for.
+        "instrumental": ctx["instrumental"],
     }, indent=2))
     return 0
 
@@ -677,16 +780,60 @@ def cmd_plan(args) -> int:
         ctx = context_for(args.genre)
     mode = args.lyrics_mode
 
-    if mode == "draft":
+    # A genre whose own template says the lyrics box stays empty. The mode and
+    # the template must agree, and when they do not the template wins a refusal
+    # rather than a quiet downgrade:
+    #   * asking for `instrumental` on a vocal genre would strip that genre's
+    #     defining element (epic-orchestral-boss is "Choir only — no solo
+    #     lyrical singing"); its `[Instrumental]` line is one SECTION, not a
+    #     declaration. Measured: its template has 0 instrumental markers.
+    #   * planning an instrumental genre as `draft` still produces a scaffold the
+    #     renderer refuses, and as `ai` it writes words the genre must not have.
+    #     That is not fatal here — a scaffold is a legitimate request for a human
+    #     to write into — but it is warned about loudly.
+    if mode == "instrumental" and not ctx["instrumental"]:
+        print(f"FAIL: --lyrics-mode instrumental refused: '{ctx['genre']}' is not an "
+              f"instrumental genre. Its template ({ctx['template']['path']}) does not "
+              f"declare an empty lyrics box, so an instrumental render would drop "
+              f"the element that defines the genre.", file=sys.stderr)
+        return 2
+    if mode != "instrumental" and ctx["instrumental"]:
+        print(f"WARNING: '{ctx['genre']}' is an instrumental genre (its template says "
+              f"the lyrics box stays empty) but --lyrics-mode {mode} was requested. "
+              f"A draft plan is refused by the renderer; AI lyrics void the "
+              f"authorship claim and are out of genre. Use --lyrics-mode instrumental.",
+              file=sys.stderr)
+
+    if mode == "instrumental":
         plan = {
             "title": args.title or (ctx["blueprint"].get("title_candidates") or ["Untitled"])[0],
             "caption": ctx["template"]["caption"],
-            "bpm": bpm_anchor_for(ctx) or 100,
-            "key": args.key or "C minor",
+            "bpm": args.bpm or bpm_anchor_for(ctx) or 100,
+            "key": args.keyscale or args.key or "C minor",
+            "duration": args.duration or 180,
+            "timesignature": "4",
+            "language": args.language,
+            "lyrics": instrumental_lyrics(ctx),
+            "instrumental": True,
+            # NOT a human-authorship claim: there is no human-authored portion in
+            # an instrumental rendered from a caption. See
+            # music/docs/pro-registration.md §1/§3 — an AI-Generated Output is not
+            # registrable with a PRO, and this line is what keeps that visible.
+            "authorship": ("instrumental — no human-authored portion "
+                           "(AI-Generated Output; not registrable with a PRO)"),
+        }
+        problems = validate(plan, ctx, args.brief, args.language, instrumental=True)
+    elif mode == "draft":
+        plan = {
+            "title": args.title or (ctx["blueprint"].get("title_candidates") or ["Untitled"])[0],
+            "caption": ctx["template"]["caption"],
+            "bpm": args.bpm or bpm_anchor_for(ctx) or 100,
+            "key": args.keyscale or args.key or "C minor",
             "duration": args.duration or 180,
             "timesignature": "4",
             "language": args.language,
             "lyrics": scaffold_lyrics(ctx, args.brief),
+            "instrumental": False,
             "authorship": "human-original (scaffold — write every sung line)",
         }
         problems = []  # a scaffold is not meant to pass content validation
@@ -695,6 +842,16 @@ def cmd_plan(args) -> int:
         raw = call_llm(SYSTEM_PROMPT, user, args.endpoint, args.model,
                        temperature=args.temperature)
         plan = extract_json(raw)
+        # An explicit request outranks the model's choice for the three fields a
+        # caller may pin (tempo, key, length) — the same precedence the engine
+        # applies to an explicit bpm.
+        if args.bpm:
+            plan["bpm"] = args.bpm
+        if args.keyscale or args.key:
+            plan["key"] = args.keyscale or args.key
+        if args.duration:
+            plan["duration"] = args.duration
+        plan["instrumental"] = False
         plan["authorship"] = "AI-GENERATED (not eligible for a human-authorship claim)"
         problems = validate(plan, ctx, args.brief, args.language)
 
@@ -702,6 +859,7 @@ def cmd_plan(args) -> int:
         "brief": args.brief,
         "genre": ctx["genre"],
         "lyrics_mode": mode,
+        "instrumental": bool(plan.get("instrumental")),
         "planner_endpoint": args.endpoint if mode == "ai" else None,
         "planner_model": args.model if mode == "ai" else None,
         "template": ctx["template"]["path"],
@@ -715,6 +873,9 @@ def cmd_plan(args) -> int:
 
     print(f"plan     : {out}")
     print(f"genre    : {ctx['genre']}   lyrics_mode: {mode}")
+    if plan.get("instrumental"):
+        print(f"mode     : INSTRUMENTAL — no lyrics; the template declares an empty "
+              f"lyrics box. The renderer's draft refusal does not apply.")
     print(f"structure: {' -> '.join(re.findall(r'^\[([^]]+)\]', plan['lyrics'], re.M))}")
     print(f"bpm/key  : {plan.get('bpm')} BPM · {plan.get('key')} · {plan.get('timesignature')}/4")
     print(f"duration : {plan.get('duration')}s   language: {plan.get('language')}")
@@ -726,6 +887,8 @@ def cmd_plan(args) -> int:
     print("\nvalidation: PASS")
     if mode == "draft":
         print("next: write the lyrics into the plan, then run acestep_plan.py")
+    elif mode == "instrumental":
+        print("next: run acestep_plan.py on the plan — no human step is needed")
     return 0
 
 
@@ -739,12 +902,20 @@ def main(argv=None) -> int:
     pp = sub.add_parser("plan", help="produce a plan")
     pp.add_argument("--brief", required=True)
     pp.add_argument("--genre", required=True)
-    pp.add_argument("--lyrics-mode", choices=["draft", "ai"], default="draft",
+    pp.add_argument("--lyrics-mode", choices=["draft", "ai", "instrumental"], default="draft",
                     help="draft = scaffold for a human (preserves copyright claim); "
-                         "ai = LLM writes them (breaks the claim, stamped)")
+                         "ai = LLM writes them (breaks the claim, stamped); "
+                         "instrumental = no lyrics at all, for the 8 genres whose "
+                         "template says the lyrics box stays empty (valid only for those)")
     pp.add_argument("--language", default="en")
     pp.add_argument("--title", default=None)
-    pp.add_argument("--key", default=None)
+    pp.add_argument("--key", default=None,
+                    help="explicit key signature for the plan (e.g. 'D Phrygian')")
+    pp.add_argument("--keyscale", default=None,
+                    help="same as --key; the name the queue schema and the engine use")
+    pp.add_argument("--bpm", type=int, default=None,
+                    help="explicit tempo for the plan; wins over the genre's anchor. "
+                         "Without it the anchor is used (blueprint, else the caption)")
     pp.add_argument("--duration", type=int, default=None)
     pp.add_argument("--out", default=None)
     pp.add_argument("--endpoint", default=DEFAULT_ENDPOINT)

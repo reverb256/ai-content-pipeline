@@ -101,6 +101,94 @@ check("blueprint wins over the caption when both exist",
 
 # ---------------------------------------------------------------------------
 print()
+print("4. instrumental mode (t_25a6499c D3)")
+
+# REGRESSION (2026-10-16). The planner queue could not express an instrumental
+# track AT ALL: --lyrics-mode accepted only `draft|ai`, `draft` is refused by
+# acestep_plan.py (exit 1, a `.refused` marker) and `ai` writes lyrics a genre
+# that must have none cannot carry - and which void the authorship claim. So
+# 8 of the 14 genres had no supported entry point into the queue, and the
+# `sunolocal/translate.py` inline comment even named NINE of them by wrongly
+# including epic-orchestral-boss (whose template has 0 instrumental markers and
+# says "Choir only - no solo lyrical singing").
+#
+# The decision itself was never in doubt: suno-gen.py has decided it since
+# ba28f55 from the genre's own template. The planner had no third mode.
+INST = ["chill-lounge", "chiptune-8bit", "commentary-beds", "elemental-air",
+        "elemental-earth", "elemental-fire", "elemental-water", "sentimental-piano"]
+VOCAL = ["activist", "anime-ending", "anime-opening", "epic-orchestral-boss",
+         "jungle-dnb", "trance"]
+
+for g in INST:
+    out = pathlib.Path(f"/tmp/_tp-inst-{g}.json")
+    r = subprocess.run(
+        [sys.executable, str(PLANNER), "plan", "--brief", BRIEF,
+         "--genre", g, "--lyrics-mode", "instrumental", "--out", str(out)],
+        capture_output=True, text=True)
+    if r.returncode != 0:
+        tail = (r.stdout + r.stderr).strip().splitlines()
+        check(f"{g}: instrumental plans", False, tail[-1] if tail else "no output")
+        continue
+    plan = json.loads(out.read_text())
+    want = pl.bpm_anchor_for(pl.context_for(g))
+    check(f"{g}: plan is instrumental, bpm {plan['bpm']} == anchor {want}, "
+          f"key is a signature",
+          plan.get("instrumental") is True and plan["bpm"] == want
+          and bool(plan.get("key")) and len(plan["key"]) < 32,
+          f"instrumental={plan.get('instrumental')} bpm={plan['bpm']} key={plan['key']!r}")
+
+# A vocal genre must NOT be forced down the instrumental path: that would strip
+# the element that defines it. epic-orchestral-boss is the measured case.
+for g in VOCAL:
+    r = subprocess.run(
+        [sys.executable, str(PLANNER), "plan", "--brief", BRIEF, "--genre", g,
+         "--lyrics-mode", "instrumental", "--out", f"/tmp/_tp-instvocal-{g}.json"],
+        capture_output=True, text=True)
+    check(f"{g}: instrumental mode refused (rc={r.returncode})", r.returncode == 2,
+          (r.stdout + r.stderr)[:140])
+
+# The refusal must NOT be relaxed: a draft plan still carries no `instrumental`
+# flag, which is what keeps acestep_plan.py refusing it.
+out = pathlib.Path("/tmp/_tp-draftflag.json")
+subprocess.run([sys.executable, str(PLANNER), "plan", "--brief", BRIEF,
+                "--genre", "sentimental-piano", "--lyrics-mode", "draft",
+                "--out", str(out)], capture_output=True, text=True)
+draft = json.loads(out.read_text())
+check("a draft plan is not marked instrumental", draft.get("instrumental") is False)
+
+# An instrumental plan is STRUCTURE, never words: that is what makes it
+# acceptable to the renderer without relaxing the draft refusal.
+esc = json.loads(pathlib.Path("/tmp/_tp-inst-sentimental-piano.json").read_text())
+check("an instrumental plan carries no singable lines",
+      not [ln for ln in esc["lyrics"].splitlines()
+           if ln.strip() and not ln.strip().startswith(("[", "#", "("))],
+      repr(esc["lyrics"]))
+
+# The registry's own loop-10min video shape is 600 s and used to be outside the
+# guard (MAX_DURATION_S was 420), so elemental-earth's documented entry could
+# not be planned at all.
+check("the 600 s loop-10min shape is inside the duration guard",
+      pl.MIN_DURATION_S <= 600 <= pl.MAX_DURATION_S, f"MAX={pl.MAX_DURATION_S}")
+
+# The predicate is a COPY of suno-gen.py's, and a copy drifts. Pin the two
+# together over every genre: if the CDP rail and the planner ever disagree, a
+# genre is queued as one thing and generated as the other.
+sg_spec = importlib.util.spec_from_file_location("suno_gen", REPO / "music" / "suno-gen.py")
+sg = importlib.util.module_from_spec(sg_spec)
+sg_spec.loader.exec_module(sg)
+for g in genres():
+    a, b = pl.is_instrumental_template(g), sg.is_instrumental_template(g)
+    check(f"{g}: planner and suno-gen agree on instrumental ({a})", a == b,
+          f"planner={a} suno-gen={b}")
+
+inst = [g for g in genres() if pl.is_instrumental_template(g)]
+check(f"the instrumental census is 8 of {len(genres())} genres", len(inst) == 8,
+      f"got {len(inst)}: {inst}")
+check("epic-orchestral-boss is NOT in the instrumental census",
+      "epic-orchestral-boss" not in inst)
+
+# ---------------------------------------------------------------------------
+print()
 if fails:
     print(f"RESULT: FAIL ({len(fails)})")
     for f in fails:
