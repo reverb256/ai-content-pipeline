@@ -18,4 +18,8 @@ WorkingDirectory=/home/j_kro/ai-content-pipeline
 Environment=HOME=/home/j_kro
 Nice=10
 IOSchedulingClass=idle
-TimeoutStartSec=600
+# TimeoutStartSec raised 600 -> 3600 (2026-10-16, t_75aacf8b). Same cause as
+# music-policy-watch.service: the digest is a full analyst agent run over 5 data sources.
+# Mon 2026-10-12 06:10:03 "start operation timed out. Terminating." -> result 'timeout',
+# status=130. The job had NEVER completed once.
+TimeoutStartSec=3600
