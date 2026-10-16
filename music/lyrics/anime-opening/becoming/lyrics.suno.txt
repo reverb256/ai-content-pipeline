@@ -1,0 +1,62 @@
+# genre: anime-opening
+# title: Becoming
+# theme: The first thirty seconds of the arc. Someone is running toward a thing they have not named yet, and the sky opens above them. A story starts, and the song is the shape of starting. Triumphant and urgent at once: the joy carries the ache, not the other way around.
+# provenance: DRAFT — UNCLAIMED. The sung lines below are an agent-written draft (writer profile, card t_53da62e5). No human has authored or approved them yet, so no authorship claim is recorded. Do not paste Suno-generated lyrics here.
+# section tags follow music/lyrics/blueprints/anime-opening.yaml; the final chorus repeats the chorus words one key higher.
+
+[Intro]
+夜明けの縁で 息を止めた
+まだ名前のない光を 追いかけてる
+
+[Verse 1]
+教室の窓 ひび割れた空
+ノートの隅に 描いた地図は
+誰にも見せない 約束ひとつ
+走り出す脚が 行き先を決める
+雨上がりの道 はねた泥んこ
+転んだ数だけ 強くなれるはず
+
+[Pre-Chorus]
+歯を食いしばって
+痛みを数えたら
+まだ遠い あの空へ
+
+[Chorus]
+なっていく 僕はなっていく
+君の声が 背中を押すから
+なっていく 何度でもなっていく
+昨日の影を 追い越してく
+
+[Verse 2]
+帰り道の橋 遠回りして
+川面に映った 疲れた横顔
+置いてきたもの 数える夜も
+選んだ道を 悔やみたくはない
+借り物の夢を 脱ぎ捨てた朝
+自分の声で 歌える日まで
+
+[Pre-Chorus]
+息を深く吸って
+恐怖を抱きしめたら
+まだ遠い あの空へ
+
+[Chorus]
+なっていく 僕はなっていく
+君の声が 背中を押すから
+なっていく 何度でもなっていく
+昨日の影を 追い越してく
+
+[Bridge]
+立ち止まっても
+空は待ってくれない
+それでも 前へ
+
+[Final Chorus — KEY CHANGE UP ONE SEMITONE/TONE]
+なっていく 僕はなっていく
+君の声が 背中を押すから
+なっていく 何度でもなっていく
+昨日の影を 追い越してく
+
+[Outro]
+なっていく！
+走り出せ
