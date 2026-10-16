@@ -434,9 +434,12 @@ seam levels), **`asset_packaging`** (weight 1, stated BPM/key + loop-point marke
   caption into `key`. Any render taken at defaults is out of genre on tempo. Workaround until
   fixed: send `styleWeight ≈ 0.2667` for 92 BPM and accept that the ACE keyscale receives the
   caption (or bypass `translate.py` and post the ACE plan directly).
+  **Already filed: `t_25a6499c`** (nexus-core, ready) — bpm hardcoded 120 / key = style
+  caption / queue schema has no instrumental field. This brief adds no new defect there.
 - **O2 — Branch divergence.** Local `main` (7 ahead) lacks 15 upstream commits, including the
   entire `music/suno-gen.py` the generate stage names. Reconcile before the generate stage runs
-  against this checkout.
+  against this checkout. **Already filed: `t_8a715681`** (nexus-core, ready) — reconcile the
+  diverged live checkout.
 - **O3 — Video/loop alignment.** 334 s is not an exact divisor of the 600 s `loop-10min` shape
   (1.80 plays). The visual stage must seam at the track's verified loop point. If the videobot
   cannot seam audio, revisit the duration (**115 bars = 300.000 s**, exactly 2 plays).
@@ -447,21 +450,49 @@ seam levels), **`asset_packaging`** (weight 1, stated BPM/key + loop-point marke
 - **O5 — Asset pack machinery is upstream-only.** `music/assets/pack.py` and
   `scripts/gates/gate_asset_pack.py` do not exist in this checkout, so the game-assets pack
   (loops ≥5, stems ≥12, one_shots ≥5, seams ≤ −60 dBFS) cannot be built here yet. This is the
-  lane's main product for this genre; it is blocked on O2.
+  lane's main product for this genre; it is blocked on O2. **Already filed: `t_5ed495eb`**
+  (distributor, ready) — "asset-pack output does not satisfy the game-assets gate".
 - **O6 — Brief cards never advance.** `music/stages.yaml` tells the brief stage to advance to
   `genre-select`, but all four previous brief cards (`t_38e84953`, `t_2541fd9c`, `t_9f7d6889`,
   `t_6272da09`) ended `done`, so no card has ever reached `genre-select`. Additionally, the
   documented advance step cannot work from a dispatcher-spawned worker:
   `bash scripts/automation/advance-stage.sh t_92a09bdc genre-select --board music` →
-  `kanban: delegate_task child contexts cannot mutate Kanban tasks via the CLI`
-  (the script aborts before its success line, so the no-op is silent). The stage prompt and the
-  worker's permissions disagree; decide which side changes.
+  `kanban: delegate_task child contexts cannot mutate Kanban tasks via the CLI`, **script exit
+  code 1**, and the script aborts before its own success echo, so the no-op is quiet. The stage
+  prompt and the worker's permissions disagree; decide which side changes. **Filed: `t_5a93164a`**
+  (nexus-core) during this stage.
 - **O7 — Duplicate oracle card.** `t_3cb6e654` (elemental-air, 7.7) duplicates this card. The
   dedupe guard landed locally in `ade6e87`; the pre-existing duplicates still need closing.
+- **F2 — Rubric/genre mismatch (raised here, not fixed here).** `music/rubrics/gamer.json`
+  criterion `battle_energy` (weight 3 of 8) is id-scoped `"(elemental-*, epic-orchestral-boss)"`
+  with a battle anchor and a guide whose floor case is "1 = slow ambient track with a battle
+  label", while the rubric's own `notes` say elemental-* choose their sub-idiom per prompt.
+  `elemental-air` is a 92 BPM suspension theme with no percussion by genre rule. **Filed:
+  `t_426a82a3`** (editor — the profile that owns the music rubrics card `t_16d011e6`).
 
 ---
 
-## 12. Provenance
+## 12. Handoffs
+- **`t_25a6499c`** (nexus-core, ready) — bpm hardcoded / key = caption / queue has no
+  instrumental field. This brief adds the elemental-air numbers (92 BPM, `styleWeight` 0.2667)
+  and nothing new to file.
+- **`t_8a715681`** (nexus-core, ready) — reconcile the diverged checkout. This brief adds the
+  measured 7/15 counts and the missing paths; nothing new to file.
+- **`t_5ed495eb`** (distributor, ready) — the asset-pack ↔ game-assets gate mismatch. Blocks O5.
+- **`t_b8afb055`** (NEW, nexus-core; parents = this card + `t_25a6499c`) — queue this track into
+  the live generation path. Carries the exact measured render parameters (instrumental true,
+  engine `ace`, `styleWeight` 0.2667 → 92 BPM, duration 334, `/api/v1/generate` →
+  `/api/v1/task/{id}` → `/api/v1/audio`), the reason `yue2` must not be selected (0/0), and the
+  fact that `/api/v1/stems` is a deferred stub. Gated so it cannot run before the instrumental
+  fix lands.
+- **`t_5a93164a`** (NEW, nexus-core; parent = this card) — no stage can advance its own card;
+  `advance-stage.sh` is refused for dispatcher-spawned workers. Decision needed (O6).
+- **`t_426a82a3`** (NEW, editor; parent = this card) — the `gamer` rubric's `battle_energy`
+  scope. Decision needed (F2).
+
+---
+
+## 13. Provenance
 
 - Registry: `music/genres.yaml`, `music/lanes.yaml` — `music/registry.py validate` → rc 0.
 - Gates read and quoted from source: `music/gates/gate_sync_ready.py`, `gate_loop_points.py`,
@@ -489,7 +520,9 @@ seam levels), **`asset_packaging`** (weight 1, stated BPM/key + loop-point marke
   performance/platforms/viral-moments). Every §-number quoted in this brief is quoted from the
   gate or template that cites it, not from the missing document. Filed as `t_b0a4db92`.
 
-## 13. Next stage
+## 14. Next stage
 
 Stage `brief` is complete. Next: `genre-select` — with O6 noted, because this card's advance
 step cannot be executed from inside this worker and no previous brief card has advanced.
+The production path for this track is `t_b8afb055` (queue into the generation path, gated on
+the instrumental fix `t_25a6499c`).
