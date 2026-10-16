@@ -106,7 +106,18 @@ def check_lyrics(plan: dict, allow_empty: bool) -> None:
     draft went straight to the engine. Measured 2026-10-16 on the three draft
     plans the brief queue produced (card t_a14e5d52); the section-level check
     below is the version the pre-sunolocal script carried.
+
+    AN INSTRUMENTAL PLAN IS NOT A DRAFT (card t_25a6499c D3, card t_8c5a6b91).
+    A plan carrying `"instrumental": true` has bare section tags BY DESIGN -
+    they are structure control and there is nothing to sing - so the refusal
+    would mark every instrumental genre `refused` forever and the queue could
+    never render one. The plan's OWN FIELD is the declaration. It is
+    deliberately NOT inferred from "the sections are empty", which is what
+    would relax the draft refusal: a draft plan has no `instrumental` field,
+    so it is still refused here exactly as before.
     """
+    if plan.get("instrumental"):
+        return
     body = plan.get("lyrics", "")
     if not body.strip():
         if not allow_empty:
@@ -133,14 +144,34 @@ def check_lyrics(plan: dict, allow_empty: bool) -> None:
 
 
 def build_suno_request(plan: dict) -> dict:
-    """Map plan fields to SunoGenerateRequest JSON."""
+    """Map plan fields to SunoGenerateRequest JSON.
+
+    TEMPO AND KEY ARE CARRIED EXPLICITLY (card t_25a6499c D1/D2). The
+    Suno-shaped body has no tempo field and no key field of its own, and this
+    wrapper is where both used to be lost:
+
+      * `plan["bpm"]` never left the plan, so the engine answered its
+        hardcoded 120 for every genre (sentimental-piano came out 1.67x its
+        72 BPM anchor);
+      * `plan["key"]` had nowhere to go, so the engine filled the key from the
+        style caption and the ACE node received 674 characters of paragraph as
+        `keyscale`.
+
+    Both are sunolocal extensions on the body now (`bpm`, `keyscale`) and are
+    passed through verbatim. `instrumental` is carried the same way: it used to
+    be hardcoded False, which was card t_25a6499c D5 — the render rail dropped
+    the flag, so an instrumental plan rendered as a vocal track with an empty
+    vocal line.
+    """
     # Required fields: prompt (caption), lyrics, title, duration.
     # Optional: we set defaults for others.
     return {
         "prompt": plan.get("caption", ""),
         "lyrics": plan.get("lyrics", ""),
         "title": plan.get("title", ""),
-        "instrumental": False,  # we assume lyrics present; if empty and allow-empty, still instrumental?
+        # From the PLAN, not assumed. A plan without the field is vocal, which
+        # is the old behaviour for every plan already on disk.
+        "instrumental": bool(plan.get("instrumental")),
         "model": "v6",
         "custom_mode": False,
         "negative_tags": None,
@@ -153,6 +184,10 @@ def build_suno_request(plan: dict) -> dict:
         "callback_url": None,
         "seed": None,  # we will pass seed separately if needed
         "engine": os.environ.get("SUNOLOCAL_ENGINE", "ace"),
+        # sunolocal extensions; None means "not specified", which the engine
+        # resolves from its own defaults rather than from the style caption.
+        "bpm": int(plan["bpm"]) if plan.get("bpm") is not None else None,
+        "keyscale": (str(plan["key"]).strip() or None) if plan.get("key") else None,
     }
 
 
@@ -204,6 +239,8 @@ def main() -> int:
     print(f"plan     : {args.plan}")
     print(f"title    : {plan.get('title')}   authorship: {plan.get('authorship','(unstated)')}")
     print(f"params   : {plan.get('bpm')} BPM · {plan.get('key')} · {plan.get('timesignature')}/4 · {plan.get('duration')}s")
+    print(f"mode     : {'INSTRUMENTAL (no lyrics box)' if plan.get('instrumental') else 'VOCAL'}"
+          f"  (instrumental={bool(plan.get('instrumental'))}, carried to the engine)")
     print(f"sunolocal: {SUNOLOCAL_HOST}")
 
     # Submit job
