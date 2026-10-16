@@ -362,6 +362,44 @@ if [ "${STALE_WRITE_CHECKS:-1}" != "0" ]; then
   fi
 fi
 
+# --- 2g. the tempo acceptance names its field (card t_f5f703ea) --------------
+# Every genre queue card this lane wrote was accepted on "measured tempo is
+# within a few BPM of 92 (do not trust the plan — measure the audio)". That
+# bullet names no FIELD, and until 90c4d0c (card t_ed609eb0) the named tool could
+# not satisfy it for a percussion-free genre at all: measure.py folded 0.5/1.0/2.0
+# only from its whole-band argmax, and on the elemental-air render that argmax sat
+# at the 60 BPM END of the lag range, so the 92 BPM anchor never entered
+# bpm_candidates (bpm 60.1, conf 0.369). The two closed cards carry the corrected
+# wording in their COMMENTS (246, 247) — a worker cannot edit another card's body,
+# so the rule needed a detector as well as the authoritative text in
+# music/rubrics/README.md, "The acceptance rule for a percussion-free genre".
+#
+# check_tempo_acceptance_field.py reads the LIVE board read-only (open cards —
+# the ones a worker will still be judged by; closed cards are the record) plus
+# music/briefs/**/*.md, and FAILs a tempo acceptance that names none of
+# ac_at_anchor / bpm_candidates / bpm_pulse. Its 8-case selftest pins the incident
+# wording as a FAIL and the canonical bullet as a PASS. The exit code is 8, so a
+# wording defect is never read as a broken gate (1), panel (3), render log (4),
+# media corpus (5) or fence (6/7) defect.
+unset tempo_verdict
+tempo_rc=0
+if [ "${TEMPO_ACCEPTANCE_CHECKS:-1}" != "0" ]; then
+  {
+    echo
+    echo "---- the tempo acceptance names its field (card t_f5f703ea) ----"
+    "$PY" "$REPO/music/scripts/check_tempo_acceptance_field.py" --repo "$REPO" \
+      --db "${KANBAN_BOARD_DB:-$HOME/.hermes/kanban/boards/music/kanban.db}"
+  } >> "$OUT" 2>&1 || tempo_rc=$?
+  say "$TS - tempo acceptance: rc=$tempo_rc (board + briefs; section in $OUT)"
+  tempo_verdict="$(tail -n 1 "$OUT" 2>/dev/null || echo '(no tempo-acceptance output)')"
+  # rc=1 is the incident: a lane text states an audio tempo acceptance that names
+  # no field. rc=3 says the leg could not answer at all (no board db) - reported
+  # the same way, because an unanswerable check is not a pass.
+  if [ "$tempo_rc" -ne 0 ] && [ "$rc" -eq 0 ]; then
+    rc=8
+  fi
+fi
+
 DURATION=$(( $(date +%s) - START ))
 passed="$(grep -cE '^PASS ' "$OUT" || true)"
 expected="$(grep -cE '^FAILS ' "$OUT" || true)"
@@ -370,6 +408,7 @@ fatal="$(grep -cE '^FATAL' "$OUT" || true)"
 panel_fails="$(grep -cE '^FAIL (check_panel_membership|probe_judges)' "$OUT" || true)"
 ledger_fails="$(grep -cE '^FAIL check_render_ledger' "$OUT" || true)"
 media_fails="$(grep -cE '^FAIL check_media_corpus_tracked' "$OUT" || true)"
+tempo_fails="$(grep -cE '^FAIL check_tempo_acceptance_field' "$OUT" || true)"
 interp="$(grep -m1 '^interpreter: ' "$OUT" 2>/dev/null | sed 's/^interpreter: //' || true)"
 verdict="$suite_verdict"
 
@@ -382,6 +421,7 @@ case "$rc" in
   5) state="MEDIA: the campaign record names media the repo does not hold ($media_fails media check(s) failed) - the gates, the panel and the render log are not implicated" ;;
   6) state="FENCE: the shared-tree commit fence is not armed ($(printf '%s' "$fence_verdict" | cut -c1-120)) - the gates, the panel, the render log and the media corpus are not implicated" ;;
   7) state="STALE WRITE: the shared-tree guard is disarmed, or a stale write landed ($(printf '%s' "$stale_verdict" | cut -c1-120)) - the gates, the panel, the render log, the media corpus and the fence are not implicated" ;;
+  8) state="TEMPO ACCEPTANCE: a lane text states an audio tempo acceptance that names no field ($tempo_fails claim(s), card t_f5f703ea) - the gates, the panel, the render log, the media corpus and the fence are not implicated" ;;
   *) state="ERROR: unexpected exit $rc" ;;
 esac
 
@@ -390,7 +430,7 @@ say "$TS — gate matrix: rc=$rc $state pass=$passed expected_failures=$expected
 if [ "$rc" -ne 0 ]; then
   {
     echo "--- failing checks (run $TS, rc=$rc); full output: $OUT"
-    grep -E '^(BAD|FATAL|REFUSE|FAIL (check_panel_membership|probe_judges|check_render_ledger|check_commit_fence))' -A 2 "$OUT" | head -60
+    grep -E '^(BAD|FATAL|REFUSE|FAIL (check_panel_membership|probe_judges|check_render_ledger|check_tempo_acceptance_field|check_commit_fence))' -A 2 "$OUT" | head -60
   } | tee -a "$LOG"
 fi
 
@@ -422,6 +462,9 @@ cat > "$STATUS" <<JSON
   "fence_verdict": "$(j "${fence_verdict:-(not run)}")",
   "stale_write_rc": ${stale_rc:-0},
   "stale_write_verdict": "$(j "${stale_verdict:-(not run)}")",
+  "tempo_rc": ${tempo_rc:-0},
+  "tempo_fails": ${tempo_fails:-0},
+  "tempo_verdict": "$(j "${tempo_verdict:-(not run)}")",
   "duration_s": $DURATION,
   "drill": $([ "$DRILL" = "1" ] && echo true || echo false),
   "output_file": "$OUT",
@@ -441,14 +484,14 @@ wired \`music/gates/check_gate_suite.sh\` into \`music-gate-matrix.timer\`
 - run: $TS (rc=$rc, $state)
 - runner: \`music/scripts/run_gate_matrix.sh\` on $REPO @ $head_sha
 - interpreter: ${interp:-$PY}
-- counts: pass=$passed expected_failures=$expected misbehaved=$bad fatal=$fatal panel_fails=$panel_fails ledger_rc=$ledger_rc ledger_fails=$ledger_fails
+- counts: pass=$passed expected_failures=$expected misbehaved=$bad fatal=$fatal panel_fails=$panel_fails ledger_rc=$ledger_rc ledger_fails=$ledger_fails tempo_rc=$tempo_rc tempo_fails=$tempo_fails
 - full suite output: \`$OUT\`
 - run log: \`$LOG\`
 
 Failing checks:
 
 \`\`\`
-$(grep -E '^(BAD|FATAL|REFUSE|FAIL (check_panel_membership|probe_judges|check_render_ledger|check_media_corpus_tracked|check_commit_fence))' -A 2 "$OUT" | head -60)
+$(grep -E '^(BAD|FATAL|REFUSE|FAIL (check_panel_membership|probe_judges|check_render_ledger|check_media_corpus_tracked|check_commit_fence|check_tempo_acceptance_field))' -A 2 "$OUT" | head -60)
 \`\`\`
 
 Reproduce: \`bash music/gates/check_gate_suite.sh\` must exit 0 with
@@ -494,6 +537,22 @@ drop is declared in the commit message with \`Stale-write-dropped: <sha>\`, whic
 the audit reads as declared rather than as a stale write. Reproduce:
 \`/usr/bin/python3 music/scripts/check_stale_write.py --armed\` must exit 0 and
 \`bash music/scripts/test_check_stale_write.py\` must print 37 PASS lines.
+For rc=8 (a lane text states an audio tempo acceptance that names no field, not a
+gate failure): every genre queue card this lane wrote was accepted on the bullet
+"measured tempo is within a few BPM of 92 (do not trust the plan - measure the
+audio)" - a bullet that names no field of the tool it points at, and that the named
+tool could not satisfy for a percussion-free genre at all until 90c4d0c (card
+t_ed609eb0: the whole-band argmax sat at the 60 BPM edge, so the anchor never
+entered bpm_candidates, and the same tool read a control that is really 120 BPM as
+60.1). Carry the canonical bullet VERBATIM from music/rubrics/README.md, section
+"The acceptance rule for a percussion-free genre": judge the tempo by
+ac_at_anchor.verdict == "supported" (a candidate within 3 BPM of the anchor at
+ac >= 0.25, or the anchor's own lag ac >= 0.25 within +-10 % of its period), never
+on the bare bpm field; and where bpm_pulse == "none" the tool cannot see a pulse -
+decide the tempo by the stem or ear check and say so in the card, never a silent
+FAIL and never a pass. Reproduce:
+/usr/bin/python3 music/scripts/check_tempo_acceptance_field.py must exit 0; its
+--selftest prints 8 PASS lines and pins the retired wording as a FAIL.
 
 Fix the gate (or its fixture) or re-point the judges, do not weaken the check.
 BODY
