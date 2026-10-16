@@ -525,11 +525,19 @@ def mode_since(repo, ref, rep):
 
 
 def mode_push(repo, stdin_text, rep):
-    """pre-push stdin: <local ref> <local sha> <remote ref> <remote sha>."""
+    """pre-push stdin: <local ref> <local sha> <remote ref> <remote sha>.
+
+    git calls this hook with an EMPTY list when the push carries nothing it will
+    send: measured 2026-10-17 on a push git already rejected as non-fast-forward,
+    the hook ran with 0 ref lines. Nothing to judge is not a failure — exit 0 and
+    say so, rather than refusing a push that has no commits in it.
+    """
     zero = "0" * 40
     lines = [l.split() for l in stdin_text.splitlines() if l.strip()]
     if not lines:
-        return 3, "cannot measure: no refs on stdin (not a pre-push invocation?)"
+        return 0, ("no ref lines on stdin — this push carries no commit to judge "
+                   "(git calls a pre-push hook with an empty list for an update it "
+                   "already rejects)")
     ranged = False
     for parts in lines:
         if len(parts) < 4:

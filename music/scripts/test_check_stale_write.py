@@ -448,6 +448,18 @@ def main():
               git("show", "origin/main:music/suite.sh", cwd=fx4.main)
               .stdout.decode().count(MARKER) == 1, "the marker is not on origin/main")
 
+        # git calls pre-push with an EMPTY ref list for an update it already
+        # rejects (measured 2026-10-17 on a non-fast-forward push). Nothing to
+        # judge must not block a push, and a guard that cannot measure must not
+        # either: both fail OPEN here, because the daily leg is the detector.
+        res = fx4.guard("--push", stdin=subprocess.DEVNULL)
+        case("20d --push with an empty ref list (nothing to judge)", 0,
+             "no ref lines on stdin", res)
+        res = run([str(fx4.main / ".githooks" / "pre-push")], fx4.main,
+                  stdin=subprocess.DEVNULL)
+        case("20e the hook does not block a push it cannot see", 0,
+             "no commit to judge", res)
+
         # ================= K: is the guard ARMED? ===========================
         res = fx3.guard("--armed", "--skip-selftest")
         case("21  --armed with core.hooksPath set and both hooks", 0, "ARMED", res)
