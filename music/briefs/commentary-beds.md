@@ -269,11 +269,14 @@ workers, so the ahead count moves). Read live from the working tree:
 **Two rail walls found while this kit rendered** (card `t_640cc2a1` — cited so the stages after
 this one do not rediscover them):
 
-1. **The planner's floor refuses the 16 s sting.** `music/planner/planner.py:103`
+1. **The planner's floor refused the 16 s sting.** `music/planner/planner.py:103`
    `MIN_DURATION_S = 30` (ceiling `MAX_DURATION_S = 600`), so the sting plans with
    `VALIDATION FAILED (1): duration 16s outside 30-600s` and that pod exits 1. The engine has no
    such floor: the 16 s render completed and measures 16.000000 s (§8). Carded `t_96dfc521`. The
    entry keeps its spec length — do not raise the sting to 30 s to dodge the planner.
+   **FIXED by card `t_96dfc521`**: the floor is 16 s now — the shortest shape the registry
+   actually names — and a duration outside the rail writes no plan at all, so the render rail
+   cannot read one (see `music/tests/test_planner.py` §6).
 2. **The planner reads the FIRST style field, and this template carries two.**
    `music/planner/planner.py:135` takes the first `## Style field` fenced block;
    `music/prompts/commentary-beds.md` declares INTRO STING (line 7) before LOOPABLE TALK BED

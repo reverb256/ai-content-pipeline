@@ -109,14 +109,14 @@ DEFAULT_MODEL = os.environ.get("PLANNER_MODEL", "forge-4060-0/bonsai2-27b-ptq1-f
 MIN_BRIEF_WORDS = 5
 
 # Duration guard rails. ACE-Step renders at 25 semantic tokens/second, so an
-# absurd duration is a long generation, not a long song.
-#
-# MAX_DURATION_S was 420, which silently excluded the registry's own `loop-10min`
-# video shape: 600 s. t_909069f0 measured the consequence - elemental-earth's
-# documented entry is 220 whole bars at 88 BPM = 600.0 s, the planner refused it,
-# and the shape could only be reached through the sunolocal API by hand. The
-# ceiling is now the longest shape the registry actually names.
-MIN_DURATION_S = 30
+# absurd duration is a long generation, not a long song. BOTH bounds are the
+# shortest / longest shape the registry actually NAMES - a measured census, not
+# round numbers. MAX_DURATION_S was 420 and is now 600: elemental-earth's own
+# `loop-10min` video shape is 220 whole bars at its 88 BPM (card t_909069f0).
+# MIN_DURATION_S was 30 and is now 16: the commentary-beds kit's own intro sting
+# is 8 bars at its 120 BPM = 16.0 s (music/briefs/commentary-beds.md §2 and §4,
+# live queue entry `duration: 16`), and the engine has no such floor - measured
+MIN_DURATION_S = 16
 MAX_DURATION_S = 600
 
 
@@ -1065,7 +1065,6 @@ def cmd_plan(args) -> int:
     out = Path(args.out) if args.out else (
         REPO / "music" / "plans" / f"{ctx['genre']}-{re.sub(r'[^a-z0-9]+', '-', args.brief.lower())[:40].strip('-')}.json")
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(plan, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     print(f"plan     : {out}")
     print(f"genre    : {ctx['genre']}   lyrics_mode: {mode}")
@@ -1079,7 +1078,23 @@ def cmd_plan(args) -> int:
         print(f"\nVALIDATION FAILED ({len(problems)}):")
         for p in problems:
             print(f"  - {p}")
+        # A duration outside the rail is NOT written. This file is the render
+        # rail's queue, and the render stage does not run this check, so a plan
+        # it can READ is a plan it will RENDER. That is how the 16 s sting
+        # "planned" successfully, exited 1, and rendered anyway (card
+        # t_96dfc521). Refuse before the write instead, and say so - the other
+        # validation failures keep today's contract (write, report, exit 1),
+        # because only the duration rail can be fixed by the rail's owner.
+        if any(p.startswith("duration ") and " outside " in p for p in problems):
+            print(f"\nREFUSED: no plan written to {out} - the render rail reads plan "
+                  f"files, and a plan it can read is a plan it can render. Fix the "
+                  f"entry's duration, or widen the rail in planner.py if the shape "
+                  f"is real. (A file already at that path is not touched.)")
+            return 1
+        out.write_text(json.dumps(plan, indent=2, ensure_ascii=False) + "\n",
+                       encoding="utf-8")
         return 1
+    out.write_text(json.dumps(plan, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print("\nvalidation: PASS")
     if mode == "draft":
         print("next: write the lyrics into the plan, then run acestep_plan.py")
