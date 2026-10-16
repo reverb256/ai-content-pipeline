@@ -1222,8 +1222,8 @@ fixes. The quoted output was left verbatim: mutating it would falsify the record
 **Standing checks at this pass** (`/usr/bin/python3 music/scripts/<name>.py`, all at 16:12–16:15 CDT
 @ `5aed5cc`): `check_brief_line_refs` PASS, 118 ranges across 14 briefs; `check_brief_paths` PASS,
 22 citations; `check_brief_bpm_solutions` PASS, 5 styleWeight claims; `check_prompt_style_counts`
-PASS, 15 declared lengths; `check_brief_drift` PASS, 16 live counts (0 behind / 82 ahead at
-`5aed5cc`, 14 genres, 7 blueprints); `check_stage_scripts` PASS, 11 script paths;
+PASS, 15 declared lengths; `check_brief_drift` PASS, 16 live counts (0 behind / 82 ahead at `5aed5cc`,
+14 genres, 7 blueprints); `check_stage_scripts` PASS, 11 script paths;
 `check_brief_figures` **FAIL** — **1 of 120** at 16:12 (line 600 of `music/briefs/elemental-water.md`);
 at 16:16, 8 of 122, seven of them briefs still carrying `brain/playbooks/music-lane-architecture.md`'s
 recorded size while card `t_fa731c5b` fixed them; that 8-of-122 reading was taken with an
