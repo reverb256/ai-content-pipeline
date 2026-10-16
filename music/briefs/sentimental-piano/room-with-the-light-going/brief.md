@@ -402,7 +402,7 @@ The entry's fields, from the live ConfigMap:
 | name | `sentimental-piano-room-with-the-light-going` | queue key |
 | genre | `sentimental-piano` | registry |
 | title | `Room With The Light Going` | this brief |
-| duration | 180 s | 54 bars of 4/4 at 72 BPM (bar = 3.333333 s); inside the planner's 30-420 s guard rail |
+| duration | 180 s | 54 bars of 4/4 at 72 BPM (bar = 3.333333 s); inside the planner's 16-600 s guard rail (re-read by card `t_ae1d9243`) |
 | bpm | 72 | the genre's own anchor in `prompts/sentimental-piano.md` |
 | keyscale | `C minor` | the planner's documented default, NOT a creative decision (t_f65b0f4c) |
 | lyricsMode | `instrumental` | §4 — no lyrics, and the scaffold path is refused |
