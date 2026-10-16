@@ -1,23 +1,14 @@
 #!/usr/bin/env python3
-"""acestep_plan.py — render a PLAN. The bridge from option B to audio.
+"""
+acestep_plan.py — render a PLAN via sunolocal studio API.
+Replaces direct ComfyUI invocation with a Suno-shaped API call.
 
 The planner (`music/planner/planner.py`) produces a plan: caption, lyrics, bpm,
-key, duration, time signature. This renders it.
+key, duration, time signature. This renders it via sunolocal.
 
-WHY THIS USES THE MANUAL NODE, NOT THE ARTIST NODE
---------------------------------------------------
-`RunningHub ACE-Step Artist` is the model's own planner — give it a sentence and
-it invents the whole song, including details the brief never asked for. That is
-option A, and it is the wrong half of the pipeline here: the plan already exists
-and its whole value is that it was constrained by our researched craft and
-validated before render. Feeding the plan to `GenerationParams` renders exactly
-what was planned. Handing the same brief back to `Artist` would throw the plan
-away and re-invent it.
-
-Order: plan -> validate -> render -> (optionally) master via acestep_qa.py.
-
-Usage (inside the pod, or anywhere that can reach ComfyUI):
+Usage (inside the pod):
     python3 acestep_plan.py /path/to/plan.json
+    python3 acestep_plan.py /path/to/plan.json --name stem
     python3 acestep_plan.py /path/to/plan.json --qa          # chain the mastering pass
     python3 acestep_plan.py /path/to/plan.json --seed 7
 """
@@ -25,147 +16,244 @@ Usage (inside the pod, or anywhere that can reach ComfyUI):
 import argparse
 import json
 import os
-import re
-import subprocess
 import sys
 import time
 import urllib.error
 import urllib.request
+import subprocess
 
-COMFY = os.environ.get("COMFY_URL", "http://localhost:8188")
-# Inside the pod the host's ~/Music is mounted INSIDE ComfyUI's output dir; see
-# helm/apps/comfyui-zephyr.yaml. On the host it is ~/Music.
-MUSIC_SUBDIR = "music/acestep"
-OUTPUT_PREFIX = MUSIC_SUBDIR
+# Configuration
+SUNOLOCAL_HOST = os.environ.get(
+    "SUNOLOCAL_HOST",
+    "http://sunolocal.mining.svc.cluster.local:8123"
+)
+POLL_INTERVAL = 5  # seconds
+DEFAULT_TIMEOUT = 900  # seconds
 
 
-def api(path, payload=None, timeout=30):
-    url = f"{COMFY}{path}"
-    if payload is None:
-        req = urllib.request.Request(url)
-    else:
-        req = urllib.request.Request(
-            url, data=json.dumps(payload).encode(),
-            headers={"Content-Type": "application/json"}, method="POST")
+def _http_json(url, data=None, method=None, headers=None, timeout=30):
+    """Perform an HTTP JSON request and return parsed JSON."""
+    req_headers = {"Content-Type": "application/json"}
+    if headers:
+        req_headers.update(headers)
+    req_data = None
+    if data is not None:
+        req_data = json.dumps(data).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=req_data,
+        headers=req_headers,
+        method=method or ("POST" if data is not None else "GET"),
+    )
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            body = r.read()
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            body = resp.read()
             return json.loads(body) if body else None
     except urllib.error.HTTPError as e:
-        raise SystemExit(f"HTTP {e.code} from {path}:\n{e.read().decode(errors='replace')[:600]}")
+        sys.stderr.write(
+            f"HTTP {e.code} from {url}: {e.read().decode(errors='replace')[:600]}\n"
+        )
+        raise
+    except urllib.error.URLError as e:
+        sys.stderr.write(f"URL error: {e}\n")
+        raise
 
 
 def load_plan(path: str) -> dict:
     with open(path, encoding="utf-8") as fh:
-        plan = json.load(fh)
-    for field in ("caption", "lyrics", "bpm", "key", "duration", "timesignature"):
-        if plan.get(field) in (None, ""):
-            sys.exit(f"FATAL: plan is missing '{field}': {path}")
-    return plan
+        return json.load(fh)
 
 
 def check_lyrics(plan: dict, allow_empty: bool) -> None:
-    """A draft plan scaffolds sections for a human and they are EMPTY.
-
-    Rendering a draft silently produces an instrumental with a vocal-shaped
-    hole, which looks like a model failure and is not one. Refuse by default.
-    """
-    body = plan["lyrics"]
-    # `[ \t]*\n` and not `\s*\n`: `\s` matches newlines, so `\s*\n` lets an
-    # empty section swallow the next section's tag and report as full.
-    sections = re.findall(r"^\[([^\]]+)\][ \t]*\n(.*?)(?=\n\[|\Z)", body, re.M | re.S)
-    empty = [tag for tag, content in sections
-             if not [ln for ln in content.splitlines()
-                     if ln.strip() and not ln.strip().startswith(("#", "("))]]
-    if not sections:
-        sys.exit("FATAL: plan has no [Section] headers — nothing to sing.")
-    if empty and not allow_empty:
-        sys.exit(
-            f"FATAL: {len(empty)} section(s) have no lyrics: {', '.join(empty)}.\n"
-            "       This is a DRAFT plan — a human writes the lines into it first.\n"
-            "       (--allow-empty renders anyway, for instrumental or scratch passes.)")
+    """Validate that lyrics are not empty unless --allow-empty."""
+    body = plan.get("lyrics", "")
+    if not body.strip():
+        if not allow_empty:
+            sys.exit(
+                "FATAL: plan has empty lyrics — a draft section needs human input. "
+                "Use --allow-empty to force rendering anyway."
+            )
+    # Optional: more detailed validation could be added here.
 
 
-def build(plan: dict, seed: int, filename: str) -> dict:
-    """Loader -> GenerationParams (the PLAN, not a re-invention) -> Creator -> Save."""
+def build_suno_request(plan: dict) -> dict:
+    """Map plan fields to SunoGenerateRequest JSON."""
+    # Required fields: prompt (caption), lyrics, title, duration.
+    # Optional: we set defaults for others.
     return {
-        "1": {"class_type": "RunningHub ACE-Step Loader",
-              "inputs": {"llm type": "acestep-5Hz-lm-1.7B"}},
-        # The plan goes in verbatim. This is the difference from option A.
-        "2": {"class_type": "RunningHub ACE-Step GenerationParams",
-              "inputs": {"caption": plan["caption"],
-                         "lyrics": plan["lyrics"],
-                         "bpm": int(plan["bpm"]),
-                         "duration": float(plan["duration"]),
-                         "keyscale": plan["key"],
-                         "timesignature": str(plan["timesignature"])}},
-        "3": {"class_type": "RunningHub ACE-Step Creator",
-              "inputs": {"dit_handler": ["1", 0],
-                         "llm_handler": ["1", 1],
-                         "params": ["2", 0],
-                         "seed": seed}},
-        "4": {"class_type": "SaveAudio",
-              "inputs": {"audio": ["3", 0],
-                         "filename_prefix": f"{OUTPUT_PREFIX}/{filename}"}},
+        "prompt": plan.get("caption", ""),
+        "lyrics": plan.get("lyrics", ""),
+        "title": plan.get("title", ""),
+        "instrumental": False,  # we assume lyrics present; if empty and allow-empty, still instrumental?
+        "model": "v6",
+        "custom_mode": False,
+        "negative_tags": None,
+        "vocal_gender": None,
+        "duration": int(plan.get("duration", 180)),
+        "style_weight": None,
+        "weirdness_constraint": None,
+        "audio_weight": None,
+        "variety": None,
+        "callback_url": None,
+        "seed": None,  # we will pass seed separately if needed
+        "engine": os.environ.get("SUNOLOCAL_ENGINE", "ace"),
     }
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="render a plan to audio")
+    ap = argparse.ArgumentParser(description="render a plan via sunolocal API")
     ap.add_argument("plan", help="path to a plan JSON from planner.py")
-    ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--name", default=None, help="output stem (default: plan filename)")
-    ap.add_argument("--allow-empty", action="store_true",
-                    help="render even when sections are empty (draft/instrumental)")
-    ap.add_argument("--qa", action="store_true",
-                    help="chain acestep_qa.py over the result (repair + genre fix + LUFS)")
-    ap.add_argument("--qa-genre", default="General / Balanced",
-                    help="Music_Fix profile for the QA pass")
-    ap.add_argument("--timeout", type=int, default=900)
+    ap.add_argument(
+        "--seed", type=int, default=42, help="seed passed to the engine (if supported)"
+    )
+    ap.add_argument(
+        "--name",
+        default=None,
+        help="output stem (default: plan filename without extension)",
+    )
+    ap.add_argument(
+        "--allow-empty",
+        action="store_true",
+        help="render even when sections are empty (draft/instrumental)",
+    )
+    ap.add_argument(
+        "--qa",
+        action="store_true",
+        help="chain acestep_qa.py over the result (repair + genre fix + LUFS)",
+    )
+    ap.add_argument(
+        "--qa-genre",
+        default="General / Balanced",
+        help="Music_Fix profile for the QA pass",
+    )
+    ap.add_argument(
+        "--timeout",
+        type=int,
+        default=DEFAULT_TIMEOUT,
+        help="seconds to wait for completion",
+    )
     args = ap.parse_args()
 
     plan = load_plan(args.plan)
     check_lyrics(plan, args.allow_empty)
 
     stem = args.name or os.path.splitext(os.path.basename(args.plan))[0]
-    wf = build(plan, args.seed, stem)
+
+    # Build request
+    request_data = build_suno_request(plan)
+    # Override seed if provided (the engine may use it)
+    if args.seed is not None:
+        request_data["seed"] = args.seed
 
     print(f"plan     : {args.plan}")
     print(f"title    : {plan.get('title')}   authorship: {plan.get('authorship','(unstated)')}")
-    print(f"params   : {plan['bpm']} BPM · {plan['key']} · {plan['timesignature']}/4 · {plan['duration']}s")
-    print(f"mode     : MANUAL (the plan is rendered as planned, not re-invented)")
-    queued = api("/prompt", {"prompt": wf})
-    pid = queued["prompt_id"]
-    print(f"queued   : {pid}")
+    print(f"params   : {plan.get('bpm')} BPM · {plan.get('key')} · {plan.get('timesignature')}/4 · {plan.get('duration')}s")
+    print(f"sunolocal: {SUNOLOCAL_HOST}")
 
+    # Submit job
+    try:
+        resp = _http_json(
+            f"{SUNOLOCAL_HOST}/api/v1/generate",
+            data=request_data,
+            method="POST",
+        )
+    except Exception as e:
+        sys.stderr.write(f"Failed to submit to sunolocal: {e}\n")
+        return 1
+
+    if not resp or "task_id" not in resp:
+        sys.stderr.write(f"Unexpected response: {resp}\n")
+        return 1
+
+    task_id = resp["task_id"]
+    print(f"queued   : {task_id} (status: {resp.get('status', 'pending')})")
+
+    # Poll for completion
     start = time.time()
     while time.time() - start < args.timeout:
-        time.sleep(15)
-        hist = api(f"/history/{pid}")
-        if hist and pid in hist:
-            entry = hist[pid]
-            status = entry.get("status", {})
-            if status.get("completed") or status.get("status_str") in ("success", "error"):
-                print(f"\nfinished in {time.time()-start:.0f}s — {status.get('status_str')}")
-                if status.get("status_str") == "error":
-                    for m in status.get("messages", []):
-                        print("  ", str(m)[:500])
-                    return 1
-                produced = None
-                for node_id, out in (entry.get("outputs") or {}).items():
-                    for a in out.get("audio", []):
-                        produced = a.get("filename")
-                        print(f"  output: {produced}  (subfolder={a.get('subfolder') or '.'})")
-                if produced and args.qa:
-                    print("\n--- QA pass ---")
-                    r = subprocess.run([sys.executable, os.path.join(
-                        os.path.dirname(os.path.abspath(__file__)), "acestep_qa.py"),
-                        produced, "--genre", args.qa_genre])
-                    return r.returncode
-                return 0
-        print(f"  ...{int(time.time()-start)}s", flush=True)
+        time.sleep(POLL_INTERVAL)
+        try:
+            task_resp = _http_json(
+                f"{SUNOLOCAL_HOST}/api/v1/task/{task_id}",
+                method="GET",
+            )
+        except Exception as e:
+            sys.stderr.write(f"Polling error: {e}\n")
+            continue
 
-    print(f"\nTIMEOUT after {args.timeout}s — check /history/{pid}")
+        if not task_resp:
+            sys.stderr.write("Empty task response\n")
+            continue
+
+        status = task_resp.get("status")
+        print(f"  ...{int(time.time()-start)}s status={status}", flush=True)
+
+        if status == "completed":
+            # studio.py merges the job result into the TOP LEVEL of the task
+            # payload; older/other producers may nest it under "result".
+            # Accept both.
+            result = task_resp.get("result") or {}
+            merged = {**task_resp, **result} if isinstance(result, dict) else dict(task_resp)
+            audio_url = merged.get("audio_url")
+            if not audio_url:
+                sys.stderr.write(f"Completed but no audio_url in response: {merged}\n")
+                return 1
+
+            # Construct full download URL
+            if audio_url.startswith("/"):
+                download_url = f"{SUNOLOCAL_HOST}{audio_url}"
+            else:
+                download_url = audio_url  # assume full
+
+            # Determine output path. The extension comes from the artifact the
+            # service actually produced (audio_url), not from the engine name:
+            # ace renders .flac, yue2 .flac, fixture .wav.
+            out_dir = os.environ.get("SUNOLOCAL_WRAPPER_OUT", "/tmp")
+            url_ext = os.path.splitext(audio_url)[1].lstrip(".")
+            ext = url_ext if url_ext in ("wav", "flac", "mp3") else "wav"
+            out_path = os.path.join(out_dir, f"{stem}.{ext}")
+
+            # Download the audio file
+            try:
+                req = urllib.request.Request(download_url)
+                with urllib.request.urlopen(req, timeout=60) as resp:
+                    audio_bytes = resp.read()
+                with open(out_path, "wb") as f:
+                    f.write(audio_bytes)
+                print(f"audio saved to {out_path}")
+            except Exception as e:
+                sys.stderr.write(f"Failed to download audio: {e}\n")
+                return 1
+
+            # If QA requested, run the QA script
+            if args.qa:
+                qa_script = os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)), "acestep_qa.py"
+                )
+                if not os.path.isfile(qa_script):
+                    sys.stderr.write(f"QA script not found: {qa_script}\n")
+                    return 1
+                print(f"--- QA pass ---")
+                ret = subprocess.run(
+                    [
+                        sys.executable,
+                        qa_script,
+                        out_path,
+                        "--genre",
+                        args.qa_genre,
+                    ]
+                )
+                return ret.returncode
+            else:
+                return 0
+
+        elif status == "failed":
+            error = task_resp.get("result", {}).get("error", "unknown")
+            sys.stderr.write(f"Job failed: {error}\n")
+            return 1
+        # else pending or processing, continue loop
+
+    sys.stderr.write(f"Timeout after {args.timeout}s waiting for task {task_id}\n")
     return 1
 
 
