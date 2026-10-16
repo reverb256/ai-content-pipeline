@@ -17,18 +17,25 @@ r = subprocess.run(['ffmpeg','-y','-f','lavfi','-i','sine=frequency=440:duration
 assert r.returncode == 0, f'sidechain ffmpeg failed: {r.stderr[-200:]}'
 print('SIDECHAIN_MIX_OK')
 "  |  EXPECT: SIDECHAIN_MIX_OK
-G4: Loudness normalization to ~-16 LUFS (behavioral)  |  CHECK: cd /home/j_kro/Projects/ai-content-pipeline && python3 -c "
+G4: Loudness normalization to ~-16 LUFS integrated (behavioral)  |  CHECK: cd /home/j_kro/Projects/ai-content-pipeline && python3 -c "
 import subprocess, re
-# Normalize a 2s tone to -16 LUFS, then MEASURE with volumedetect
-# (loudnorm maps dBFS roughly 1:1 to LUFS for a steady tone; -16 target
-#  should land the mean volume near -16 dB)
+# Normalize a 2s tone to I=-16 LUFS, then MEASURE it with EBU R128 (ebur128),
+# the same unit loudnorm's own I= target uses.
+# DO NOT measure this fixture with volumedetect: its mean_volume is a plain RMS
+# mean (no K-weighting, no gating), NOT a LUFS reading, and the two rulers do
+# not agree. Measured 2026-10-16 (ffmpeg 9.0.1) on this exact fixture:
+#   ebur128 integrated loudness  I    = -16.0 LUFS
+#   volumedetect                 mean = -15.3 dB
+# That is 0.7 dB apart, with the RMS number reading LOUDER, so no 1:1
+# dBFS-to-LUFS mapping holds -- not even for a steady tone.
 r = subprocess.run(['ffmpeg','-y','-f','lavfi','-i','sine=frequency=440:duration=2','-af','loudnorm=I=-16:TP=-1.5:LRA=11','/tmp/loudnorm_test.wav'],capture_output=True,text=True)
 assert r.returncode == 0, f'loudnorm failed: {r.stderr[-200:]}'
-r2 = subprocess.run(['ffmpeg','-i','/tmp/loudnorm_test.wav','-af','volumedetect','-f','null','-'],capture_output=True,text=True)
-m = re.search(r'mean_volume:\s*([-\d.]+) dB', r2.stderr)
-assert m, f'no volume measurement: {r2.stderr[-300:]}'
-db = float(m.group(1))
-assert -22 < db < -10, f'mean volume {db} not near -16'
+r2 = subprocess.run(['ffmpeg','-i','/tmp/loudnorm_test.wav','-af','ebur128=peak=true','-f','null','-'],capture_output=True,text=True)
+s = r2.stderr[r2.stderr.rfind('Integrated loudness:'):]  # summary block, not the per-frame I: lines
+m = re.search(r'I:\s+([-\d.]+) LUFS', s)
+assert m, f'no integrated loudness reading: {r2.stderr[-300:]}'
+lufs = float(m.group(1))
+assert -17.0 < lufs < -15.0, f'integrated loudness {lufs} LUFS is not within 1 LU of the -16 target'
 print('LOUDNORM_OK')
 "  |  EXPECT: LOUDNORM_OK
 G5: B-roll clip export produces files (behavioral)  |  CHECK: cd /home/j_kro/Projects/ai-content-pipeline && ls scripts/audio/broll/ 2>/dev/null | wc -l | grep -v '^0$' && echo BROLL_EXISTS || python3 -c "
