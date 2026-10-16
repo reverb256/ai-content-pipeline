@@ -745,3 +745,6 @@ Every file below cites this document. Each reference resolves to a heading in th
 **On the briefs' `Dangling reference` paragraphs.** Card `t_fa731c5b` stripped them, and
 `music/scripts/check_doc_refs.py` rule 2 fails any citing file that calls this doc absent.
 Cite this file's sections, not its byte size or line count: it is live, so those figures age.
+`music/scripts/check_brief_figures.py` rule 7 enforces that for the briefs: an unanchored byte
+size or line count against this file FAILS, whether or not it matches today, and an anchored
+one is re-verified against the revision it names (card `t_f7889dd6`).

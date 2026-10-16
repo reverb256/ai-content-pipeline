@@ -44,6 +44,34 @@ referent THIS REPO can prove. Referents it can prove:
 Out of scope by design: figures only cluster state can prove (kubectl output, journal
 lines, images quoted in a brief). Those are counted and reported as skipped.
 
+LIVE REFERENTS — a figure against a live file must be anchored, or dropped
+-------------------------------------------------------------------------
+INCIDENT (2026-10-16, card t_f7889dd6, found while closing t_6599927d)
+
+Seven briefs cited `brain/playbooks/music-lane-architecture.md`'s size as a LIVE figure —
+six at "34,328 B", `chill-lounge.md` also "596 lines" — and the class pre-dated any single
+commit: at HEAD~2 the doc already measured 35 169 B / 605 lines against the same claim. So
+every edit to the doc turned this check red lane-wide, and nothing could see the stale claim
+until after the edit had landed. `check_brief_drift.py` already draws the right line for a
+count — "an anchored historical count is a fact, an unanchored one is a claim" (its rule 3) —
+but the figure class had no such escape hatch. The doc states the rule itself, in its own
+§14: "Cite this file's sections, not its byte size or line count: it is live, so those
+figures age" — and nothing enforced it.
+
+Two admissible shapes, both recorded here:
+
+  * DROP the figure and cite the doc's own §s. A path plus a section number cannot age.
+    `705043f` (card `t_0fbdfa34`) rewrote 23 sites this way.
+  * ANCHOR it to the revision it is true at — `at `6b24a52`: 34 328 B` — which this check
+    re-verifies against that revision's blob. `music/briefs/jungle-dnb.md:1369` is the live
+    example: `6b24a52`'s doc measures exactly 596 lines / 34 328 B.
+
+A figure against a LIVE referent with no anchor on its line now FAILS, whether or not its
+value matches the worktree today: a live copy that is correct this minute still goes stale on
+the next edit, and that is the defect. A CLOCK-anchored figure is a dated record this repo
+cannot recompute, so it is SKIPPED and printed as such, never guessed at — the same line
+`check_brief_drift.py` rule 3 draws.
+
 Rules (kept deliberately narrow, so the check is signal and not noise)
 ---------------------------------------------------------------------
 1. A figure is recomputed only when its artifact is named EARLIER ON THE SAME LINE
@@ -61,6 +89,9 @@ Rules (kept deliberately narrow, so the check is signal and not noise)
    characters, including or excluding a trailing newline. A claim fails when the value
    matches NEITHER its own unit's family (value not reproducible) OR when it matches the
    OTHER unit's family (UNIT MISLABEL — the two incidents above).
+7. A LIVE referent (`LIVE_REFERENTS` below: a file whose own content declares it live) may
+   not carry an unanchored figure — see LIVE REFERENTS above. An anchored figure is history:
+   it is re-verified when the anchor is a revision, and skipped when it is a clock stamp.
 
 Exit codes: 0 = every recomputed figure matches, 1 = at least one mismatch, 2 = usage error.
 
@@ -88,7 +119,8 @@ bundled interpreter. (This script needs no PyYAML — see t_d3b9e218 — but a u
 interpreter keeps the lane's checks reproducible.)
 
 cited: t_55379aba (this check), t_47491ec0/t_4187b092 (incident 1), t_96821eed/t_abaa7e2d
-(incident 2), t_05b640f6 (incident 3), t_b16b9046 (same gap shape: no gate matrix runner).
+(incident 2), t_05b640f6 (incident 3), t_b16b9046 (same gap shape: no gate matrix runner),
+t_f7889dd6 (the live-referent class and rule 7), t_0fbdfa34/705043f (the brief-side fix).
 """
 
 from __future__ import annotations
@@ -113,6 +145,20 @@ PAIR_TIGHT_RE = re.compile(rf"(?<![A-Za-z0-9_.\-])({_NUM})\s*/\s*({_NUM})\s*({_U
 PAIR_SPACED_RE = re.compile(rf"(?<![A-Za-z0-9_.\-])({_NUM})\s+/\s+({_NUM})\s*({_UNIT})\b")
 # A revision token: `ade6e87`, `4bb1ea6` — a brief may measure an artifact at an older commit.
 REV_RE = re.compile(r"`([0-9a-f]{7,40})`")
+
+# Referents whose OWN content declares them live: they change whenever this lane is edited.
+# `brain/playbooks/music-lane-architecture.md` §14 says it in its own words — "Cite this
+# file's sections, not its byte size or line count: it is live, so those figures age" — and
+# nothing enforced it, so seven briefs froze the doc and this check went red lane-wide on
+# every doc edit (card t_f7889dd6; the briefs were fixed at `705043f` by card `t_0fbdfa34`).
+LIVE_REFERENTS = frozenset({"brain/playbooks/music-lane-architecture.md"})
+
+# An ANCHOR turns a figure from a claim about now into history: a clock or date stamp on the
+# same line, or a revision token — and the revision must RESOLVE, because an anchor nobody can
+# verify is not an anchor. The convention is `check_brief_drift.py` rule 3's, adopted rather
+# than invented, so this lane draws the line between claim and history in one way only.
+_CLOCK_RE = re.compile(r"(?:\b20\d\d-\d\d-\d\d\b|\b\d{1,2}:\d{2}\b|\bCDT\b|\bCST\b"
+                       r"|\bUTC\b|as of\b|when written\b)", re.IGNORECASE)
 
 # Path tokens: backticked, or bare with a known repo prefix.
 _BACKTICK_RE = re.compile(r"`([^`\n]+)`")
@@ -402,6 +448,27 @@ def check_brief(tree: Tree, rel: str) -> tuple[list[str], int, int]:
             for m in REV_RE.finditer(line[:claim["start"]]):
                 if m.end() >= path_end and at_rev(m.group(1)):
                     rev = m.group(1)
+            # Rule 7 / LIVE REFERENTS: a live referent may not carry an unanchored figure.
+            # Enforced BEFORE the value is recomputed, because the defect is the unanchored
+            # claim, not the number — a live copy that matches today still ages on the very
+            # next edit of the file it quotes.
+            if path in LIVE_REFERENTS and rev is None:
+                alt = next((m.group(1) for m in REV_RE.finditer(line)
+                            if at_rev(m.group(1))), None)
+                if alt is not None:
+                    rev = alt          # a revision named anywhere on the line still measures it
+                elif _CLOCK_RE.search(line):
+                    skipped += 1       # a dated record: history this repo cannot recompute
+                    continue
+                else:
+                    recomputed += 1
+                    failures.append(
+                        f'  {rel}:{lineno}  claimed "{claim["value"]:,} {claim["unit"]}"  '
+                        f'referent {path}  [VOLATILE REFERENCE: {path} is live (§14) — its '
+                        f'byte size and line count are not citable; drop the figure and cite '
+                        f'its §s, or anchor it to the revision it is true at '
+                        f'(`at <rev>: {claim["value"]:,} {claim["unit"]}`)]')
+                    continue
             ctx = line[max(0, claim["start"] - _BLOCK_CTX):claim["start"]].lower()
             unit_key = "bytes" if claim["unit"].lower() in ("b", "byte", "bytes") else (
                 "lines" if claim["unit"].lower() in ("line", "lines") else "chars")
@@ -454,26 +521,53 @@ def check_brief(tree: Tree, rel: str) -> tuple[list[str], int, int]:
 
 
 def selftest() -> int:
-    """Prove the check can fail: inject both incident shapes into a throwaway repo.
+    """Prove the check can fail: inject every incident shape into a throwaway repo.
 
     A correct brief must exit 0; a brief whose whole-file claim carries the character
     count as "B" AND whose style-block claim carries the byte count as "chars" (the two
     incident directions) must exit 1 with two UNIT MISLABEL findings.
+
+    The LIVE-REFERENT rule (card t_f7889dd6) is proved the same way. The probe doc is
+    committed at v1 and then edited in the worktree to v2, so ONE value is simultaneously
+    true at a revision and stale live — which is exactly the briefs' position when the doc
+    moved under them: an unanchored claim must exit 1 with a VOLATILE REFERENCE finding,
+    the same claim anchored to the revision it is true at must exit 0, and a clock-stamped
+    claim must be skipped as history rather than guessed at.
     """
     import contextlib
     import io
+    import subprocess
     import tempfile
 
     with tempfile.TemporaryDirectory() as td:
         repo = Path(td)
         (repo / "music/prompts").mkdir(parents=True)
         (repo / "music/briefs").mkdir(parents=True)
+        (repo / "brain/playbooks").mkdir(parents=True)
         prompt = ('# p\n\n## Style field (paste into Suno "Styles", 28/1000 chars)\n\n'
                   '```text\nwarm lo-fi bed — no melody\n```\n')
         (repo / "music/prompts/p.md").write_text(prompt, encoding="utf-8")
         block = "warm lo-fi bed — no melody"
         f_bytes, f_chars = len(prompt.encode()), len(prompt)
         b_bytes, b_chars = len(block.encode()), len(block)
+
+        # The live doc: v1 committed, v2 in the worktree.
+        doc = repo / "brain/playbooks/music-lane-architecture.md"
+        doc_v1 = "# doc\n\nThe doc is live, so its figures age.\n"
+        doc.write_text(doc_v1, encoding="utf-8")
+        subprocess.run(["git", "init", "-q", str(repo)], check=False, capture_output=True)
+        subprocess.run(["git", "-C", str(repo), "add", "-A"], check=False, capture_output=True)
+        subprocess.run(["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t",
+                        "commit", "-q", "-m", "v1"], check=False, capture_output=True)
+        head = subprocess.run(["git", "-C", str(repo), "rev-parse", "--short=8", "HEAD"],
+                              capture_output=True, text=True, check=False).stdout.strip()
+        doc.write_text(doc_v1 + "Cite its sections, not its size.\n", encoding="utf-8")
+        v1_bytes = len(doc_v1.encode())
+        if not head or len(doc.read_bytes()) == v1_bytes:
+            print("SELFTEST FAIL check_brief_figures: could not build the live-referent probe "
+                  "(no revision, or v2 == v1)")
+            return 1
+        LIVE = "brain/playbooks/music-lane-architecture.md"
 
         def brief(body: str) -> tuple[int, str]:
             (repo / "music/briefs/t.md").write_text(body, encoding="utf-8")
@@ -489,16 +583,26 @@ def selftest() -> int:
         rc_bad, out_bad = brief(
             f"# brief\n\n| Prompt template | `music/prompts/p.md` ({f_chars} B, resolves) |\n"
             f"Style: `` `music/prompts/p.md` `` — style block is {b_bytes} chars\n")
+        rc_live, out_live = brief(
+            f"# brief\n\nThe architecture doc `{LIVE}` is {v1_bytes} B.\n")
+        rc_anch, _ = brief(
+            f"# brief\n\nThe architecture doc `{LIVE}` at `{head}` is {v1_bytes} B.\n")
+        rc_clk, _ = brief(
+            f"# brief\n\nThe architecture doc `{LIVE}` measured {v1_bytes} B at 15:31 CDT.\n")
 
     mislabels = out_bad.count("UNIT MISLABEL")
-    ok = rc_good == 0 and rc_bad == 1 and mislabels == 2
+    volatiles = out_live.count("VOLATILE REFERENCE")
+    ok = (rc_good == 0 and rc_bad == 1 and mislabels == 2
+          and rc_live == 1 and volatiles == 1 and rc_anch == 0 and rc_clk == 0)
     print(f"SELFTEST {'PASS' if ok else 'FAIL'} check_brief_figures: "
           f"correct-claims rc={rc_good} (want 0), flipped-units rc={rc_bad} (want 1), "
-          f"unit mislabels={mislabels} (want 2)")
-    line = "  (caught) " + "\n  (caught) ".join(
-        ln.strip() for ln in out_bad.splitlines() if "MISLABEL" in ln)
-    if mislabels:
-        print(line)
+          f"unit mislabels={mislabels} (want 2), live-unanchored rc={rc_live} (want 1) with "
+          f"{volatiles} volatile finding(s) (want 1), live-rev-anchored rc={rc_anch} (want 0), "
+          f"live-clock-anchored rc={rc_clk} (want 0, skipped as history)")
+    for out, marker in ((out_bad, "MISLABEL"), (out_live, "VOLATILE")):
+        caught = [ln.strip() for ln in out.splitlines() if marker in ln]
+        if caught:
+            print("  (caught) " + "\n  (caught) ".join(caught))
     return 0 if ok else 1
 
 
@@ -552,6 +656,10 @@ def main(argv: list[str] | None = None) -> int:
         print("  Fix: correct the figure in the citing brief. Do NOT edit an artifact to "
               "match a stale figure, and do NOT edit a brief that carries a recorded "
               "sha256 without recording the supersession in the same commit.")
+        print("  A LIVE referent is the exception — do not correct its figure: drop the size "
+              "and cite the file's own §s, or anchor it to the revision it is true at. A "
+              "stamped line is history and is skipped; an unanchored present tense is a "
+              "claim and fails (§14 of brain/playbooks/music-lane-architecture.md, rule 7).")
         return 1
 
     print(f"PASS check_brief_figures: {recomputed} recomputed figure(s) across "
