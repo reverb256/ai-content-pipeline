@@ -37,6 +37,20 @@ sits 23 spaces out. One brief took >45 s, the repo-wide run >200 s. The pattern 
 unrolled alternation that accepts the same language (brute-forced over every string up to length
 6) and `--selftest` asserts the gap from that incident stays linear.
 
+THIRD INCIDENT (2026-10-16, card t_8d6c40ac, the false-attribution report)
+-------------------------------------------------------------------------
+`music/briefs/chiptune-8bit.md` quotes this check's OWN past output inside a fenced transcript —
+`FAIL check_brief_line_refs rc=1: 1 of 107 cited line range(s) does not hold —
+music/briefs/elemental-fire.md:605` — under the prose "The checks cited above were run at revision
+`c296db6` (2026-10-16, before this pass's commit) … Verbatim results:". Rule 3 looked for the
+anchor on the QUOTING line; it sits on the prose above the fence, so backtick-stripping left the
+quoted `path:605` indistinguishable from a pointer: the check FAILed the brief that REPORTED the
+defect, told it to "correct … the citing brief" (i.e. another genre's line numbering), and — since
+the target brief was being rewritten by a concurrent worker at that minute — failed only
+sometimes. `repro_incident.py` (workspace of t_8d6c40ac) reproduces the shape on a fixture:
+pre-fix rc=1 on the quoting brief, post-fix rc=0 while the same blank line cited bare still
+FAILs.
+
 WHAT IT DOES
 ------------
 For every `music/briefs/**/*.md` it finds line citations and measures each one against the
@@ -68,6 +82,11 @@ Rules (kept deliberately narrow, so the check is signal and not noise)
    claim about now.
 4. Backticks are stripped before parsing; a path is linked to a claim only when the gap
    between them is a link syntax (whitespace, "(", ",", "lines"/"line"), not arbitrary prose.
+5. Rule 3 at BLOCK level: a citation inside a fenced block whose INTRODUCING PROSE is anchored
+   to a revision or a clock time is a quoted transcript, and is SKIPPED under the `quoted at a
+   rev` bucket. The anchor usually sits on the prose above the fence, not on the quoting line,
+   so the same-line test of rule 3 cannot see it. A fence whose introduction carries no anchor
+   is still measured line by line — that half is asserted by `--selftest`.
 
 SIBLING CHECKS (deliberately not duplicated here)
 ------------------------------------------------
@@ -115,6 +134,13 @@ LINK_RE = re.compile(r"^(?:[\s(),;:\[]|lines?|around|~|≈)*$")
 ANCHORED = re.compile(
     r"`[0-9a-f]{7,40}`|when written|at write time|at filing|"
     r"\b\d{1,2}:\d{2}\b|\bmeasured (?:at|on)\b", re.I)
+# Rule 5, card t_8d6c40ac: a fenced block introduced by anchored prose is a TRANSCRIPT of a past
+# run. The `path:LINE` inside it is what the run PRINTED, not a pointer a reader is meant to open
+# today — and the anchor sits on the prose above the fence, where rule 3's same-line test cannot
+# see it. Deliberately narrow: the block is skipped only when its introduction carries an anchor.
+_FENCE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
+_FENCE_INTRO_GAP = 2        # blank lines tolerated between the introducing prose and the fence
+_FENCE_INTRO_LINES = 6      # lines of introducing prose collected above the fence
 _LINK_GAP = 60          # max chars between a path and the claim it introduces
 _HEREDOC_GUARD = 3      # a path must be within this many tokens of the claim's line
 
@@ -226,6 +252,34 @@ def citations(line: str) -> list[tuple[str | None, int, int | None, str]]:
     return found
 
 
+def _fence_marker(line: str) -> tuple[str, int] | None:
+    """(marker char, run length) when `line` is a markdown code fence, else None."""
+    m = _FENCE.match(line)
+    return (m.group(1)[0], len(m.group(1))) if m else None
+
+
+def fence_intro(lines: list[str], idx: int) -> tuple[int, str]:
+    """The prose paragraph introducing the fence at 0-based `idx`: (1-based first line, prose).
+
+    Scans up over at most `_FENCE_INTRO_GAP` blank lines, then collects at most
+    `_FENCE_INTRO_LINES` contiguous non-blank lines. Marks the paragraph that a markdown reader
+    reads as the fence's introduction ("… Verbatim results:"), which is where the revision
+    anchor of card t_8d6c40ac sits. `(0, "")` means: no introduction close enough to read, so
+    the fence is not a transcript under rule 5.
+    """
+    j = idx - 1
+    for _ in range(_FENCE_INTRO_GAP + 1):
+        if j < 0 or lines[j].strip():
+            break
+        j -= 1
+    end = j
+    while j >= 0 and lines[j].strip() and end - j < _FENCE_INTRO_LINES:
+        j -= 1
+    if end < 0 or not lines[end].strip():
+        return 0, ""
+    return j + 2, "\n".join(lines[j + 1:end + 1])
+
+
 def check_brief(tree: Tree, rel: str) -> tuple[list[str], int, int, list[str]]:
     """Return (failures, checked, skipped, skip notes)."""
     text = tree.read(rel)
@@ -235,19 +289,40 @@ def check_brief(tree: Tree, rel: str) -> tuple[list[str], int, int, list[str]]:
     checked = skipped = 0
     notes: list[str] = []
     cache: dict[str, list[str]] = {}
+    raw = text.splitlines()
+    in_fence = False
+    fence_open: tuple[str, int] | None = None    # (marker char, run length) of the open fence
+    quoted_at = 0            # 1-based line of the anchored prose that introduces the open fence
 
     def src(path: str) -> list[str]:
         if path not in cache:
             cache[path] = (tree.read(path) or "").splitlines()
         return cache[path]
 
-    for lineno, line in enumerate(text.splitlines(), 1):
+    for lineno, line in enumerate(raw, 1):
+        mark = _fence_marker(line)
+        if mark is not None:
+            if not in_fence:
+                in_fence, fence_open = True, mark
+                intro_ln, prose = fence_intro(raw, lineno - 1)
+                quoted_at = intro_ln if prose and ANCHORED.search(prose) else 0
+                continue
+            if fence_open and mark[0] == fence_open[0] and mark[1] >= fence_open[1]:
+                in_fence, fence_open, quoted_at = False, None, 0
+                continue
+            # a shorter or different marker inside the fence is markdown CONTENT — keep reading
         anchored = bool(ANCHORED.search(line))
         for tok, a, b, syntax in citations(line):
-            if anchored:
+            if anchored or quoted_at:
                 skipped += 1
-                notes.append(f"  {rel}:{lineno}  skipped `{syntax}` — anchored to a revision "
-                             f"or a clock time (a historical fact, not a claim about now)")
+                if anchored:
+                    notes.append(f"  {rel}:{lineno}  skipped `{syntax}` — anchored to a revision "
+                                 f"or a clock time (a historical fact, not a claim about now)")
+                else:
+                    notes.append(f"  {rel}:{lineno}  skipped `{syntax}` — quoted at a rev: inside "
+                                 f"a fence whose introducing prose (line {quoted_at}) is anchored "
+                                 f"to a revision or a clock time (a transcript of a past run, not "
+                                 f"a claim about now)")
                 continue
             if tok is None:
                 skipped += 1
@@ -291,6 +366,26 @@ def selftest() -> int:
     import tempfile
     import time
 
+    # Card t_8d6c40ac: a brief that QUOTES a `path:LINE` inside a fence introduced by rev-anchored
+    # prose. This is the shape of `music/briefs/chiptune-8bit.md` (it quotes this check's own past
+    # output, naming `music/briefs/elemental-fire.md:605`, under "… run at revision `c296db6` …
+    # Verbatim results:"). The quoted citation targets the BLANK line 2 of the referent, so pre-fix
+    # it was FAILed as a claim of the quoting brief's own. Must be SKIPPED.
+    quoted = ("Verbatim checker results, run at revision `c296db6` (card t_8d6c40ac):\n"
+              "\n"
+              "```\n"
+              "FAIL check_brief_line_refs rc=1: 1 of 107 cited line range(s) does not hold"
+              " — music/registry.yaml:2 (106 OK)\n"
+              "```\n")
+    # The SAME blank line cited bare (no fence, no anchor) is still a claim about now: MUST FAIL.
+    bare = "Open `music/registry.yaml`:2 for the block.\n"
+    # The block rule keys on the ANCHOR, not on the fence: an unanchored fence is still measured.
+    unanchored = ("A quoted run; no revision and no clock time is named above this fence.\n"
+                  "\n"
+                  "```\n"
+                  "the checker said music/registry.yaml:2 was empty\n"
+                  "```\n")
+
     with tempfile.TemporaryDirectory() as td:
         repo = Path(td)
         (repo / "music/briefs").mkdir(parents=True)
@@ -311,9 +406,18 @@ def selftest() -> int:
         rc_good, _ = brief("Block (`music/registry.yaml` lines 3–5): export/stems.\n")
         rc_bad, out_bad = brief("Block (`music/registry.yaml` lines 2–5): export/stems.\n")
         rc_amb, out_amb = brief("See `thing.yaml` lines 1–1 for the setting.\n")
+        rc_quote, out_quote = brief(quoted)
+        rc_bare, out_bare = brief(bare)
+        rc_unanchored, out_unanchored = brief(unanchored)
 
     caught = [ln.strip() for ln in out_bad.splitlines() if "BLANK OPEN" in ln]
     skipped_amb = "ambiguous referent" in out_amb
+    # Card t_8d6c40ac, both halves: the rev-anchored fence's quoted citation is SKIPPED and counted
+    # in its own bucket, while the same blank line cited bare — and the same blank line quoted
+    # inside an UNANCHORED fence — is still measured and still FAILs.
+    caught_bare = [ln.strip() for ln in out_bare.splitlines() if "BLANK OPEN" in ln]
+    caught_unanchored = [ln.strip() for ln in out_unanchored.splitlines() if "BLANK OPEN" in ln]
+    quote_skipped = "quoted at a rev x1" in out_quote and "BLANK OPEN" not in out_quote
     # Regression, card t_e86c2110 (2026-10-16): the link-gap pattern used to nest a repeat inside a
     # repeat, so a gap that fails to match backtracked exponentially. `music/briefs/elemental-water.md`
     # aligns a trailing comment 23 spaces out inside a fenced transcript, and that made the whole
@@ -329,14 +433,22 @@ def selftest() -> int:
     small_ms = (time.perf_counter() - t0) * 1000
     gap_linear = not gap_is_link and gap_ms < 50 and not small_is_link and small_ms < 50
     ok = (rc_good == 0 and rc_bad == 1 and len(caught) == 1 and rc_amb == 0 and skipped_amb
+          and rc_quote == 0 and quote_skipped
+          and rc_bare == 1 and len(caught_bare) == 1
+          and rc_unanchored == 1 and len(caught_unanchored) == 1
           and gap_linear)
     print(f"SELFTEST {'PASS' if ok else 'FAIL'} check_brief_line_refs: "
           f"correct-range rc={rc_good} (want 0), off-by-one rc={rc_bad} (want 1), "
           f"caught={len(caught)} (want 1), ambiguous-basename rc={rc_amb} (want 0, skipped), "
           f"aligned-comment gap {gap_ms:.3f} ms / 12-space {small_ms:.3f} ms "
           f"(want <50 each, not links: {not gap_is_link and not small_is_link})")
+    print(f"  quoted-at-a-rev (card t_8d6c40ac): fence rc={rc_quote} (want 0, skipped: "
+          f"{quote_skipped}), bare same-line rc={rc_bare} (want 1, caught={len(caught_bare)}), "
+          f"unanchored fence rc={rc_unanchored} (want 1, caught={len(caught_unanchored)})")
     for ln in caught:
         print(f"  (caught) {ln}")
+    for ln in caught_bare:
+        print(f"  (bare) {ln}")
     return 0 if ok else 1
 
 
@@ -347,6 +459,8 @@ def skip_summary(notes: list[str]) -> str:
         reason = n.split("— ", 1)[-1]
         if reason.startswith("ambiguous"):
             cat = "ambiguous referent"
+        elif reason.startswith("quoted at a rev"):
+            cat = "quoted at a rev"
         elif "anchored to a revision" in reason:
             cat = "anchored to a rev/time"
         elif "outside the repo" in reason:
