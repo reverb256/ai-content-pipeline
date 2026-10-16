@@ -53,10 +53,26 @@ stops a scaffold shipping as a track, and an instrumental is not a scaffold.
 
 Output: a plan JSON. Feed it to a generator with `acestep_plan.py`.
 
+WHICH STYLE FIELD IS THE CAPTION (card t_3497b627)
+--------------------------------------------------
+A template may sell more than one product. `music/prompts/commentary-beds.md`
+carries TWO style fields - `## Style field — INTRO STING` and
+`## Style field — LOOPABLE TALK BED` - and says so itself: "Two separate
+generations — never one". Taking the first block made every plan from that genre
+carry the sting's caption, so the 32 s bed rendered as the sting.
+
+So the caption's source is stated by the CALLER (`--style-field`, from the queue
+entry's `styleField:`), never taken from the template's block order. A template
+with two or more style fields REFUSES to plan without it, and an unknown name is
+a hard failure - there is no fallback to the first block. The resolved name is
+recorded in the plan's `_meta.style_field`.
+
 Usage:
     python3 music/planner/planner.py plan --brief "..." --genre chill-lounge
     python3 music/planner/planner.py plan --brief "..." --genre anime-opening --lyrics-mode ai
-    python3 music/planner/planner.py show --genre chill-lounge      # what it reads
+    python3 music/planner/planner.py plan --brief "..." --genre commentary-beds \
+        --style-field "LOOPABLE TALK BED" --lyrics-mode instrumental
+    python3 music/planner/planner.py show --genre commentary-beds   # every style field
 """
 
 from __future__ import annotations
@@ -118,23 +134,121 @@ def load_registry() -> dict:
     return data
 
 
+# --- the style fields ------------------------------------------------------
+# A template may carry MORE THAN ONE style field, because some products are a
+# KIT: music/prompts/commentary-beds.md sells an INTRO STING and a LOOPABLE TALK
+# BED, and the template's own prose says so - "Two separate generations - never
+# one". WHICH field is a given plan's caption is a property of the QUEUE ENTRY,
+# never of the template's block order.
+#
+# REGRESSION (card t_3497b627). The reader took the first fenced block after the
+# first "## Style field" heading, so the bed's plan carried the STING's caption
+# and the 32 s render on disk was the sting, not the anti-melody bed the kit
+# sells. Measured in the engine record for job
+# 0e3fb7b2728747ce816c3e6a760c3c69 ("Commentary Kit - Talk Bed"): its `prompt`
+# was the sting's text. Both kit plans carried byte-identical captions.
+STYLE_HEADING_RE = re.compile(r"^##[ \t]*Style field(?P<rest>[^\n]*)$", re.M | re.I)
+
+
+def style_field_name(heading_rest: str) -> str:
+    """The name a style-field heading declares, or "" when it declares none.
+
+    Two heading shapes are live in music/prompts/:
+        ## Style field (paste into Suno "Styles", 494/1000 chars)  ->  ""
+        ## Style field - INTRO STING (420/1000 chars)              ->  "INTRO STING"
+    Only a separator makes the trailing words a NAME. The "(N/1000 chars)" note
+    is a character-count annotation and is never part of the name.
+    """
+    m = re.match(r"\s*[-\u2013\u2014:]\s*(?P<name>.*)$", heading_rest or "")
+    if not m:
+        return ""
+    name = re.sub(r"\s*\([^)]*\)\s*$", "", m.group("name"))
+    return " ".join(name.split()).strip(" -\u2013\u2014:").strip()
+
+
+def parse_style_fields(raw: str) -> list[dict]:
+    """Every style field a template declares, in order: [{name, caption}, ...]."""
+    heads = list(STYLE_HEADING_RE.finditer(raw))
+    fields: list[dict] = []
+    for i, head in enumerate(heads):
+        end = heads[i + 1].start() if i + 1 < len(heads) else len(raw)
+        body = raw[head.end():end]
+        fm = re.search(r"```(?:text)?\n(.*?)```", body, re.S)
+        if not fm:
+            continue
+        fields.append({"name": style_field_name(head.group("rest")),
+                       "caption": " ".join(fm.group(1).split())})
+    return fields
+
+
+def _norm_field(name: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", (name or "").lower()).strip()
+
+
+def resolve_style_caption(tmpl: dict, requested, genre: str) -> tuple[str, str]:
+    """(name, caption) of the style field the ENTRY names. It never guesses.
+
+    One field: it IS the caption, and naming it is optional (13 of the 14
+    templates have exactly one). Two or more: the entry MUST name one, and an
+    unknown name is fatal. There is NO fallback to the first block - that
+    fallback is the defect card t_3497b627 removed.
+    """
+    fields = tmpl.get("style_fields") or []
+    path = tmpl.get("path") or str(PROMPT_DIR / f"{genre}.md")
+    if not fields:
+        if requested:
+            sys.exit(f"FATAL: styleField {requested!r} was stated for genre '{genre}' "
+                     f"but its template ({path}) declares no style field to resolve it "
+                     f"against. Correct the queue entry or the template.")
+        return "", ""
+    if len(fields) == 1:
+        only = fields[0]
+        if requested and _norm_field(requested) != _norm_field(only["name"]):
+            have = f"named {only['name']!r}" if only["name"] else "unnamed"
+            sys.exit(f"FATAL: unknown styleField {requested!r} for genre '{genre}'. Its "
+                     f"template ({path}) declares one style field ({have}). An unknown "
+                     f"name is a hard failure, never a silent fallback (card "
+                     f"t_3497b627).")
+        return only["name"], only["caption"]
+    if not requested:
+        names = ", ".join(repr(f["name"]) for f in fields)
+        sys.exit(f"FATAL: template {path} carries {len(fields)} style fields ({names}) - "
+                 f"genre '{genre}' cannot be planned without the ENTRY stating which one "
+                 f"is the caption. Add `styleField: \"<name>\"` to the queue entry in BOTH "
+                 f"queue lists. The first block is not used as a fallback: that is how "
+                 f"the commentary bed was rendered from the sting's caption (card "
+                 f"t_3497b627).")
+    want = _norm_field(requested)
+    for f in fields:
+        if _norm_field(f["name"]) == want:
+            return f["name"], f["caption"]
+    names = ", ".join(repr(f["name"]) for f in fields)
+    sys.exit(f"FATAL: unknown styleField {requested!r} for genre '{genre}'. Its template "
+             f"({path}) declares: {names}. An unknown name is a hard failure, never a "
+             f"silent fallback to the first block (card t_3497b627).")
+
+
 def load_template(genre: str) -> dict:
-    """Parse music/prompts/<genre>.md -> {caption, structure[], craft[]}.
+    """Parse music/prompts/<genre>.md -> {caption, style_fields[], structure[], craft[]}.
 
     The templates were authored for a human pasting into Suno's web form, so
-    they are prose. We pull the two machine-useful pieces out: the fenced
-    `text` block under "Style field" (the caption) and the section tag sheet
-    under "Lyrics guidance" (the structure).
+    they are prose. We pull the machine-useful pieces out: the fenced `text`
+    block(s) under "Style field" (the caption) and the section tag sheet under
+    "Lyrics guidance" (the structure).
+
+    `caption` is set here ONLY for a template that declares exactly ONE style
+    field. A template with two or more gets `caption: ""` on purpose: its
+    caption is resolved per ENTRY by `resolve_style_caption()`, called from
+    `context_for()`. This function must never pick a block (card t_3497b627).
     """
     path = PROMPT_DIR / f"{genre}.md"
     if not path.is_file():
-        return {"caption": "", "structure": [], "craft": [], "path": None}
+        return {"caption": "", "style_fields": [], "structure": [], "craft": [],
+                "path": None}
     raw = path.read_text(encoding="utf-8")
 
-    caption = ""
-    m = re.search(r"##\s*Style field.*?```(?:text)?\n(.*?)```", raw, re.S | re.I)
-    if m:
-        caption = " ".join(m.group(1).split())
+    style_fields = parse_style_fields(raw)
+    caption = style_fields[0]["caption"] if len(style_fields) == 1 else ""
 
     # Section tags: [Intro], [Verse 1], ... in order of appearance.
     # NO dedup and NO length cap on purpose. In these forms the repetition IS
@@ -174,7 +288,8 @@ def load_template(genre: str) -> dict:
 
     craft = [ln.strip("-* ").strip() for ln in raw.splitlines()
              if ln.strip().startswith(("-", "*")) and len(ln.strip()) > 12][:12]
-    return {"caption": caption, "structure": structure, "detailed": detailed,
+    return {"caption": caption, "style_fields": style_fields,
+            "structure": structure, "detailed": detailed,
             "craft": craft, "path": str(path)}
 
 
@@ -319,17 +434,24 @@ def instrumental_lyrics(ctx: dict) -> str:
     return "".join(f"[{t}]\n" for t in tags)
 
 
-def context_for(genre: str) -> dict:
+def context_for(genre: str, style_field: str | None = None) -> dict:
     reg = load_registry()
     if genre not in reg["genres"]:
         sys.exit(f"FATAL: genre '{genre}' not in genres.yaml. "
                  f"Known: {', '.join(sorted(reg['genres']))}")
     entry = reg["genres"][genre]
     tmpl = load_template(genre)
+    # WHICH style field is this plan's caption is stated by the CALLER (the queue
+    # entry, via --style-field), never taken from the template's block order.
+    # `resolve_style_caption` fails loudly on an unknown name and on a template
+    # that carries several fields and was given none (card t_3497b627).
+    sf_name, caption = resolve_style_caption(tmpl, style_field, genre)
+    tmpl["caption"] = caption
+    tmpl["style_field"] = sf_name
     bp = load_blueprint(genre)
     return {"genre": genre, "registry": entry, "template": tmpl, "blueprint": bp,
-            "template_bpm": bpm_in_caption(tmpl.get("caption") or ""),
-            "template_key": key_in_caption(tmpl.get("caption") or ""),
+            "template_bpm": bpm_in_caption(caption),
+            "template_key": key_in_caption(caption),
             "instrumental": is_instrumental_template(genre)}
 
 
@@ -783,7 +905,7 @@ def validate(plan: dict, ctx: dict, brief: str, language: str,
 # ---------------------------------------------------------------------------
 
 def cmd_show(args) -> int:
-    ctx = context_for(args.genre)
+    ctx = context_for(args.genre, getattr(args, "style_field", None))
     # show the EFFECTIVE structure — the blueprint's when it exists, else the
     # template's. That is what plan() and validate() both act on.
     bp_struct = [s.get("tag") if isinstance(s, dict) else str(s)
@@ -793,6 +915,12 @@ def cmd_show(args) -> int:
         "registry": ctx["registry"],
         "template_path": ctx["template"]["path"],
         "caption_chars": len(ctx["template"]["caption"]),
+        # Every style field the template declares, and which one this call
+        # resolved. A KIT genre (commentary-beds) declares two and the ENTRY
+        # must name one; an unknown name is fatal (card t_3497b627).
+        "style_fields": [{"name": f["name"], "chars": len(f["caption"])}
+                         for f in ctx["template"]["style_fields"]],
+        "caption_from_style_field": ctx["template"]["style_field"] or None,
         "structure_source": "blueprint" if bp_struct else "template",
         "structure": bp_struct or ctx["template"]["structure"],
         "blueprint": bool(ctx["blueprint"]),
@@ -830,7 +958,7 @@ def cmd_plan(args) -> int:
         for el in sound.get("elements", []):
             print(f"  - {el['name']}: {el.get('reason','')}")
     else:
-        ctx = context_for(args.genre)
+        ctx = context_for(args.genre, args.style_field)
     mode = args.lyrics_mode
 
     # A genre whose own template says the lyrics box stays empty. The mode and
@@ -927,6 +1055,10 @@ def cmd_plan(args) -> int:
         "planner_endpoint": args.endpoint if mode == "ai" else None,
         "planner_model": args.model if mode == "ai" else None,
         "template": ctx["template"]["path"],
+        # WHICH style field of the template this plan's caption came from, so a
+        # reader can tell two plans from the same kit apart (card t_3497b627).
+        # null when the template declares one unnamed field.
+        "style_field": ctx["template"].get("style_field") or None,
         "blueprint": bool(ctx["blueprint"]),
     }
 
@@ -962,10 +1094,23 @@ def main(argv=None) -> int:
 
     ps = sub.add_parser("show", help="what the planner reads for a genre")
     ps.add_argument("--genre", required=True)
+    ps.add_argument("--style-field", default=None,
+                    help="which style field of the template is the caption, by name "
+                         "(e.g. 'LOOPABLE TALK BED'). Required for a template that "
+                         "declares two or more style fields; an unknown name is fatal "
+                         "(card t_3497b627)")
 
     pp = sub.add_parser("plan", help="produce a plan")
     pp.add_argument("--brief", required=True)
     pp.add_argument("--genre", required=True)
+    pp.add_argument("--style-field", default=None,
+                    help="WHICH style field of the genre's template is this plan's "
+                         "caption, named exactly (e.g. 'INTRO STING', 'LOOPABLE TALK "
+                         "BED'). The queue entry states this (`styleField:`) because "
+                         "the caption is not a property of the template's block order. "
+                         "A template with two or more style fields REQUIRES it, and an "
+                         "unknown name is a hard failure - never a fallback to the "
+                         "first block (card t_3497b627)")
     pp.add_argument("--lyrics-mode", choices=["draft", "ai", "instrumental"], default="draft",
                     help="draft = scaffold for a human (preserves copyright claim); "
                          "ai = LLM writes them (breaks the claim, stamped); "
