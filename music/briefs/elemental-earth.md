@@ -11,6 +11,12 @@
 > brief-stage workers are running against it and HEAD moved twice while this brief was written).
 > **Oracle:** 7.5/10 — quota headroom 10.0, lane coverage 6.0, revenue 8.0, cadence fit 6.7,
 > policy risk 9.0, **trend signal 3.0**. Threshold 5.0 → produce.
+> **Verified 2026-10-16 13:53 CDT** by the duplicate card `t_c92f566d`. Superseded revision
+> `0e9bf0de63752385d6d2a24c793f4519beab9da1246485b6d9f60dbd64796968` (537 lines / 30576 B).
+> Corrections applied — the `styleWeight` value this brief asks for (§5, §7a C/E, §10, §12), the
+> `loop_points.json` declaration the seam gate requires (§3), the `final-round` marker reading
+> (§7b), the panel's five-criteria arithmetic (§9), and the repo/card census (§1, §11, §13).
+> The pass is recorded in full in §14. The genre decision is unchanged: produce.
 
 ## 1. Genre resolution (live, not transcribed)
 
@@ -132,7 +138,8 @@ rc=1
 ```
 
 Twelve problems. The gate does not list a stems problem — the pack carries 12 stems, which is
-the one requirement it meets. The generator (`music/assets/pack.py`, `origin/main:83cd0ce`)
+the one requirement it meets. The last finding is lane-specific: the same command without
+`--lane game-assets` reports **11** (measured 2026-10-16, `rc=1` both ways). The generator (`music/assets/pack.py`, `origin/main:83cd0ce`)
 emits a **pack** layout (`loops/`, `stems/`, `one_shots/`, `sfx/`, `manifest.json` with
 `pack_name`/`counts`); the gate expects a **per-track package** layout (`full_mix.wav`,
 `instrumental.wav`, `stems/`, a `metadata` object, a clearance PDF, an AI disclosure). The two
@@ -171,6 +178,10 @@ Decisions locked here so later stages do not re-litigate them:
 - **Stems: ≥ 4 files, each within ±0.5 s of the master duration** (ffprobe-measured, not file
   size). Export through Suno Studio, never the standard download button.
 - **`loop_points.json` is mandatory** for this lane, and `gate_loop_points` must pass on it.
+  The document must also declare **`"seamless": true`** and a span ≥ 2 s — `gate_loop_points.py:186`
+  and `:189` read 2026-10-16. The two seam runs quoted above reproduce only with that key present;
+  a document carrying just `{"loop_start_s", "loop_end_s"}` fails with a third finding
+  (`loop_points.json does not declare 'seamless': true`) that the quoted output does not show.
 - **`clearance_doc.pdf` must be a real PDF** (`%PDF-` header parsed) and `license_tiers.*`
   must exist for the licence the pack ships (perpetual game-asset v1 is the runbook's licence).
 - **`youtube-gaming`**: `gate_youtube_authentic` requires a decodable video, **≥ 10 distinct
@@ -239,8 +250,11 @@ ending "layers subtract to drone and rumble — LOOP POINT into bar 1". The tag 
 
 **The tempo trap, measured against the deployed engine** (§7): the genre anchor 88 BPM is not
 reachable by asking for it, because the request has no tempo field. It is reachable only by
-setting the *style-adherence* dial to `styleWeight = (88-60)/120 = 0.2333` — i.e. by telling
-the engine to follow the style at **23%** when the template asks for **80%**. At the template's
+setting the *style-adherence* dial to `styleWeight = 0.2334` — i.e. by telling
+the engine to follow the style at **23%** when the template asks for **80%**. The algebraic value
+`(88-60)/120 = 0.2333` is **one BPM short**: the engine truncates (`int`), so 0.2333 renders at
+**87 BPM** (re-measured in-pod, §7a C). 0.2334 is the smallest 4-decimal weight whose truncation
+lands on 88 (`int(60 + 28.008) = 88`). At the template's
 own 80% the plan comes out at **156 BPM, 1.77× the anchor**, i.e. a rushing tempo, which the
 template names as an automatic reject. Filed as `t_25a6499c` (§12).
 
@@ -308,7 +322,8 @@ key = req.style or "C major"                # the KEY receives the whole caption
 and `acestep_plan.py` passes `plan["key"]` into the ACE node as `keyscale`.
 
 **Executed against the deployed module with this genre's own 487-char caption** (no GPU, no
-network — the module is imported in the pod), outputs verbatim:
+network — the module is imported in the pod). Outputs below are the originals, re-run 2026-10-16 by
+`t_c92f566d`; the one corrected line is variant C, and its re-measurement is variant C′:
 
 ```
 caption_chars : 487
@@ -321,19 +336,22 @@ caption_chars : 487
   bpm vs 88 anchor: +32 BPM (1.36x)
 --- B: styleWeight=0.8 (the template's own Style Influence) ---
   plan.bpm        : 156                      bpm vs 88 anchor: +68 BPM (1.77x)
---- C: styleWeight solved for the 88 BPM anchor (0.2333) ---
+--- C: styleWeight=0.2333 (the algebraic solve — WRONG, it misses the anchor) ---
+  plan.bpm        : 87                       bpm vs 88 anchor: -1 BPM (0.99x)
+--- C': styleWeight=0.2334 (the smallest 4-decimal value that buys the anchor) ---
   plan.bpm        : 88                       bpm vs 88 anchor: +0 BPM (1.00x)
 --- D: tag sheet as lyrics + instrumental=True (keeps sections, loses cue) ---
   plan.bpm        : 120      cue present: False   (caption stays 487 chars, no instrumental cue)
---- E: tag sheet as lyrics + cue appended to style by hand + styleWeight for 88 ---
+--- E: tag sheet as lyrics + cue appended to style by hand + styleWeight=0.2334 ---
   plan.bpm        : 88       cue present: True    key chars: 512 (key IS the caption: False)
 ```
 
 **Routing rule derived from that measurement.** For a render that holds both the tempo anchor
 and the section structure:
 
-- `styleWeight = 0.2333` (buys 88 BPM at the cost of style adherence — the correct value is the
-  engine's bug, not a preference; `t_25a6499c` is the fix).
+- `styleWeight = 0.2334` (buys 88 BPM at the cost of style adherence — the correct value is the
+  engine's bug, not a preference; `t_25a6499c` is the fix). **Not 0.2333**: `int()` truncates, so
+  the algebra `(88-60)/120` lands on 87. Any 4-decimal weight in `[0.2334, 0.2416]` buys 88.
 - pass the tag sheet as `lyrics` **and** append ``, instrumental, no vocals`` to `style`
   yourself — variant D silently drops the instrumental cue because `translate.py` only appends
   it when `lyrics` is empty.
@@ -369,9 +387,14 @@ smoke-chill-lounge.json  smoke-chill-lounge.rendered  (8 bytes: "refused")
 testplan.json  testplan.rendered        (8 bytes: "refused")
 ```
 
-The marker files are the whole story: nothing has rendered on this route, and the two plans
-that were attempted were **refused** by the renderer because `--lyrics-mode draft` scaffolds
-sections with no lines. `planner.py --lyrics-mode` accepts only `draft|ai` and there is no
+The marker files are the whole story, and it takes the wrapper to read them: the render CronJob
+writes an **empty** marker on `rc=0` and `refused\n` on `rc=1` (read from the live job template
+2026-10-16). So **one plan did render** — `final-round` (0-byte marker, `rc=0`) — and **two were
+refused**: `smoke-chill-lounge` and `testplan`, both refused by `acestep_plan.py` because
+`--lyrics-mode draft` scaffolds sections with no lines. Re-measured `ls` on 2026-10-16:
+`final-round.rendered` 0 B, `smoke-chill-lounge.rendered` 8 B ("refused"), `testplan.rendered`
+8 B ("refused"). The earlier revision of this section said "nothing has rendered on this route";
+that was wrong on the wrapper's semantics and miscounted three plans as two. `planner.py --lyrics-mode` accepts only `draft|ai` and there is no
 `--instrumental` flag (measured, `music/planner/planner.py:528`), so an instrumental genre
 cannot enter this queue either. Covered by `t_25a6499c` (§12).
 
@@ -385,8 +408,8 @@ The payload ConfigMap `music-pipeline-payload` mounts the data the jobs consume:
 **D1/D2/D3 — already filed, and this genre is a named victim.** `t_25a6499c` (nexus-core,
 ready): bpm hardcoded, `key` = the style caption, planner queue has no instrumental field. It
 lists the four elementals among the 8 affected templates. This brief adds the two numbers that
-card does not carry: the **exact** styleWeight for this genre (0.2333) and what the template's
-own 80% produces (**156 BPM**, 1.77×). Do not re-file.
+card does not carry: the **exact** styleWeight for this genre (0.2334 — not 0.2333, §7a) and what
+the template's own 80% produces (**156 BPM**, 1.77×). Do not re-file.
 
 **D4 — the live checkout is behind, so this brief cannot be executed as written.**
 `git rev-list --count main..origin/main` = **15** and `origin/main..main` = **7** (local tip
@@ -425,6 +448,15 @@ music/briefs/anime-opening.md  music/briefs/sentimental-piano/.../brief.{md,json
 The last four are the sibling briefs (each mentions every genre in the registry list). There is
 no `music/assets/` and no `music/packages/` directory in this working tree at all.
 
+**Re-measured 2026-10-16 13:53 CDT** — the census has grown with the lane: the same `grep -rl` now
+returns **20 paths — 16 brief files under `music/briefs/`** (11 flat genre briefs and 5 files
+inside 3 track-brief directories) plus `genres.yaml`, the template, the visual style and the rubric:
+activist, anime-ending, anime-opening, chill-lounge,
+chiptune-8bit, commentary-beds, elemental-air, elemental-fire, elemental-water,
+epic-orchestral-boss, jungle-dnb, sentimental-piano, plus this file — because every brief written
+today names every genre in its registry list. The claim it was making is unchanged — no lyric
+sheet, blueprint, audio, plan or pack exists for `elemental-earth`.
+
 Quota is untouched, measured:
 
 ```
@@ -446,7 +478,7 @@ not this genre's product, and it fails the game-assets gate (§3).
 
 | Criterion | Weight | Applies to elemental-earth? |
 |---|---|---|
-| `chip_timbre_authenticity` | 3 | No — the criterion's own name scopes it to chiptune-8bit |
+| `chip_timbre_authenticity` | 3 | **No by its name — but the panel scores it anyway, and that costs weight 3. See below.** |
 | `battle_energy` | 3 | **Ambiguous — see below** |
 | `loop_safety` | 3 | Yes — common to all game-asset delivery |
 | `asset_packaging` | 1 | Yes |
@@ -468,10 +500,29 @@ battle_energy= 7 -> overall  9.18 (PASS)      battle_energy= 1 -> overall 7.55 (
   …with battle_energy=4 and loop_safety=6, asset_packaging=6 -> overall 6.91 (FAIL)
 ```
 
+**How the panel actually adds it up** (read 2026-10-16, `music/rubrics/panel.py:364-393`): the
+aggregate is taken over **every criterion id in the rubric** —
+`overall = Σ agg[cid]·w[cid] / Σ w[cid]` with `Σ w = 11`, not 8. There is **no applicability
+filter**, so `chip_timbre_authenticity` is scored on an earth render whether or not its name says
+`(chiptune-8bit only)`; a criterion a judge leaves out is scored **1.0 (absent)** and flagged
+(`panel.py:379-382`), and a judge whose output omits any criterion id is dropped entirely
+(`panel.py:479-485`). The figures above are therefore right **only** under the assumption that
+`chip_timbre_authenticity` scores 10. Measured alternatives:
+
+```
+chip=10 (as tabulated above)  battle_energy=1 -> 7.55 (PASS)
+chip= 1, everything else 10                    -> 7.55 (PASS, same razor)
+chip= 1, battle_energy=4                       -> 5.91 (FAIL)
+chip= 1, battle_energy=1                       -> 5.09 (FAIL)
+chip= 1, loop_safety=6                         -> 6.45 (FAIL)
+```
+
 So an in-genre earth render is **not** doomed by the ambiguity — but if a judge reads the
 criterion name literally and scores 1, the whole pass margin rests on the other three criteria
 being perfect, and two ordinary imperfections elsewhere (6/10 on loop safety and packaging)
-flip it to FAIL. Recommendation for the rubric owner: scope `battle_energy` to
+flip it to FAIL. A low score on the *chip* criterion costs exactly as much as a low score on
+`battle_energy` (weight 3 each), and unlike `battle_energy` there is no in-genre argument for it
+scoring high: an earth track has no chip timbre to authenticate. Recommendation for the rubric owner: scope `battle_energy` to
 `elemental-fire` + `epic-orchestral-boss`, and give the slow elements their own criterion
 (drone discipline / patience / no-third harmonic signature) so the panel is scoring the genre
 that exists. Recorded here rather than filed, because it is a predicted ambiguity, not an
@@ -484,7 +535,7 @@ observed failure.
 | brief | producer | this file ✅ |
 | genre-select | producer | registry entry already resolved in §1; nothing left to select |
 | lyrics | writer | **NOT APPLICABLE — instrumental** (`prompts/elemental-earth.md:15`). The stage must be recorded as not-applicable, not skipped silently. Do not let `planner.py --lyrics-mode ai` write lyrics: it would both contradict the template and void the human-authorship default. |
-| generate | producer | `sunolocal /api/v1/generate` with `instrumental: true`, empty `lyrics`, tag sheet as lyrics, cue appended to `style`, `styleWeight = 0.2333` (§7a). Suno CDP (`music/suno-gen.py`) is the alternative route and needs D4 fixed first. |
+| generate | producer | `sunolocal /api/v1/generate` with `instrumental: true`, empty `lyrics`, tag sheet as lyrics, cue appended to `style`, `styleWeight = 0.2334` (§7a — 0.2333 renders at 87 BPM). Suno CDP (`music/suno-gen.py`) is the alternative route and needs D4 fixed first. |
 | curate | producer | pick the winner; reject reason per loser. Reject conditions are §2 — electronic drums, defined tonality, rushed tempo, non-loop ending. |
 | stems | producer | Studio export; ≥ 4 stems within ±0.5 s of the master. |
 | master | producer | `gate_loudness --target streaming` (-14) for the streaming lane; -16 for sync-family. Note the open ruler card `t_9546841b` (the gate measures `volumedetect` RMS, not gated LUFS — 1.4–2.4 dB below LUFS on real masters). |
@@ -496,10 +547,13 @@ observed failure.
 
 ## 11. What the sibling cards in flight mean for this genre
 
-- `t_c92f566d` (elemental-earth 7.7, **ready**) is the duplicate of this card. Both resolve to
-  THIS brief. It should be closed as a duplicate rather than dispatched into a second brief.
-- `t_92a09bdc`, `t_6f0d261e`, `t_d3b9e218`, `t_3cb6e654`, `t_42a01e18`, `t_d8cc0a38` — the
-  four elementals have two cards each, the same pattern as every other genre on the board.
+- `t_c92f566d` (elemental-earth 7.7) is the duplicate of this card. Both resolve to THIS brief,
+  so it wrote no second brief and started no second stage chain — it ran the verification pass
+  recorded in §14 instead. Status re-read 2026-10-16 13:53 CDT: this card `running`, and the queue
+  handoff `t_909069f0` `todo`.
+- `t_92a09bdc`, `t_6f0d261e`, `t_d3b9e218` are `done`; their twins `t_3cb6e654` (air),
+  `t_42a01e18` (fire) are `running` and `t_d8cc0a38` (water) is `ready` — the same two-cards-per-
+  genre pattern as every other genre on the board.
 - The oracle dedupe guard (`ade6e87`, `music/oracle.py` + `music/test_oracle_dedupe.py`) now
   refuses to open a second card for a genre that already has one in flight, so this duplication
   should not recur; the existing duplicate pairs still need clearing (`t_bf0e5edd`).
@@ -515,7 +569,8 @@ observed failure.
   blocks the primary lane of all six gamer genres, not just this one.
 - **`t_909069f0`** (NEW, nexus-core; parents = this card + `t_25a6499c`) — queue this track into
   the live generation path. It carries the exact render parameters measured in §7a
-  (`styleWeight` 0.2333, tag sheet as `lyrics`, cue appended to `style`, 600 s duration) and is
+  (`styleWeight` 0.2334 — re-measured, 0.2333 buys 87 BPM — tag sheet as `lyrics`, cue appended
+  to `style`, 600 s duration) and is
   gated so it cannot run before the instrumental-mode fix lands.
 
 ## 13. Provenance
@@ -530,8 +585,95 @@ observed failure.
   and `music-pipeline-payload`, `/var/lib/music-plans/` (nexus)
 - Rubric: `music/rubrics/gamer.json` + `music/rubrics/panel.py`, `music/gates/gate_quality.py`
 - Skills/rubric rule: `brain/runbooks/music-game-assets.md` (`origin/main`)
+- **Repo state at the verification pass (2026-10-16 13:53 CDT):** HEAD `940c210`, divergence
+  **15 behind / 26 ahead** of `origin/main` (the earlier revision recorded 15/7 at `9ebf6af`;
+  owned by `t_8a715681`). `music/suno-gen.py`, `music/sunolocal/`, `music/assets/pack.py` and
+  `packages/welcome-asset-pack` still exist **only** on `origin/main`.
 - **Dangling reference (unchanged):** `brain/playbooks/music-lane-architecture.md` is cited as
   "READ FIRST" by this lane's profile, `stages.yaml`, `genres.yaml`, `lanes.yaml`,
   `autonomy.yaml`, `gates/README.md` and every gate script — and does not exist on this machine
   (`t_b0a4db92`). Same for `brain/research/music-monetization-2026.md`. Section numbers quoted
   from it (§2, §3, §5, §11.2, §13) cannot be checked.
+
+## 14. Verification pass (card `t_c92f566d`, 2026-10-16)
+
+The duplicate card did not write a second brief. It re-measured this one against live state and
+corrected what had drifted. Everything below was run again; only the deltas are listed.
+
+**Held up as written.** `registry.py validate` → `registry OK: 14 genres, 10 lanes`; ledger
+period 2026-10, 0/60, warn 55, hard 58; `gate_quota` 0/60, studio 0. Template 3643 B, caption
+**487** chars, theme 88 BPM, Weirdness 35 %, Style Influence 80 %, 6 exclude terms (leading space
+included), 6 tag-sheet sections in the order quoted, and the instrumental marker on
+`prompts/elemental-earth.md:15` with **8 of 14** templates carrying it — all four `loop-10min`
+genres among them (`video_shape` re-read for all four elementals). Visual style 1088 B. Bar math
+exact: 88 BPM → bar 2.727273 s, 420 s = 154.000 bars, 480 s = 176.000, 600 s = 220.000, 4 bars =
+10.909 s, 5 bars = 13.636 s. `planner.py:82-83` `MIN_DURATION_S = 30` / `MAX_DURATION_S = 420`;
+`planner.py:528` `--lyrics-mode choices=["draft","ai"]`, no `--instrumental`. `packages/welcome-asset-pack`
+extracted from `origin/main` (`83cd0ce`) → `gate_sync_ready --lane game-assets` **FAIL, the same 12
+findings verbatim**; 5 loops / 12 stems / 8 one-shots / 6 SFX; `gate_loop_points` on the 1.3 s loop
+**FAIL** (span), on the 51.605 s stem **PASS, curvature 0.24×, RMS 0.02570** — byte-for-byte the
+quoted output. Live rail re-read: svc `sunolocal` ClusterIP `10.43.164.190:8123`, image
+`localhost/sunolocal:v0.1.2`, `/health` ok, `/api/v1/models` as quoted, CronJobs `17 */6 * * *` and
+`41 */4 * * *` both unsuspended, briefs ConfigMap still the one `smoke-chill-lounge` entry, payload
+ConfigMap still 14 prompts + 3 blueprints + planner + `acestep_plan.py` and **no** gates.
+`openapi.json`: `/api/v1/generate` has **17 properties and no `bpm`, no `key`** — so `translate.py`
+owns the tempo, which is what makes §7a C matter. `/var/lib/music-plans/` as quoted. No
+`upload_index.json` anywhere in the repo; no `music/lyrics/**` and no pack for this genre.
+
+**Corrections (this revision).**
+
+1. **§5 / §7a C+E / §10 / §12 — the `styleWeight` value was wrong by one BPM.** 0.2333 was
+   derived algebraically and never executed. In-pod, deployed v0.1.2: `0.2333 → 87`,
+   `0.2334 → 88`, `0.23334 → 88`; the accepting interval is `[0.233333.., 0.241666..)`, and the
+   algebra's own endpoint truncates to 87. Corrected to **0.2334** everywhere, including the
+   child card's parameter list. Regression check added:
+   `music/scripts/check_brief_bpm_solutions.py` (§14.1).
+2. **§3 — `loop_points.json` must declare `"seamless": true`** (`gate_loop_points.py:189`). The
+   two seam runs quoted here reproduce only with that key; the abbreviated document shown in the
+   command comment fails with a third finding.
+3. **§7b — "nothing has rendered on this route" was false.** The wrapper writes an empty marker
+   on `rc=0` and `refused` on `rc=1`, so `final-round` **did render**; two plans were refused.
+   The revision also miscounted three plans as two.
+4. **§9 — the panel's arithmetic is over all five criteria (`Σ w = 11`), with no applicability
+   filter**, and an omitted criterion scores 1.0. The tabulated margin figures hold only if
+   `chip_timbre_authenticity` scores 10; at 1 the margin collapses (7.55 razor → 5.91 with
+   `battle_energy` 4). Numbers added. **Cited, not duplicated:** `t_426a82a3` (editor) owns the
+   `battle_energy` scope question — and its body states "weights sum to 8", which `panel.py`
+   contradicts; a comment carries the measurement rather than an edit to another card's artefact.
+5. **§8 / §11 / §13 census.** The `elemental-earth` grep now returns 20 paths, the card statuses
+   moved (this card and the air/fire twins `running`, water `ready`), HEAD is `940c210` and the
+   divergence is **15 behind / 26 ahead**.
+6. **§7a D-note — the in-pod `translate.py` docstring lists nine templates while claiming eight.**
+   It names `epic-orchestral-boss` among the instrumental eight; the measured census is 8 of 14
+   and that genre is **not** in it. Same class as the note in the epic-orchestral-boss brief; the
+   comment is the deployed module's, so it is recorded here and not filed again.
+
+**Not corrected, because it is not drift.** The card's own score table (quota 10.0, lane 6.0,
+revenue 8.0, cadence 6.7, policy 9.0) reproduces under `music/oracle.py` only with the ledger
+arithmetic of **2026-10-09**, when the two oracle cards were created ten minutes apart —
+`t_55e37b88` at 03:27:50 CDT and `t_c92f566d` at 03:37:50 CDT, the duplicate-card incident, not
+this run (`created_at` read from the board).
+`cadence_fit_score("2/wk")` is date-dependent: it returns **6.6667** on 2026-10-09 and **3.3333**
+today, so a re-score today gives elemental-earth **7.0** (trend 3.0) or **7.2** (trend 5.0) —
+still above the 5.0 produce threshold, so the decision to produce is unchanged either way.
+`oracle.py` computes the total as `round(Σ score·weight, 2)` over the six components; the 7.5 and
+7.7 on the two cards differ only in `trend_signal` (3.0 = zero search snippets, vs 5.0 = the
+search raised, which the function scores 5.0).
+
+### 14.1 Regression check (FAILURE → TEST)
+
+`music/scripts/check_brief_bpm_solutions.py` — recomputes, for every `music/briefs/**/*.md`
+claim that pairs a `styleWeight` value with the BPM it buys (or with the `(NNN-60)/120` solve
+form), what the **deployed rule** `int(60 + w·120)` actually returns against that genre's anchor
+in its own template caption. It failed on the pre-correction revision with exactly three
+findings, all in this brief (`:242`, `:324`, `:335`), and passes across the other 6 claims in the
+tree — so it is signal, not noise. Run:
+
+```
+$ /usr/bin/python3 music/scripts/check_brief_bpm_solutions.py
+PASS check_brief_bpm_solutions: 9 styleWeight claim(s) across 14 brief(s) buy the BPM they state
+```
+
+It deliberately does not check every `style_weight` in a brief: a brief may quote the template's
+own Style Influence as the counter-example it is (elemental-fire's `0.80 → 156 BPM`), and that
+number is supposed to miss the anchor.
