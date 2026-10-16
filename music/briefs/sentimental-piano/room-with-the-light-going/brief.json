@@ -1,0 +1,86 @@
+{
+  "name": "sentimental-piano-room-with-the-light-going",
+  "genre": "sentimental-piano",
+  "brief": "A late-evening room with the light going. One person stops working and does not start again. The cup goes cold, the chair stays where it was, the room keeps the shape of the day. No words: a felt piano holds one four-note motif while the window light moves across the floor, reaches the wall, and leaves.",
+  "title": "Room With The Light Going",
+  "duration": 180,
+  "instrumental": true,
+  "lyricsMode": null,
+  "language": null,
+
+  "_genre_is_instrumental": "prompts/sentimental-piano.md: 'This genre is instrumental. Leave the lyrics box empty.' No lyric sheet exists and none is wanted. lyricsMode is null because neither 'draft' (scaffold, refused by the renderer) nor 'ai' (out of genre, voids the authorship claim) applies.",
+
+  "_registry": {
+    "source": "music/genres.yaml (validated: /usr/bin/python3 music/registry.py validate -> registry OK: 14 genres, 10 lanes, rc=0)",
+    "family": "acoustic",
+    "prompt_template": "music/prompts/sentimental-piano.md",
+    "visual_style": "music/visuals/soft-window-light.md",
+    "lanes": ["sync", "streaming", "direct-license", "youtube-longform"],
+    "cadence": "3/wk",
+    "video_shape": "album-30-60min",
+    "bpm_anchor": 72,
+    "timesignature": "4",
+    "caption_chars": 674,
+    "style_exclusions": "drums, percussion, EDM, synths, pop vocals, dramatic trailer crescendo, virtuosity"
+  },
+
+  "_queue": {
+    "note": "CANONICAL FIELDS ONLY for the music-pipeline queue. That schema has no 'instrumental' field and planner.py has no instrumental mode, so queueing this genre there yields a draft scaffold or AI lyrics - both wrong (see _engine_defects D3).",
+    "target": "mining-k8s/helm/charts/music-pipeline/values.yaml -> briefs:",
+    "configmap": "mining/music-pipeline-briefs key briefs.json (currently: 1 entry, smoke-chill-lounge)",
+    "planner_job": "mining/music-pipeline (17 */6 * * *)",
+    "plan_out": "/var/lib/music-plans/sentimental-piano-room-with-the-light-going.json",
+    "render_job": "mining/music-pipeline-render (41 */4 * * *)",
+    "drift": "chart values.yaml briefs: [] is EMPTY while the live ConfigMap holds smoke-chill-lounge"
+  },
+
+  "_route": {
+    "live_engine": "mining/sunolocal (deployment sunolocal-source, image tag v0.1.2, ClusterIP 10.43.164.190:8123)",
+    "why_not_the_planner_queue": "D3 - the planner queue cannot express an instrumental track; its draft scaffold is refused by acestep_plan.py (exit 1). Observed as the 'refused' content of smoke-chill-lounge.rendered and testplan.rendered.",
+    "call": "POST http://sunolocal.mining.svc.cluster.local:8123/api/v1/generate",
+    "status_of_task": "GET http://sunolocal.mining.svc.cluster.local:8123/api/v1/task/{id}",
+    "renderer": "adapters/ace_comfy.py -> /opt/sunolocal/music/scripts/acestep_plan_direct.py --allow-empty (verified present in the running pod)"
+  },
+
+  "_generation_request": {
+    "style": "<674-char caption from music/prompts/sentimental-piano.md, with ', instrumental, no vocals' appended>",
+    "instrumental": true,
+    "lyrics": "",
+    "duration": 180,
+    "title": "Room With The Light Going",
+    "engine": "ace",
+    "customMode": true,
+    "_variant_b_if_structure_steering_is_wanted": "send the template tag sheet (7 tags: Intro, Verse, Verse, Bridge, Chorus, Verse, Outro) as 'lyrics' AND append ', instrumental, no vocals' to 'style' yourself - measured: translate.py only appends that cue when lyrics is empty"
+  },
+
+  "_engine_defects": [
+    {
+      "id": "D1",
+      "what": "BPM is not expressible; the 72 BPM genre anchor cannot be honoured",
+      "evidence": "deployed sunolocal/translate.py:42 'bpm = 120'; :45 'bpm = int(60 + req.style_weight * 120)'. Executed against the deployed code: plan.bpm = 120, i.e. 1.67x the genre anchor. Reaching 72 requires style_weight = 0.1, which is Suno's style-adherence dial.",
+      "impact": "any sentimental-piano render on the current route is out of genre on tempo alone"
+    },
+    {
+      "id": "D2",
+      "what": "The key field receives the whole style caption",
+      "evidence": "deployed translate.py:49 'key = req.style or \"C major\"'; acestep_plan.py passes plan['key'] as the ACE 'keyscale'. Measured: key = the full 674-character caption.",
+      "impact": "the engine is handed a paragraph where a key signature belongs"
+    },
+    {
+      "id": "D3",
+      "what": "The planner queue cannot express an instrumental track",
+      "evidence": "mining-k8s/helm/charts/music-pipeline/values.yaml brief schema = {name, genre, brief, lyricsMode?, language?, title?, duration?}; planner.py --lyrics-mode accepts only draft|ai. Draft plans are refused by acestep_plan.py (exit 1); the two live 'refused' markers record exactly that.",
+      "impact": "8 of 14 genres cannot be queued through music-pipeline. Measured list (grep -li 'is instrumental|leave the lyrics box empty' music/prompts/*.md): chill-lounge, chiptune-8bit, commentary-beds, elemental-air, elemental-earth, elemental-fire, elemental-water, sentimental-piano. NOTE: the deployed translate.py inline comment claims 8 but lists 9, wrongly including epic-orchestral-boss (0 marker matches in its template)."
+    },
+    {
+      "id": "D4",
+      "what": "Stale stage prompt names a missing script",
+      "evidence": "music/stages.yaml generate stage -> 'music/suno-gen.py'. No file matching suno-gen* exists under /home/j_kro except music/gates/fixtures/suno-generated-umbrellas-in-space.txt",
+      "impact": "the generate stage instructs its bot to run a file that does not exist"
+    }
+  ],
+
+  "_duration_basis": "72 BPM, 4/4 -> one bar = 4*60/72 = 3.3333 s. 54 bars = 180.0 s, inside the planner guard rail (planner.py MIN_DURATION_S=30, MAX_DURATION_S=420).",
+  "_lyrics": "none - instrumental genre by design (music/prompts/sentimental-piano.md)",
+  "_written_by": "music-producer, card t_9f7d6889, 2026-10-16"
+}
