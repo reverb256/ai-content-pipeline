@@ -11,7 +11,8 @@ sunolocal engine, where the "lyrics" it would have sung are the template's craft
 notes. Nothing caught that: the guard's own caller assumed it worked.
 
 Run: /usr/bin/python3 -m unittest music.test_acestep_guard
-     (from the repo root; the sibling suite is music.test_oracle_dedupe)
+     (from the repo root; the sibling suite for the tag sheet itself is
+      music.tests.test_acestep_sheet_guard, which reads the template at run time)
 """
 import importlib.util
 import json
@@ -108,13 +109,16 @@ class TestCheckLyrics(unittest.TestCase):
 
 
 class TestRefusalContract(unittest.TestCase):
-    """The CronJob's side of the contract: rc == 1, and no network call.
+    """The CronJob's side of the contract: rc == REFUSED_EXIT (4), and no network call.
 
     templates/cronjob-render.yaml calls this script WITHOUT --allow-empty and
-    writes the `.refused` marker only on rc == 1; anything else is a retry every
-    4 hours. SUNOLOCAL_HOST points at a closed port, so a plan that got PAST the
-    guard fails at submit with a different message - which is how these tests
-    tell "the guard refused it" from "the guard let it through".
+    records the refusal (`.refused`, with the plan's fingerprint) when the exit
+    code is that script's own REFUSED_EXIT = 4 - rc 1 is an OPERATIONAL failure
+    and writes no marker, so the next run retries it (card t_69cab80b, which
+    raised the refusal from 1 to 4 after a network blip was recorded as "a human
+    must edit the sheet"). SUNOLOCAL_HOST points at a closed port, so a plan that
+    got PAST the guard fails at submit with a different message - which is how
+    these tests tell "the guard refused it" from "the guard let it through".
     """
 
     def run_script(self, lyrics, *extra):
@@ -126,9 +130,9 @@ class TestRefusalContract(unittest.TestCase):
                               capture_output=True, text=True, env=env, timeout=60)
         return proc.returncode, proc.stdout + proc.stderr
 
-    def test_scaffold_exits_1_with_the_draft_message(self):
+    def test_scaffold_exits_4_with_the_draft_message(self):
         rc, out = self.run_script(SCAFFOLD)
-        self.assertEqual(rc, 1)
+        self.assertEqual(rc, acestep.REFUSED_EXIT)
         self.assertIn("section(s) have no lyrics", out)
         self.assertIn("DRAFT plan", out)
         self.assertNotIn("Failed to submit", out)   # nothing reached the network

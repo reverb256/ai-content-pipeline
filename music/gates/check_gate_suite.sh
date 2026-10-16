@@ -722,6 +722,37 @@ pass "planner: every genre plans + the duration rail admits 16 s and refuses 15 
   "$PY" "$REPO/music/tests/test_planner.py"
 
 # ------------------------------------------------------------------
+# 16. the planner carries a HUMAN SHEET into the plan (card t_e69368ff)
+# ------------------------------------------------------------------
+# `--lyrics-mode draft` writes a SCAFFOLD (the tags plus the template's craft
+# notes, and no singable line), and the render rail refuses a scaffold on
+# purpose - so every draft entry in the queue reached the rail and stopped
+# there. Measured on the queued trance entry (card t_a7a7d998): the plan carried
+# 9 section tags and 0 singable lines, `.refused` was recorded for it, and the
+# human-authored sheet for that same track already existed and was already
+# claimed (`music/lyrics/trance/signal-before-dawn`, sha256 e667e248..., gate
+# `gate_lyrics_original` PASS) - with no planner input that could put it into
+# the plan. `--lyrics-mode ai` is not the fix: AI words void the authorship
+# claim the sheet exists to make.
+#
+# `--lyrics-file` carries the sheet VERBATIM (bytes read, utf-8 decoded, so the
+# plan's lyrics hash IS the sheet's manifest hash) and binds the authorship line
+# to the sheet's path and sha256. These cases are what makes that a check rather
+# than a claim:
+#   * the plan built from the sheet passes the RENDER RAIL's own guard
+#     (`acestep_plan.py` without --allow-empty) end to end, while a plan built
+#     without the sheet is still refused with rc 4;
+#   * a sheet with no claim, a claim whose hash no longer covers the file, an
+#     `ai` claim, an empty sheet, and a sheet for another genre are all rc 2 and
+#     write NO plan - the render rail reads plan files, so a refused sheet must
+#     not leave one behind (card t_96dfc521's rule);
+#   * the CHART PAYLOAD's planner copy carries the flag, because the CronJob
+#     mounts a copy of the payload, not this repo (card t_a14e5d52's drift).
+say "the planner carries a human-authored sheet (music/tests/test_planner_lyrics_file.py)"
+pass "planner --lyrics-file: sheet carried verbatim, the rail's guard accepts it, a scaffold is still refused (t_e69368ff)" \
+  "$PY" -m unittest music.tests.test_planner_lyrics_file
+
+# ------------------------------------------------------------------
 rm -f /tmp/gate_out.$$
 if [ "$fails" -eq 0 ]; then
   echo

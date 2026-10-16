@@ -51,6 +51,31 @@ plainly there is no human-authored portion - so the difference cannot be lost
 downstream. The renderer's draft refusal is untouched: it is the check that
 stops a scaffold shipping as a track, and an instrumental is not a scaffold.
 
+A PLAN MAY CARRY A HUMAN SHEET - `--lyrics-file` (card t_e69368ff)
+------------------------------------------------------------------
+`draft` writes a SCAFFOLD, and the render rail refuses a scaffold before any
+network call (card t_a14e5d52) - correctly, because a scaffold's only words are
+the template's craft notes. Measured 2026-10-16: the queued trance plan (9
+section tags, 0 singable lines) was refused and a `.refused` marker was recorded
+for it, while the human-authored sheet for that very track already existed and
+was already claimed - `music/lyrics/trance/signal-before-dawn/lyrics.suno.txt`,
+sha256 e667e248..., authors j_kro, gate `gate_lyrics_original` PASS - and no
+planner input could put it into the plan. `--lyrics-mode ai` is not the fix: AI
+words void the human-authorship claim this lane registers (see
+music/docs/pro-registration.md).
+
+`--lyrics-file PATH` is that input. The plan's `lyrics` is the sheet VERBATIM
+(the file is read as bytes and decoded utf-8, so sha256 of the plan's lyrics IS
+the sheet's own sha256), `authorship` names the author and binds the sheet's
+path and hash, and the plan is validated like any other plan - it now carries
+the words the engine will sing. The sheet must carry its `manifest.json`
+human-authorship claim (`music/lyrics/lyrics.py claim`, schema
+`music/track-lyrics-manifest v1`); `--lyrics-file` refuses a sheet with no
+claim, a claimed hash that disagrees with the file on disk, or a claimed genre
+other than the one being planned. It refuses with `--lyrics-mode ai` and with
+`--lyrics-mode instrumental`, and it refuses a genre whose own template declares
+an empty lyrics box.
+
 Output: a plan JSON. Feed it to a generator with `acestep_plan.py`.
 
 WHICH STYLE FIELD IS THE CAPTION (card t_3497b627)
@@ -72,12 +97,15 @@ Usage:
     python3 music/planner/planner.py plan --brief "..." --genre anime-opening --lyrics-mode ai
     python3 music/planner/planner.py plan --brief "..." --genre commentary-beds \
         --style-field "LOOPABLE TALK BED" --lyrics-mode instrumental
+    python3 music/planner/planner.py plan --brief "..." --genre trance \
+        --lyrics-file music/lyrics/trance/signal-before-dawn/lyrics.suno.txt
     python3 music/planner/planner.py show --genre commentary-beds   # every style field
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -807,6 +835,110 @@ def scaffold_lyrics(ctx: dict, brief: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# a plan may carry a HUMAN SHEET, not a scaffold (card t_e69368ff)
+# ---------------------------------------------------------------------------
+
+class SheetRefused(Exception):
+    """A `--lyrics-file` the planner will not carry. `cmd_plan` prints it and
+    exits 2, the code the planner already uses for an artifact it refuses."""
+
+
+SHEET_MANIFEST = "manifest.json"
+
+
+def load_sheet(path: Path, genre: str) -> dict:
+    """Read and VERIFY a human-authored sheet for `--lyrics-file`.
+
+    The incident is in the module header; the rules this enforces are the
+    lane's own, re-used rather than re-invented:
+
+      * THE TEXT IS CARRIED VERBATIM. The file is read as BYTES and decoded
+        utf-8, so `sha256(sheet["text"].encode("utf-8"))` is the file's sha256.
+        `Path.read_text` would translate newlines and quietly break that
+        binding. The sheet's `# genre:`/`# provenance:` header lines are part of
+        the carried text: `music/lyrics/lyrics.py::parse_sections` and the
+        render guard's `singable_lines` both treat a `#` line as a file-level
+        comment, never as a sung line.
+      * THE AUTHORSHIP CLAIM IS VERIFIED, NOT ASSERTED. A sheet is usable only
+        with the `manifest.json` that `music/lyrics/lyrics.py claim` writes
+        beside it. This refuses a missing manifest, a claim that is not
+        `human-original`, no named author, `suno_generated_lyrics` not false, a
+        hash that disagrees with the file on disk (the same rule as
+        `lyrics.py::validate_track_dir`), and a claimed genre other than the
+        one being planned - the words and the sound would be two tracks.
+    """
+    if not path.is_file():
+        raise SheetRefused(f"no such file (a sheet is a file, not a directory): {path}")
+    raw = path.read_bytes()
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise SheetRefused(f"not valid UTF-8: {exc}") from None
+    if not text.strip():
+        raise SheetRefused("the sheet is empty - there are no words to carry")
+    sha = hashlib.sha256(raw).hexdigest()
+
+    manifest_path = path.parent / SHEET_MANIFEST
+    if not manifest_path.is_file():
+        raise SheetRefused(
+            f"no {SHEET_MANIFEST} beside it ({manifest_path}). A sheet is carried "
+            f"only with the human-authorship claim that makes it usable; record it "
+            f"with 'python3 music/lyrics/lyrics.py claim --track-dir {path.parent}'")
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SheetRefused(f"{manifest_path} is not readable JSON: {exc}") from None
+
+    auth = manifest.get("authorship")
+    if not isinstance(auth, dict):
+        raise SheetRefused(f"{manifest_path} carries no 'authorship' claim")
+    if auth.get("status") != "human-original":
+        raise SheetRefused(
+            f"{manifest_path} claims authorship.status {auth.get('status')!r}; this "
+            f"planner carries 'human-original' sheets only - AI-written words void "
+            f"the claim the sheet exists to make")
+    if auth.get("suno_generated_lyrics") is not False:
+        raise SheetRefused(
+            f"{manifest_path} does not state suno_generated_lyrics: false")
+    authors = [str(a).strip() for a in (auth.get("authors") or []) if str(a).strip()]
+    if not authors:
+        raise SheetRefused(f"{manifest_path} names no human author")
+
+    claimed = ((manifest.get("files") or {}).get(path.name) or {})
+    claimed_sha = claimed.get("sha256") if isinstance(claimed, dict) else None
+    if not claimed_sha:
+        raise SheetRefused(
+            f"{manifest_path} carries no sha256 for {path.name}: the claim does not "
+            f"cover this file (record it with lyrics.py claim)")
+    if claimed_sha != sha:
+        raise SheetRefused(
+            f"the claim does not cover THIS text: {manifest_path} says sha256 "
+            f"{claimed_sha[:12]}..., the file on disk hashes to {sha[:12]}...")
+
+    claimed_genre = manifest.get("genre")
+    if claimed_genre and claimed_genre != genre:
+        raise SheetRefused(
+            f"the sheet claims genre {claimed_genre!r} but this plan is {genre!r} - "
+            f"the words and the sound would be two different tracks")
+
+    return {"path": str(path), "text": text, "sha256": sha, "bytes": len(raw),
+            "authors": authors, "manifest": str(manifest_path),
+            "status": auth["status"]}
+
+
+def sheet_authorship_line(sheet: dict) -> str:
+    """The plan's `authorship` for a carried sheet (card t_e69368ff).
+
+    It names the human author, the sheet's path, its sha256 and the manifest
+    that claims it, so the plan says on its own face what the render is licensed
+    by and a reader can re-run the hash from the plan alone.
+    """
+    return (f"human-original — {', '.join(sheet['authors'])}; sheet "
+            f"{sheet['path']} sha256 {sheet['sha256']} carried verbatim; claim "
+            f"{sheet['manifest']}")
+
+
+# ---------------------------------------------------------------------------
 # validate the plan against the artifacts (do not ship a drifted plan)
 # ---------------------------------------------------------------------------
 
@@ -985,6 +1117,41 @@ def cmd_plan(args) -> int:
               f"authorship claim and are out of genre. Use --lyrics-mode instrumental.",
               file=sys.stderr)
 
+    # A HUMAN SHEET, CARRIED RATHER THAN WRITTEN (card t_e69368ff). The plan
+    # the render rail reads then carries singable lines instead of the scaffold
+    # it refuses. Refused against the two modes it cannot belong to:
+    #   * `instrumental`: that plan has no lyrics box by design, so the sheet
+    #     would never be rendered - and letting it through would put words in a
+    #     genre whose template says there are none;
+    #   * `ai`: that mode's words are the model's. A sheet there would either be
+    #     ignored or would contradict the plan's own AI stamp, and AI-written
+    #     lyrics void the claim the sheet carries.
+    sheet = None
+    if args.lyrics_file:
+        if mode == "instrumental":
+            print(f"FAIL: --lyrics-file refused with --lyrics-mode instrumental: an "
+                  f"instrumental plan carries no lyrics box by design, so the sheet "
+                  f"{args.lyrics_file} would never be rendered.",
+                  file=sys.stderr)
+            return 2
+        if mode == "ai":
+            print(f"FAIL: --lyrics-file refused with --lyrics-mode ai: that mode's "
+                  f"words are the model's, and AI-written lyrics void the "
+                  f"human-authorship claim the sheet carries. Use --lyrics-mode "
+                  f"draft with --lyrics-file.", file=sys.stderr)
+            return 2
+        if ctx["instrumental"]:
+            print(f"FAIL: --lyrics-file refused: '{ctx['genre']}' is an instrumental "
+                  f"genre (its template, {ctx['template']['path']}, declares an empty "
+                  f"lyrics box), so it has no sung line for a sheet to author. "
+                  f"Plan it with --lyrics-mode instrumental.", file=sys.stderr)
+            return 2
+        try:
+            sheet = load_sheet(Path(args.lyrics_file), ctx["genre"])
+        except SheetRefused as exc:
+            print(f"FAIL: --lyrics-file {args.lyrics_file}: {exc}", file=sys.stderr)
+            return 2
+
     if mode == "instrumental":
         plan = {
             "title": args.title or (ctx["blueprint"].get("title_candidates") or ["Untitled"])[0],
@@ -1017,11 +1184,17 @@ def cmd_plan(args) -> int:
             "duration": args.duration or 180,
             "timesignature": "4",
             "language": args.language,
-            "lyrics": scaffold_lyrics(ctx, args.brief),
+            "lyrics": sheet["text"] if sheet else scaffold_lyrics(ctx, args.brief),
             "instrumental": False,
-            "authorship": "human-original (scaffold — write every sung line)",
+            "authorship": (sheet_authorship_line(sheet) if sheet else
+                           "human-original (scaffold — write every sung line)"),
         }
-        problems = []  # a scaffold is not meant to pass content validation
+        # A scaffold is deliberately NOT validated - it has no words to validate,
+        # and failing it would hide the one thing it exists for (a human fills it).
+        # A SHEET is validated: the plan now carries what the engine will sing, so
+        # the structure, avoid-list, language, tempo and duration checks have
+        # something real to read (card t_e69368ff).
+        problems = validate(plan, ctx, args.brief, args.language) if sheet else []
     else:
         user = build_user_prompt(args.brief, ctx, args.language, args.title, args.duration)
         raw = call_llm(SYSTEM_PROMPT, user, args.endpoint, args.model,
@@ -1050,7 +1223,16 @@ def cmd_plan(args) -> int:
     plan["_meta"] = {
         "brief": args.brief,
         "genre": ctx["genre"],
-        "lyrics_mode": mode,
+        # "sheet" is NOT one of --lyrics-mode's values. It says the lyrics came
+        # from a human-authored file carried verbatim - not from the scaffold and
+        # not from the model - so a reader can tell the three apart from the plan
+        # alone (card t_e69368ff). The mode the CALLER asked for stays recorded
+        # as the kind of source, in `lyrics_source`.
+        "lyrics_mode": "sheet" if sheet else mode,
+        "lyrics_source": ({"path": sheet["path"], "sha256": sheet["sha256"],
+                           "bytes": sheet["bytes"], "authors": sheet["authors"],
+                           "status": sheet["status"],
+                           "manifest": sheet["manifest"]} if sheet else None),
         "instrumental": bool(plan.get("instrumental")),
         "planner_endpoint": args.endpoint if mode == "ai" else None,
         "planner_model": args.model if mode == "ai" else None,
@@ -1067,7 +1249,12 @@ def cmd_plan(args) -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
 
     print(f"plan     : {out}")
-    print(f"genre    : {ctx['genre']}   lyrics_mode: {mode}")
+    print(f"genre    : {ctx['genre']}   lyrics_mode: {'sheet' if sheet else mode}")
+    if sheet:
+        print(f"lyrics   : SHEET {sheet['path']}")
+        print(f"           sha256 {sheet['sha256']}")
+        print(f"           {sheet['bytes']} B · author(s) {', '.join(sheet['authors'])}"
+              f" · carried verbatim (claim {sheet['manifest']})")
     if plan.get("instrumental"):
         print(f"mode     : INSTRUMENTAL — no lyrics; the template declares an empty "
               f"lyrics box. The renderer's draft refusal does not apply.")
@@ -1091,12 +1278,27 @@ def cmd_plan(args) -> int:
                   f"entry's duration, or widen the rail in planner.py if the shape "
                   f"is real. (A file already at that path is not touched.)")
             return 1
+        # A SHEET-CARRYING PLAN IS FINAL, so every validation failure on one
+        # refuses the write, not only the duration rail (card t_e69368ff).
+        # Nothing waits on a human to fill a sheet, and the render rail runs no
+        # validation of its own - it reads this file and renders it. The scaffold
+        # path keeps the old contract (write, report, exit 1): its whole purpose
+        # is to be edited by a human.
+        if sheet:
+            print(f"\nREFUSED: no plan written to {out} - the sheet "
+                  f"{sheet['path']} produced the {len(problems)} problem(s) above, "
+                  f"and a sheet-carrying plan has no later editor. Fix the sheet or "
+                  f"the entry. (A file already at that path is not touched.)")
+            return 1
         out.write_text(json.dumps(plan, indent=2, ensure_ascii=False) + "\n",
                        encoding="utf-8")
         return 1
     out.write_text(json.dumps(plan, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print("\nvalidation: PASS")
-    if mode == "draft":
+    if sheet:
+        print("next: run acestep_plan.py on the plan — the human sheet is carried "
+              "verbatim, so no human step is left")
+    elif mode == "draft":
         print("next: write the lyrics into the plan, then run acestep_plan.py")
     elif mode == "instrumental":
         print("next: run acestep_plan.py on the plan — no human step is needed")
@@ -1130,7 +1332,19 @@ def main(argv=None) -> int:
                     help="draft = scaffold for a human (preserves copyright claim); "
                          "ai = LLM writes them (breaks the claim, stamped); "
                          "instrumental = no lyrics at all, for the 8 genres whose "
-                         "template says the lyrics box stays empty (valid only for those)")
+                         "template says the lyrics box stays empty (valid only for those). "
+                         "With --lyrics-file the draft mode carries a HUMAN SHEET "
+                         "instead of a scaffold")
+    pp.add_argument("--lyrics-file", default=None,
+                    help="a HUMAN-AUTHORED lyric sheet to carry into the plan "
+                         "VERBATIM (card t_e69368ff): plan[lyrics] becomes the file's "
+                         "text, byte for byte, so the render rail's draft refusal no "
+                         "longer refuses this plan, and plan[authorship] names the "
+                         "author, the path and the sheet's sha256. The sheet must "
+                         "carry its own manifest.json human-authorship claim "
+                         "(music/lyrics/lyrics.py claim) whose sha256 matches the "
+                         "file and whose genre is the planned genre. Use with "
+                         "--lyrics-mode draft; refused with ai and instrumental")
     pp.add_argument("--language", default="en")
     pp.add_argument("--title", default=None)
     pp.add_argument("--key", default=None,
