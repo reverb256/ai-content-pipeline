@@ -641,3 +641,49 @@ moved under this pass and `music/briefs/activist.md`, `music/briefs/epic-orchest
 `music/briefs/chiptune-8bit.md`, `music/briefs/elemental-earth.md`, `music/briefs/jungle-dnb.md`
 and `music/briefs/trance/signal-before-dawn/brief.md` were dirty from other workers while it ran.
 Every write here needs a path-scoped `git add`; this pass staged only this genre's file.
+
+## 11. Declared scoring scope — machine-checked against the live rubric (card `t_00ac4f10`, 2026-10-16)
+
+`music/scripts/check_brief_rubric_scope.py` reads the `rubric_scope` block below and
+compares it, field by field, to this genre's scope COMPUTED from `music/rubrics/anisong.json`
+by the panel's own resolver (`music/rubrics/panel.py`: `applicable_criteria()`,
+`applicable_signals()`). The anisong family is the one whose two genres do NOT score the
+same set — `tv_edit_density` is scoped to the opening and one reject signal is scoped to
+each — so this block is a per-genre claim, and a change in that scoping fails this brief
+instead of going unnoticed. The block is a claim about NOW, and the check never reads prose.
+
+Regenerate the block after any rubric edit — one command, no hand-edit:
+
+    /usr/bin/python3 music/scripts/check_brief_rubric_scope.py --print-truth anime-opening
+
+```json
+{
+  "rubric_scope": {
+    "genre": "anime-opening",
+    "family": "anisong",
+    "rubric_version": 1,
+    "pass_threshold": 7.0,
+    "criteria": [
+      "tempo_idiom",
+      "royal_road",
+      "final_chorus_key_change",
+      "tv_edit_density",
+      "japanese_vocals",
+      "loudness_target"
+    ],
+    "weights": {
+      "tempo_idiom": 3,
+      "royal_road": 3,
+      "final_chorus_key_change": 3,
+      "tv_edit_density": 2,
+      "japanese_vocals": 2,
+      "loudness_target": 1
+    },
+    "weight_sum": 14,
+    "reject_signals": [
+      "opening_no_key_change"
+    ],
+    "reject_signals_unnamed": 3
+  }
+}
+```

@@ -1388,3 +1388,47 @@ left unset": the A/B instruction and its meaning are unchanged. `check_brief_abs
 repo-wide after the four-brief pass of this card.
 
 - **Superseded by this pass (card `t_bdb94fb7`, 2026-10-16):** `sha256 dbec2ef82dee346e751ff0cc1f95fab2dec2e77b682d657bc2c0d00fadb1bc82` (1375 lines / 94 569 B).
+
+## 20. Declared scoring scope — machine-checked against the live rubric (card `t_00ac4f10`, 2026-10-16)
+
+`music/scripts/check_brief_rubric_scope.py` reads the `rubric_scope` block below and
+compares it, field by field, to this genre's scope COMPUTED from `music/rubrics/edm.json`
+by the panel's own resolver (`music/rubrics/panel.py`: `applicable_criteria()`,
+`applicable_signals()`). `edm.json` declares `applies_to` on every criterion, so both of
+its genres are covered: a criterion added, dropped or re-weighted in that file fails this
+brief instead of going unnoticed. The block is a claim about NOW, and the check never reads
+prose.
+
+Regenerate the block after any rubric edit — one command, no hand-edit:
+
+    /usr/bin/python3 music/scripts/check_brief_rubric_scope.py --print-truth jungle-dnb
+
+```json
+{
+  "rubric_scope": {
+    "genre": "jungle-dnb",
+    "family": "edm",
+    "rubric_version": 1,
+    "pass_threshold": 7.0,
+    "criteria": [
+      "tempo_pocket",
+      "dance_structure",
+      "genre_engine",
+      "low_end_discipline",
+      "loudness_target",
+      "arrangement_development"
+    ],
+    "weights": {
+      "tempo_pocket": 3,
+      "dance_structure": 2,
+      "genre_engine": 3,
+      "low_end_discipline": 2,
+      "loudness_target": 1,
+      "arrangement_development": 1
+    },
+    "weight_sum": 12,
+    "reject_signals": [],
+    "reject_signals_unnamed": 5
+  }
+}
+```

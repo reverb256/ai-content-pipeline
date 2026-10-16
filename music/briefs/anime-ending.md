@@ -584,3 +584,47 @@ must not exist yet". That argument covers the absent-then-still-absent case and 
 a *file* path under those roots, with no date / clock time / card id / commit on it and no
 git-scoped framing, FAILs if the path exists. It found 15 stale claims across 8 sibling briefs
 and none in this one (verified after the corrections above).
+
+## 12. Declared scoring scope — machine-checked against the live rubric (card `t_00ac4f10`, 2026-10-16)
+
+`music/scripts/check_brief_rubric_scope.py` reads the `rubric_scope` block below and
+compares it, field by field, to this genre's scope COMPUTED from `music/rubrics/anisong.json`
+by the panel's own resolver (`music/rubrics/panel.py`: `applicable_criteria()`,
+`applicable_signals()`). The anisong family is the one whose two genres do NOT score the
+same set — `tv_edit_density` is scoped to the opening and one reject signal is scoped to
+each — so this block is a per-genre claim, and a change in that scoping fails this brief
+instead of going unnoticed. The block is a claim about NOW, and the check never reads prose.
+
+Regenerate the block after any rubric edit — one command, no hand-edit:
+
+    /usr/bin/python3 music/scripts/check_brief_rubric_scope.py --print-truth anime-ending
+
+```json
+{
+  "rubric_scope": {
+    "genre": "anime-ending",
+    "family": "anisong",
+    "rubric_version": 1,
+    "pass_threshold": 7.0,
+    "criteria": [
+      "tempo_idiom",
+      "royal_road",
+      "final_chorus_key_change",
+      "japanese_vocals",
+      "loudness_target"
+    ],
+    "weights": {
+      "tempo_idiom": 3,
+      "royal_road": 3,
+      "final_chorus_key_change": 3,
+      "japanese_vocals": 2,
+      "loudness_target": 1
+    },
+    "weight_sum": 12,
+    "reject_signals": [
+      "ending_hard_cut"
+    ],
+    "reject_signals_unnamed": 3
+  }
+}
+```
