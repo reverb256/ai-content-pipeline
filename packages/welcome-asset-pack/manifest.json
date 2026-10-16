@@ -9,7 +9,7 @@
   "channels": 1,
   "bit_depth": 16,
   "genre": "chill-lounge",
-  "created": "2026-10-16T19:35:31.299287+00:00",
+  "created": "2026-10-16T19:51:24.452879+00:00",
   "metadata": {
     "title": "Welcome Loop Pack",
     "artist": "Reverb256",
@@ -35,8 +35,9 @@
   "clearance_doc": "clearance_doc.pdf",
   "ai_disclosure": "ai_disclosure.txt",
   "file_naming": "type_index_attribute.bpm.bpm_key.key.wav",
-  "licence": "multi-tier (PERPETUAL-GAME-ASSET-V1)",
+  "licence": "Perpetual Music Asset Licence (v1.0)",
   "licence_url": "music/licences/perpetual_game_asset_v1.txt",
+  "licence_sha256": "e1dd51ae29489c15b4321b250965dc9e81110882de394ec257389a153b5ebfbd",
   "loops": [
     {
       "path": "loops/loop_01_bpm184_key-Cmajor.wav",

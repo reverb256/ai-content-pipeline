@@ -43,9 +43,20 @@ def synth(path: Path, seconds: float, freq: float = 220.0,
     subprocess.run(cmd, check=True)
 
 
+LICENCE_OF_RECORD = REPO / "music/licences/perpetual_game_asset_v1.txt"
+
+
+def licence_bytes() -> bytes:
+    """The lane's licence of record — a pack ships this text verbatim."""
+    if LICENCE_OF_RECORD.is_file():
+        return LICENCE_OF_RECORD.read_bytes()
+    return b"PERPETUAL-GAME-ASSET-V1 fixture licence\n"
+
+
 def write_docs(pack: Path, meta: dict, counts: dict, loops: list[dict],
                with_loops_json: bool = True, with_clearance: bool = True,
                with_disclosure: bool = True, with_licence: bool = True,
+               licence_text: bytes | None = None,
                pack_name: str = "suite-synth-pack") -> None:
     if with_loops_json:
         (pack / "loop_points.json").write_text(json.dumps({
@@ -63,8 +74,7 @@ def write_docs(pack: Path, meta: dict, counts: dict, loops: list[dict],
             "AI disclosure: generated with an AI music model.\n",
             encoding="utf-8")
     if with_licence:
-        (pack / "LICENCE.txt").write_text(
-            "PERPETUAL-GAME-ASSET-V1 fixture licence\n", encoding="utf-8")
+        (pack / "LICENCE.txt").write_bytes(licence_text or licence_bytes())
     (pack / "manifest.json").write_text(json.dumps({
         "schema": "music/asset-pack/v1",
         "pack_name": pack_name,
@@ -161,6 +171,12 @@ def main() -> int:
             dict(counts), src=seamless, with_loops_json=False)
     rebuild("pack_bad_noclear", dict(meta), [dict(l) for l in loops],
             dict(counts), src=seamless, with_clearance=False)
+    # The licence substitution incident (card t_5ed495eb): a generator run on a
+    # tree with no music/licences/ wrote its own fallback text into the pack.
+    rebuild("pack_bad_licence", dict(meta), [dict(l) for l in loops],
+            dict(counts), src=seamless,
+            licence_text=b"# Perpetual Game Asset Licence (v1.0)\n"
+                         b"# Multi-Tier: PERSONAL / COMMERCIAL / EXCLUSIVE\n")
 
     # count mismatch: an extra file in loops/ that the manifest does not count
     d = rebuild("pack_bad_count", dict(meta), [dict(l) for l in loops],

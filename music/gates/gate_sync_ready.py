@@ -85,6 +85,10 @@ MODES = ("track", "pack")
 AUDIO_SUFFIXES = (".wav", ".aif", ".aiff", ".flac")
 LICENCE_NAMES = ("LICENCE.txt", "LICENSE.txt", "licence.txt", "license.txt",
                  "LICENCE.md", "LICENSE.md", "LICENCE.pdf", "LICENSE.pdf")
+# The lane's licence of record. A pack ships this text verbatim; the gate
+# compares bytes when the file exists (see check_pack).
+REPO_ROOT = Path(__file__).resolve().parents[2]
+LICENCE_OF_RECORD = REPO_ROOT / "music/licences/perpetual_game_asset_v1.txt"
 
 
 def probe(path: Path) -> dict | None:
@@ -455,11 +459,21 @@ def check_pack(pkg: Path) -> tuple[list[str], dict]:
     licence = next((pkg / n for n in LICENCE_NAMES if (pkg / n).is_file()),
                    None)
     if licence is None:
-        problems.append("no LICENCE.txt — §13 requires a multi-tier licence "
-                        "with explicit permitted use, distribution and "
-                        "derivative rules")
+        problems.append("no LICENCE.txt — §13 requires a licence with explicit "
+                        "permitted use, distribution and derivative-work "
+                        "rules (music/licences/perpetual_game_asset_v1.txt)")
     elif licence.stat().st_size == 0:
         problems.append(f"{licence.name} is zero bytes")
+    elif LICENCE_OF_RECORD.is_file():
+        # The pack must ship the lane's licence of record, not a substitute.
+        # Measured 2026-10-16 (card t_5ed495eb): a generator run on a tree
+        # where music/licences/ was absent wrote its own fallback text and the
+        # pack's licence silently changed from the authored licence to it.
+        if licence.read_bytes() != LICENCE_OF_RECORD.read_bytes():
+            problems.append(
+                f"{licence.name} is not the lane's licence of record "
+                f"({LICENCE_OF_RECORD.relative_to(REPO_ROOT).as_posix()}) — "
+                "the pack must ship that text, byte for byte")
 
     shutil.rmtree(scratch_root, ignore_errors=True)
     info.update({"counts": {k: len(v) for k, v in sorted(on_disk.items())},

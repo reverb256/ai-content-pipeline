@@ -416,6 +416,9 @@ fail_expected "pack: no loop_points.json fails" 1 \
 fail_expected "pack: no clearance_doc fails" 1 \
   "$PY" "$GATES/gate_sync_ready.py" \
   --package-dir "$F/pack_bad_noclear" --lane game-assets
+fail_expected "pack: a substituted licence is not the licence of record" 1 \
+  "$PY" "$GATES/gate_sync_ready.py" \
+  --package-dir "$F/pack_bad_licence" --lane game-assets
 
 say "gate_loop_points --pack-dir (checks EVERY loop)"
 pass "generator-built pack: every loop seamless" \

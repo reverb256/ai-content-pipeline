@@ -50,6 +50,7 @@ the asset lane fully autonomous and CPU-only (no GPU VRAM consumption).
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -695,8 +696,9 @@ class PackManifest:
     one_shots: List[dict] = field(default_factory=list)
     sfx: List[dict] = field(default_factory=list)
     file_naming: str = "type_index_attribute.bpm.bpm_key.key.wav"
-    licence: str = "multi-tier (PERPETUAL-GAME-ASSET-V1)"
+    licence: str = ""
     licence_url: str = "music/licences/perpetual_game_asset_v1.txt"
+    licence_sha256: str = ""
 
     def to_dict(self) -> dict:
         return {
@@ -744,6 +746,9 @@ class PackManifest:
             "file_naming": self.file_naming,
             "licence": self.licence,
             "licence_url": self.licence_url,
+            # The pack ships a copy of the licence of record; this binds the
+            # pack to the exact text it shipped.
+            "licence_sha256": self.licence_sha256,
             "loops": self.loops,
             "stems": self.stems,
             "one_shots": self.one_shots,
@@ -811,50 +816,28 @@ python3 music/gates/gate_loop_points.py --pack-dir <this pack>
 - `clearance_doc.pdf` — who cleared this audio for resale.
 - `ai_disclosure.txt` — the AI role, for the marketplace AI tag
   (`brain/runbooks/music-game-assets.md`: itch.io requires `AI-Generated`).
-- `LICENCE.txt` — see {m.licence_url} — multi-tier (personal / commercial /
-  exclusive), with explicit permitted use, distribution and derivative rules.
+- `LICENCE.txt` — {m.licence} ({m.licence_url}), shipped byte-for-byte.
+  sha256 {m.licence_sha256}.
 """
     (out_dir / "README.md").write_text(readme, encoding="utf-8")
 
 
 def ensure_licence() -> str:
-    """Ensure the multi-tier licence file exists; return its path."""
+    """Return the licence of record's path. Never writes a substitute.
+
+    The licence is a legal artifact: the pack must ship the lane's authored
+    licence, not text this generator invented. Measured 2026-10-16 (card
+    t_5ed495eb): a reproduction run on a tree where music/licences/ was absent
+    made this function write its own fallback text, and the pack's LICENCE.txt
+    silently changed from the authored licence (streamer clearance, six
+    clauses) to the fallback. Refuse instead.
+    """
     lic_path = LICENSE_DIR / "perpetual_game_asset_v1.txt"
-    if not lic_path.exists():
-        lic_path.parent.mkdir(parents=True, exist_ok=True)
-        licence_text = """# Perpetual Game Asset Licence (v1.0)
-# Multi-Tier: PERSONAL / COMMERCIAL / EXCLUSIVE
-
-## PERSONAL (free tier)
-Permitted use: hobby game projects, personal mods.
-Distribution: not redistributable as standalone.
-Derivative works: allowed, no resale.
-
-## COMMERCIAL ($ tier)
-Permitted use: commercial games, apps, trailers.
-Distribution: bundled with compiled binary only.
-Derivative works: allowed, may be mixed into your project.
-
-## EXCLUSIVE ($$ tier)
-Permitted use: unlimited commercial exploitation.
-Distribution: same as commercial, plus OEM bundling.
-Derivative works: full rights to reslice, repitch, redistribute within your product.
-
-## Prohibited
-- Redistributing assets as standalone WAVs / sample packs / royalty-free libraries.
-- Selling these assets on sample marketplaces.
-- Using these assets to train generative AI models.
-- Claiming sole authorship of the underlying composition.
-
-## AI Disclosure
-These assets were generated using AI tools under a commercial-rights grant.
-Licencee is not required to disclose AI origin in final credits, though permitted.
-
-Licence ID: PERPETUAL-GAME-ASSET-V1
-Date: 2026-10-08
-Issuer: AI Content Pipeline / Music Lane
-"""
-        lic_path.write_text(licence_text, encoding="utf-8")
+    if not lic_path.exists() or lic_path.stat().st_size == 0:
+        print(f"[pack] ERROR: licence of record not found: {lic_path}\n"
+              f"       the pack must ship the lane's authored licence; this "
+              f"generator does not invent one", file=sys.stderr)
+        sys.exit(1)
     return str(lic_path)
 
 
@@ -1006,8 +989,8 @@ itch.io this pack carries the `AI-Generated` tag. See
 brain/runbooks/music-game-assets.md.
 
 LICENCE
-Multi-tier (personal / commercial / exclusive). See LICENCE.txt and
-music/licences/perpetual_game_asset_v1.txt.
+The lane's licence of record (music/licences/perpetual_game_asset_v1.txt),
+shipped verbatim as LICENCE.txt in this pack.
 """
     path = out_dir / "ai_disclosure.txt"
     path.write_text(text, encoding="utf-8")
@@ -1149,12 +1132,18 @@ def main():
     for name in removed:
         print(f"[pack] pruned stale asset (not in this run's manifest): {name}")
 
-    # licence
+    # licence — the lane's licence of record, copied verbatim. The pack records
+    # its sha256 so the shipped text is bound to what the manifest claims.
     lic_path = ensure_licence()
-    # copy licence text into the pack dir
+    lic_bytes = Path(lic_path).read_bytes()
     pack_lic = out_dir / "LICENCE.txt"
-    pack_lic.write_text(Path(lic_path).read_text(encoding="utf-8"), encoding="utf-8")
-    print(f"[pack] licence: {lic_path} -> {pack_lic}")
+    pack_lic.write_bytes(lic_bytes)
+    lic_sha = hashlib.sha256(lic_bytes).hexdigest()
+    lic_title = next((ln.lstrip("# ").strip() for ln in
+                      lic_bytes.decode("utf-8", "replace").splitlines()
+                      if ln.strip()), "licence")
+    print(f"[pack] licence: {lic_path} -> {pack_lic} "
+          f"(sha256 {lic_sha[:16]}…)")
 
     # --- the gate's own seam measurement, run on every emitted loop -----
     print("[pack] measuring every loop seam with gate_loop_points ...")
@@ -1234,8 +1223,9 @@ def main():
         stems=stems,
         one_shots=one_shots,
         sfx=sfx,
-        licence="multi-tier (PERPETUAL-GAME-ASSET-V1)",
+        licence=lic_title,
         licence_url="music/licences/perpetual_game_asset_v1.txt",
+        licence_sha256=lic_sha,
     )
     manifest_path = out_dir / "manifest.json"
     manifest_path.write_text(json.dumps(m.to_dict(), indent=2), encoding="utf-8")
