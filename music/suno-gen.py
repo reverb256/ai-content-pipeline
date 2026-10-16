@@ -71,6 +71,7 @@ from __future__ import annotations
 import argparse
 import base64
 import datetime as dt
+import importlib.util
 import json
 import os
 import re
@@ -124,18 +125,141 @@ def resolve_genre(registry: dict, genre: str) -> dict:
     return genres[genre]
 
 
-def load_style_prompt(genre: str) -> str:
-    """Pull the Suno style field out of the genre's prompt template.
-    The template is data (music/prompts/<genre>.md); this parser only
-    extracts the fenced '## Style field' block."""
+# --------------------------------------------------------------------------
+# 1b. the style field: ONE parser, owned by the planner (card t_0525127c)
+# --------------------------------------------------------------------------
+# A template may sell a KIT, not one prompt. `music/prompts/commentary-beds.md`
+# declares TWO style fields - `## Style field — INTRO STING` (line 8) and
+# `## Style field — LOOPABLE TALK BED` (line 14) - and says why itself: "Two
+# separate generations — never one". This rail's reader took the FIRST fenced
+# block after the first heading:
+#
+#     m = re.search(r"## Style field.*?```text\n(.*?)```", text, re.S)
+#
+# so the bed was UNREACHABLE from this rail. Measured 2026-10-16 (card
+# t_0525127c, found by t_3497b627) against this file's pre-fix revision,
+# sha256 9698f3302730e2d9d7f2d11a4ebd0c44c6a6244152cb14f3fe5ed164ee61eced:
+#
+#     load_style_prompt("commentary-beds")                    -> 420 chars,
+#         byte-identical to field #1 (the sting); field #2 is 422 chars
+#     load_style_prompt("commentary-beds", "LOOPABLE TALK BED") -> TypeError:
+#         load_style_prompt() takes 1 positional argument but 2 were given
+#
+# The planner carried the same defect and was fixed first (commit 29f0c19):
+# `parse_style_fields()` reads EVERY declared field and
+# `resolve_style_caption()` resolves the one the CALLER names, hard-failing on
+# an unknown name and on an omission where the template declares two, with NO
+# fallback to the first block and no genre-name special case. This rail CALLS
+# those two functions - it does not re-implement them, so there is exactly one
+# parser and nothing to drift.
+#
+# WHY AN IMPORT, NOT A NEW SHARED MODULE: this file is NOT part of the
+# music-pipeline CronJob payload (mining-k8s helm/charts/music-pipeline/files/
+# ships genres.yaml, lyrics/, planner/, prompts/, scripts/, visuals/ - not this
+# one; the rail needs the CDP browser and runs on the lane host), so importing
+# the planner costs the cluster nothing. A new shared module WOULD be shipped:
+# planner.py runs in-cluster from /payload/music/planner/, so any new file it
+# imports must be added to the chart's files/ tree and kept in sync by
+# check-payload-sync.sh. Importing the planner from the one script the payload
+# never carries is the smaller and more honest dependency.
+PLANNER_PATH = REPO / "music" / "planner" / "planner.py"
+_PLANNER = None
+
+
+def planner_module():
+    """The planner module - the ONE parser of a template's style fields.
+
+    The module is loaded from its own path (`importlib.util.spec_from_file_location`),
+    as the lane's other scripts load sibling modules, so this file does not put
+    `music/planner/` on sys.path for the whole process.
+
+    If this process already holds the planner (loaded from the same file, e.g.
+    by `music/tests/test_planner.py` or by a test that drives both readers),
+    that instance is reused: one process, one parser, so nothing can observe a
+    second copy's behaviour.
+    """
+    global _PLANNER
+    if _PLANNER is None:
+        if not PLANNER_PATH.is_file():
+            raise SystemExit(f"FATAL: style-field parser missing: {PLANNER_PATH}")
+        for mod in list(sys.modules.values()):
+            f = getattr(mod, "__file__", None)
+            if f and hasattr(mod, "resolve_style_caption"):
+                try:
+                    if Path(f).resolve() == PLANNER_PATH.resolve():
+                        _PLANNER = mod
+                        return _PLANNER
+                except OSError:  # pragma: no cover - unreadable __file__
+                    continue
+        spec = importlib.util.spec_from_file_location("music_planner", PLANNER_PATH)
+        if spec is None or spec.loader is None:
+            raise SystemExit(f"FATAL: cannot load the style-field parser: {PLANNER_PATH}")
+        _PLANNER = importlib.util.module_from_spec(spec)
+        try:
+            spec.loader.exec_module(_PLANNER)
+        except Exception as e:  # noqa: BLE001 - say what failed, never guess a caption
+            raise SystemExit(f"FATAL: cannot load {PLANNER_PATH}: {type(e).__name__}: {e}")
+    return _PLANNER
+
+
+def load_style_field(genre: str, style_field: str | None = None) -> tuple[str, str]:
+    """(declared name, caption) of the style field THIS run must paste.
+
+    `style_field` names the field, exactly as the template's own heading does
+    (`## Style field — LOOPABLE TALK BED` -> "LOOPABLE TALK BED"; the match is
+    case-insensitive). The caller states it - the template's block ORDER is
+    never consulted:
+
+      * one declared field -> the selector is optional; naming a field the
+        template does not declare is still fatal;
+      * two or more -> the selector is REQUIRED, an unknown name is fatal, and
+        there is NO fallback to the first block (that fallback is how a kit's
+        bed was generated from its sting, card t_3497b627);
+      * a template that declares no style field at all -> fatal, because there
+        is nothing to paste.
+
+    The returned name is "" for the 13 templates whose heading is an unnamed
+    annotation (`## Style field (paste into Suno "Styles", 494/1000 chars)`);
+    commentary-beds is the only template that names its fields (measured census
+    over music/prompts/*.md, 2026-10-16: 15 fields across 14 templates).
+    """
     path = PROMPTS_DIR / f"{genre}.md"
     if not path.exists():
         raise SystemExit(f"FATAL: prompt template missing: {path}")
-    text = path.read_text()
-    m = re.search(r"## Style field.*?```text\n(.*?)```", text, re.S)
-    if not m:
-        raise SystemExit(f"FATAL: no '## Style field' block in {path}")
-    return m.group(1).strip()
+    try:
+        name, caption = planner_module().resolve_style_caption(
+            planner_module().load_template(genre), style_field, genre
+        )
+    except SystemExit as e:
+        # resolve_style_caption refuses to guess. Keep its own words (unknown
+        # styleField / carries N style fields) and add what THIS rail takes.
+        raise SystemExit(
+            f"{e}\n"
+            f"       CDP rail: name the field with --style-field \"<name>\", "
+            f"spelled as the template's own heading does. This rail never falls "
+            f"back to the template's first style block."
+        ) from None
+    if not caption:
+        raise SystemExit(
+            f"FATAL: {path} declares no '## Style field' block, so this rail has "
+            f"nothing to paste into Suno's Styles box. Fix the template."
+        )
+    return name, caption
+
+
+def load_style_prompt(genre: str, style_field: str | None = None) -> str:
+    """Pull the Suno style field out of the genre's prompt template.
+
+    The template is data (music/prompts/<genre>.md) and this reader takes the
+    field the CALLER names, through the planner's own parser - the one reader
+    of a template's style fields. `style_field` is the template's section name
+    (`--style-field "LOOPABLE TALK BED"` for the kit's bed). A template with
+    two or more style fields REFUSES to resolve without it, and an unknown name
+    is a hard failure; there is no fallback to the first block (card
+    t_0525127c, the CDP-rail half of t_3497b627).
+    """
+    return load_style_field(genre, style_field)[1]
+
 
 
 def is_instrumental_template(genre: str) -> bool:
@@ -865,7 +989,9 @@ def export_audio_studio(tab: SunoTab, clip: dict) -> tuple[bytes, str]:
 def cmd_generate(args) -> int:
     registry = load_registry()
     genre_entry = resolve_genre(registry, args.genre)
-    style = load_style_prompt(args.genre)
+    # WHICH style field is the caption is stated by this run (--style-field),
+    # never taken from the template's block order (card t_0525127c).
+    style_field, style = load_style_field(args.genre, args.style_field)
 
     # Instrumental mode is decided from the genre's own prompt template,
     # not from a CLI flag. The template is the spec: if its lyrics
@@ -883,7 +1009,8 @@ def cmd_generate(args) -> int:
     print(f"mode:     {'INSTRUMENTAL' if instrumental else 'vocal'} "
           f"(template-declared; lyrics box {'empty' if instrumental else 'filled'})")
     print(f"title:    {track['title']}")
-    print(f"style:    {len(style)} chars from prompts/{args.genre}.md")
+    print(f"style:    {len(style)} chars from prompts/{args.genre}.md "
+          f"(style field: {style_field or 'unnamed - the template declares one'})")
     if instrumental:
         # Suno's instrumental path is an empty lyrics box. Say that plainly, so
         # a reader of the log does not read the blank as a missing sheet.
@@ -983,6 +1110,7 @@ def cmd_generate(args) -> int:
         "export_path": "studio",
         "standard_download_used": False,
         "style_prompt_chars": len(style),
+        "style_field": style_field or None,
         "lyrics_chars": len(track["lyrics"]),
         "instrumental": instrumental,
         "cdp_port": CDP_PORT,
@@ -1001,6 +1129,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--genre", required=True, help="genre key from music/genres.yaml")
     ap.add_argument("--track-dir", required=True, type=Path,
                     help="lyrics-stage track dir (title.txt + lyrics.suno.txt)")
+    ap.add_argument("--style-field", default=None, metavar="NAME",
+                    help="which of the template's style fields is this track's "
+                         "caption, spelled as the template's own heading does "
+                         "(`## Style field - LOOPABLE TALK BED` -> "
+                         "\"LOOPABLE TALK BED\"). Required when the template "
+                         "declares more than one field (the kit genres); an "
+                         "unknown name is a hard failure. Never falls back to "
+                         "the template's first block (card t_0525127c).")
     ap.add_argument("--instrumental", action="store_true",
                     help="no vocals: the lyrics box is left empty (Suno's "
                          "instrumental path). The track dir must be marked "

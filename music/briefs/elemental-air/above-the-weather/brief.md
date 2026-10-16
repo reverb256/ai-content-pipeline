@@ -21,7 +21,11 @@ Superseded revisions of this file:
 - before the duplicate pass of 2026-10-16 13:45 CDT — `sha256
   ba6fbbf8f13d81a61f8cd7e58cfe47e8bf657169c48865991728953b2ea85cfd`;
 - before this surviving-card pass of 2026-10-16 16:07 CDT — `sha256
-  7c2c790faf648932f24e383824cc03014e55d388a466b79c721a8ad87d26e93f`.
+  7c2c790faf648932f24e383824cc03014e55d388a466b79c721a8ad87d26e93f`;
+- before the figure re-measurement pass of 2026-10-16 17:21 CDT (card `t_6dd13d76`) — `sha256
+  0487c2c8feee739099055ecc4819ea8cc10c5ed6096598903dbac64b76ccf370`; §7's plan reading was
+  refreshed against the live file under `/var/lib/music-plans/`, which the rail rewrites on
+  every planning pass, so that figure is a reading at a time, not a constant.
 
 `brief.json` superseded: `sha256 de3ec94ee74d93a786b2f7d9e19a4e25f3c7fa1ebd6047cd5dfd67a5daf67c09`
 (before the duplicate pass,
@@ -154,7 +158,7 @@ lane's shape are both `loop-10min`. One render satisfies both.
 
 ### A fourth surface also exists in this checkout now
 
-`music/assets/pack.py` (52690 B) and its executable gate `scripts/gates/gate_asset_pack.py`
+`music/assets/pack.py` (card `t_4906bc6e`; its size is not restated here — the file is live, so a live figure ages, §14) and its executable gate `scripts/gates/gate_asset_pack.py`
 (2981 B) are both present in this checkout at 2026-10-16 16:07 CDT — the "upstream-only" reading the first two
 revisions of this brief carried is stale (card `t_5ed495eb`, `done`). The sample pack is here
 too: `packages/welcome-asset-pack/` (manifest.json, loops/, one_shots/, LICENCE.txt,
@@ -210,9 +214,11 @@ boundary land on a phrase boundary.
 
 ### Duration decision: 334 s (128 bars)
 
-The lane's guard rail is `MIN_DURATION_S = 30`, `MAX_DURATION_S = 600`
-(`music/planner/planner.py` lines 103-104, re-read 2026-10-16 16:07 CDT; the cap was 420 when this brief was
-written and was raised to 600 for the `loop-10min` shape). The wire format takes an integer
+The lane's guard rail is `MIN_DURATION_S = 16` (`music/planner/planner.py:147`) and
+`MAX_DURATION_S = 600` (`:148`). The cap was 420 when this brief was written and was raised to
+600 for the `loop-10min` shape (**anchored**); the floor moved 30 -> 16 when card `t_96dfc521`
+made it the shortest shape the registry names (re-read 2026-10-16 by card `t_ae1d9243`). The
+wire format takes an integer
 (`SunoGenerateRequest.duration: Optional[int]`), so the plan value is **334**.
 
 The binding check is the family rubric, not taste. `music/rubrics/gamer.json` →
@@ -295,9 +301,9 @@ Two documentation defects surfaced in this census. Only one of them is still liv
   named NINE by wrongly including epic-orchestral-boss ... (card t_25a6499c)". The earlier
   revisions of this brief reported the opposite; that reading was true of image v0.1.2 and is not
   true now.
-- `music/suno-gen.py` (line 184) still says **"8 of the 12 genre templates"** and still repeats
+- `music/suno-gen.py` (line 308) still says **"8 of the 12 genre templates"** and still repeats
   `epic-orchestral-boss` in the same sentence. Both numbers are wrong. Re-measured 2026-10-16 16:07 CDT: the file
-  is now in THIS checkout (`music/suno-gen.py`, 42652 B), not `origin/main`-only as the earlier
+  is now in THIS checkout (`music/suno-gen.py`, 50030 B), not `origin/main`-only as the earlier
   revisions said.
 
 Census re-measured by this pass over the `## Lyrics guidance` section of `music/prompts/*.md`:
@@ -429,7 +435,7 @@ and will send a human looking for a check digit that the standard does not defin
 | `lyrics` | **Not applicable.** The stage prompt already anticipates this: "an instrumental genre … skips this stage — advance it with a comment saying the genre is instrumental." No sheet, no `gate_lyrics_original` run, no authorship claim to register with SOCAN for this track. |
 | `generate` | Requires a **track dir with `title.txt`** and, because `--instrumental` is passed, a marker: `"instrumental": true` in the track dir's `manifest.json`, or an empty file named `instrumental`. Code-enforced, with a FATAL message that says exactly this. The lyrics box is sent **empty**; the caption gets `, instrumental, no vocals` appended by the translator. |
 | `curate` | Critical for this genre, because D1 (120 BPM default) and out-of-genre drift into percussion are both audible. Reject on: any drum kit, any bass weight, a resolved cadence, a hard/faded ending. |
-| `stems` | Export through **Suno Studio** (unlimited) — never the standard download button (60/month cap). The local service's `/api/v1/stems` is a deferred stub. `music/assets/pack.py` (52690 B, now in this checkout) derives 12 time-aligned stems by HPSS (scipy) as the asset-pack path (card `t_5ed495eb`, `done`). |
+| `stems` | Export through **Suno Studio** (unlimited) — never the standard download button (60/month cap). The local service's `/api/v1/stems` is a deferred stub. `music/assets/pack.py` (now in this checkout) derives 12 time-aligned stems by HPSS (scipy) as the asset-pack path (card `t_5ed495eb`, `done`). |
 | `master` | −14 LUFS ±1 for streaming. **Careful:** the `gate_loudness` in THIS checkout still measures `ffmpeg volumedetect` mean_volume (plain RMS), not LUFS. Card `t_9546841b` is `done` and its decision was to move the ruler to EBU R128 integrated loudness, but that commit (`e783a96`) sits on `origin/publish/audio-lane-2026-10-16` and is not on `main`; `music/mix/master.py` (card `t_568c67d2`) is on that branch only and is not in this checkout at all. So a gate FAIL here is not by itself evidence of a bad master. Measure both. |
 | `gate` | `gate_quality` requires a `review.json` whose `reviewer_model` differs from the producer model and which is sha256-bound to this master. The panel rubric for this family is `music/rubrics/gamer.json` (pass threshold 7.0). |
 | `package` | `loop_points.json` + `clearance_doc.pdf` + `ai_disclosure.txt` are required for game-assets; `gate_release_ready` adds an ISRC, artwork (PIL-openable), and manifest `{title, artist, isrc, genre, ai_disclosure}` for streaming. Artwork is j_kro's creative gate — do not fabricate a cover. |
@@ -442,7 +448,7 @@ and will send a human looking for a check digit that the standard does not defin
 
 **Assets: no audio yet, and the first plan now exists.** No `music/lyrics/elemental-air/`
 directory, no master, no stems, no render. The generation rail has planned this track:
-`/var/lib/music-plans/elemental-air-above-the-weather.json` (1557 B, written 2026-10-16 14:57 CDT)
+`/var/lib/music-plans/elemental-air-above-the-weather.json` (1582 B, re-planned 2026-10-16 16:57 CDT)
 carries `bpm: 92`, `key: "C major"`, `duration: 334`, `instrumental: true` and the template's six
 section tags in the lyrics field. Beside it sits
 `elemental-air-above-the-weather.rendered` (0 B, 15:00 CDT) and **no audio file** — the render
@@ -535,7 +541,7 @@ states the live measurement, the card that closed it, and what remains.
   entry and the plan on disk both do exactly that (§9).
 - **O2 — Branch divergence. CLOSED** (card `t_8a715681`, `done`). Local `main` @ `c296db6` is
   72 ahead / 0 behind `origin/main` (`ba28f55`), measured 2026-10-16 16:0x CDT; `music/suno-gen.py`
-  is present here (42652 B). **Partial residue:** the CM fix for the loudness ruler
+  is present here (50030 B). **Partial residue:** the CM fix for the loudness ruler
   (card `t_9546841b`, `done`) and `music/mix/master.py` (card `t_568c67d2`, `done`) live on
   `origin/publish/audio-lane-2026-10-16` only, 5 commits this branch does not carry. The
   generate stage is unaffected; the master stage is.
@@ -554,7 +560,7 @@ states the live measurement, the card that closed it, and what remains.
   `clearance_doc.pdf` now exists for the sample pack
   (`packages/welcome-asset-pack/clearance_doc.pdf`, 2061 B); none exists for this track yet.
 - **O5 — Asset pack machinery. CLOSED** (card `t_5ed495eb`, `done`). `music/assets/pack.py`
-  (52690 B) and `scripts/gates/gate_asset_pack.py` (2981 B) are in this checkout (§3). The open
+  (54971 B) and `scripts/gates/gate_asset_pack.py` (2981 B) are in this checkout (§3). The open
   residue is a different one: no stage builds a pack (card `t_eb079b91`, `ready`).
 - **O6 — Brief cards never advance. CLOSED** (card `t_5a93164a`, `done`). `music/stages.yaml`
   now tells the stage to post the marker with the `kanban_comment` tool and to treat
@@ -637,7 +643,7 @@ states the live measurement, the card that closed it, and what remains.
   `brain/research/music-monetization-2026.md` are cited as authoritative by `stages.yaml`,
   `genres.yaml`, `lanes.yaml`, `autonomy.yaml`, `gates/README.md` and every gate script. The
   earlier revisions of this brief recorded that neither existed on this machine. Both are on
-  disk and in `HEAD` now: `brain/playbooks/music-lane-architecture.md` (34328 B) and
+  disk and in `HEAD` now: `brain/playbooks/music-lane-architecture.md` and
   `brain/research/music-monetization-2026.md` (11067 B). Card `t_b0a4db92` is `done`, and card
   `t_fa731c5b` stripped the same old reading from the sibling briefs; the playbook was rewritten
   at `7411afa` (head touching it `6b24a52`). Every §-number this brief quotes is still quoted
@@ -688,9 +694,9 @@ broken-fetch premium — which is the entire 0.20 gap.
 | 3 | §1 | registry prints "14 genres, 10 lanes" | prints "14 genres, 10 lanes, 1 stage gate rule(s)" plus the `visual` stage-gate line |
 | 4 | §1 | blueprints hold "only activist, chill-lounge, trance" | 7 files, listed |
 | 5 | §3 | pack.py and gate_asset_pack.py are upstream-only, "cannot be built from this tree today" | both in this checkout (52690 B / 2981 B), with the sample pack |
-| 6 | §5 | `MAX_DURATION_S = 420` | 600 (planner.py lines 103-104) |
+| 6 | §5 | `MAX_DURATION_S = 420` (**anchored**) | 600 — the constant is at `planner.py:148` now, not `:103-104` (card `t_ae1d9243`) |
 | 7 | §7 | the deployed translator "names nine" | v0.1.3 names exactly eight and records the fix |
-| 8 | §7 | suno-gen.py:184 is an `origin/main`-only file | it is in this checkout (42652 B) and the wrong string is still at line 184 |
+| 8 | §7 | suno-gen.py:184 is an `origin/main`-only file | it is in this checkout (50030 B) and the wrong string is still at line 308 |
 | 9 | §7 | Engine A runs image v0.1.2 on pod `sunolocal-source-65fcc845d-fd5r6` | image v0.1.3 on pod `sunolocal-source-75d58dbc97-7jfmc` |
 | 10 | §7 | request shape has no tempo/key fields | `bpm` and `keyscale` are declared in the pod's `spec.py` |
 | 11 | §7 | D1/D2 "STILL LIVE" | both fixed in the deployed v0.1.3; the repo mirror is the stale copy |
@@ -756,7 +762,7 @@ Checks after the edits (real runs, 2026-10-16 16:47 CDT):
 | `check_prompt_style_counts` | 0 | PASS (15 lengths) |
 | `check_oracle_board` | 0 | PASS (0 open oracle genres) |
 | `music/rubrics/test_panel_math.py` | 0 | ALL CHECKS PASSED |
-| `check_brief_figures` | 1 | no finding in this file from this pass — its remaining one is §13's `34,328 B`, owned by `t_f7889dd6` / `t_fa731c5b` |
+| `check_brief_figures` | 1 | no finding in this file from this pass — its remaining one was §13's `34,328 B` (`6b24a52`), owned by `t_f7889dd6` / `t_fa731c5b` |
 | `check_brief_absences` | 1 | no finding in this file — its two name `elemental-water.md` §14 and the closing pass note, owned by `t_bdb94fb7` |
 
 This pass did NOT edit the rubric (`music/rubrics/*` belongs to the review panel, `editor`) and did
@@ -770,4 +776,83 @@ from rc 0 to rc 1, on three ranges in OTHER briefs (`activist.md`, `commentary-b
 `elemental-fire.md`) — the class card `t_6dd13d76` owns. Nothing in this file regressed; re-run
 `check_brief_line_refs` and the count of findings in this file is still zero.
 
+---
 
+## 16. Supersession record — the pack-key pass (card `t_4906bc6e`, 2026-10-16 17:57 CDT)
+
+This pass changed three LIVE figures in this file and nothing else. `music/assets/pack.py` moved
+from **52690 B** to **54971 B** when card `t_4906bc6e` removed the fabricated short-input key from
+`estimate_key()`: the analyser now declares its own window, returns no key below it, and the
+generator records an explicit `unknown` instead of `"C minor"`. `check_brief_figures` recomputes
+this size, and it flagged three present-tense claims — §3's "A fourth surface" note, §8's `stems`
+row and §11's O5 entry. All three are corrected above.
+
+Two sites were left ALONE on purpose, because they are history rather than live claims: §15's
+corrections-table row 5, which records what that pass measured at 16:07 CDT, and the 14:50 `ls -l`
+transcript in `elemental-earth.md` (the file WAS 52690 B at that instant).
+
+The header's "Superseded revisions of this file" list was deliberately NOT extended: every
+citation into this file (`activist.md` and `music/scripts/check_brief_absence.py` both cite the
+line at :404) points at a line number, and the correction above was made without moving one.
+
+Superseded revision of this file: `sha256
+97ad6977c8ff4637536a4a653934c0357fc071933f098ef5e82a6c12c2174581` (777 lines / 50366 B).
+
+Superseded by the pack manifest-path pass (card `t_5f814f2f`, 2026-10-16 18:25 CDT): `sha256
+4fc255fad1cddc2e31fdc66c6a2b85475795bbded9ef8489ef2f4142825ed618` (843 lines / 53268 B) — the
+content this pass started from. The commit that lands these hunks replaces the blob carried by
+`ad6cfbe` (the rubric-scope pass, card `t_00ac4f10`), whose §17 is untouched: the diff is the two
+dropped size figures and this record.
+
+That pass changed `music/assets/pack.py`: the manifest's `file` field has ONE definition
+(`manifest_file()` writes it against the pack tree root, `resolve_manifest_file()` inverts it and
+RAISES on a miss), and the one-shots are cut from the declared stem instead of a second `hpss()`
+computed in `main()`. The two LIVE size figures this brief carried for that file were DROPPED,
+not corrected — the file is live, so any size ages (§14). No cited line number moved. Regression
+check: `music/scripts/check_pack_manifest_paths.py` (card `t_5f814f2f`).
+
+## 17. Declared scoring scope — machine-checked against the live rubric (card `t_00ac4f10`, 2026-10-16)
+
+`music/scripts/check_brief_rubric_scope.py` reads the `rubric_scope` block below and
+compares it, field by field, to this genre's scope COMPUTED from `music/rubrics/gamer.json`
+by the panel's own resolver (`music/rubrics/panel.py`: `applicable_criteria()`,
+`applicable_signals()`). It FAILs when the criterion set, the weights, the weight sum, the
+applicable reject signals or the rubric version disagree with the live file. The block is a
+claim about NOW; the prose above keeps this family's pre-fix record (gamer v1: five
+criteria, Σw 11, scope only inside a criterion NAME) and the check never reads prose, so
+that record keeps passing.
+
+Regenerate the block after any rubric edit — one command, no hand-edit:
+
+    /usr/bin/python3 music/scripts/check_brief_rubric_scope.py --print-truth elemental-air
+
+```json
+{
+  "rubric_scope": {
+    "genre": "elemental-air",
+    "family": "gamer",
+    "rubric_version": 2,
+    "pass_threshold": 7.0,
+    "criteria": [
+      "elemental_atmosphere",
+      "loop_safety",
+      "asset_packaging",
+      "loudness_target"
+    ],
+    "weights": {
+      "elemental_atmosphere": 3,
+      "loop_safety": 3,
+      "asset_packaging": 1,
+      "loudness_target": 1
+    },
+    "weight_sum": 8,
+    "reject_signals": [
+      "elemental_fight_material",
+      "loop_fade_or_truncation",
+      "clipped_master",
+      "no_stated_tempo_key"
+    ],
+    "reject_signals_unnamed": 0
+  }
+}
+```

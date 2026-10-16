@@ -11,6 +11,8 @@
 > **Aged counts re-measured (card `t_0f7aed63`):** 2026-10-16 — see §13.
 > **Re-measured (surviving-card pass, `t_60767fb1`):** 2026-10-16 15:58–16:08 CDT (commit
 > `41b7b1e`) — see §14.
+> **Census correction anchored (card `t_c5a98379`):** 2026-10-16 — §12's correction row 5 now
+> carries the stamp for the blueprint census it quotes; see §15.
 > Every section the live world has moved past carries its correction inline; §14 tabulates all
 > of them against the revision that supersedes this copy.
 > **Repo:** `/home/j_kro/ai-content-pipeline` (main) — NOT `~/Projects/ai-content-pipeline`,
@@ -22,6 +24,9 @@
 > **Superseded digest:** this file was
 > `sha256 2e603d85ef4e5b3ce41c2d69b5ff1b9210828e289bb2b6c6c3ed1dda64974457`
 > (692 lines / 39 339 B) when this pass began. The revision below supersedes that copy.
+> **Rail B absence claim corrected (card `t_bdb94fb7`, 2026-10-16):** §7 had said `music/suno-gen.py`
+> was out of local `main` and out of its history; the reconciliation merge put it in both. §16
+> records the correction and the superseded revision.
 
 Every number and quoted string below comes from a command run or a file read during this
 stage. Nothing is recalled. Where something is unknown, it says so.
@@ -157,7 +162,7 @@ Four consequences that are decisions, not details:
 3. **The `loop-10min` shape is 600 s, and the planner now accepts 600 s.** The shape
    template measures exactly 600.000 s (ffprobe). When this brief was written the planner
    capped a plan at 420 s (`MAX_DURATION_S = 420`); re-measured 2026-10-16 (§14) the cap is
-   **600 s** (`music/planner/planner.py:104`, raised by commit `52ae620` for this very shape).
+   **600 s** (`music/planner/planner.py:148`, raised by commit `52ae620` for this very shape — the constant moved from `:104`; re-read 2026-10-16 by card `t_ae1d9243`).
    **600.000 s is whole-bar at this genre's tempo — 375 bars × 1.600 s a bar — so the loop can
    be rendered at full length.** Revised decision: plan the loop at 375 bars / 600 s; cut it
    to a shorter whole-bar master only if the game-asset pack wants one.
@@ -263,7 +268,7 @@ $ git log --oneline -1                              → c296db6
 $ git ls-remote origin main                         → ba28f55
 $ git rev-list --left-right --count origin/main...HEAD → 0   72
 $ git merge-base --is-ancestor origin/main HEAD     → YES
-$ ls -l music/suno-gen.py                           → 42 652 B in the working tree
+$ ls -l music/suno-gen.py                           → 50 030 B in the working tree
 $ /usr/bin/python3 music/scripts/check_stage_scripts.py
 PASS check_stage_scripts: 11 referenced script path(s) all present in /home/j_kro/ai-content-pipeline
 ```
@@ -347,7 +352,7 @@ no longer needed.
 ### 6.4 Duration — corrected: a 600 s render is plannable and has been rendered
 
 ~~A 600 s render is impossible.~~ Corrected 2026-10-16 (§14): the planner's guard rail is now
-30–600 s (`planner.py:103-104`), and `/var/lib/music-plans/elemental-earth-chamber-loop.json`
+16–600 s (`planner.py:147-148`, card `t_ae1d9243`), and `/var/lib/music-plans/elemental-earth-chamber-loop.json`
 carries `duration: 600` with a `.rendered` marker — the rail has rendered a 600 s plan.
 `translate.py` still takes `duration` straight from the request with no upper guard (line 55:
 `float(req.duration)` else `30.0`), so the planner remains the only duration guard. §3.3 now
@@ -636,7 +641,7 @@ ruling that made this card the owner of the genre.
   (`/home/j_kro/.hermes/tools/ffmpeg-9.0.1-linux-x64/bin/ffprobe` — ffmpeg is not on PATH)
 - **Dangling reference — RESOLVED 2026-10-16 (§14).** `brain/playbooks/music-lane-architecture.md`
   was reported absent when this list was written; it is in this tree and in `HEAD` now —
-  34 328 B, rewritten at `7411afa` (head touching it `6b24a52`, card `t_b0a4db92` done). The
+  rewritten at `7411afa` (head touching it `6b24a52`, card `t_b0a4db92` done). The
   genre block in §2 and the gate table in §5 carry this brief's claims, and
   `music/scripts/check_doc_refs.py` resolves every `§` reference to a heading.
 
@@ -672,7 +677,7 @@ gates, the plans, the chart, or the cluster; no new card was created.
   150 BPM, weirdness 35%, Style Influence 85%, six exclude terms, loop-point ending. Blueprints
   are `activist, anime-ending, anime-opening, chill-lounge, epic-orchestral-boss, trance` (6 of the 14); still no chiptune lyric dir, no
   `loop_points.json`, no master, no stems.
-- Bar arithmetic (1.600 s/bar), the planner cap `MAX_DURATION_S = 420`, and the fallback
+- Bar arithmetic (1.600 s/bar), the planner cap `MAX_DURATION_S = 420` (**anchored** — this section is that pass's record; §14 row 4 corrects it), and the fallback
   `bpm_anchor or 100` (`music/planner/planner.py:470`).
 - `ffprobe`: `loop_10min.mp4` = 600.000000 s · 1280×720 · 25/1 fps; `pixel_scene.mp4` =
   5.000000 s · 14 244 bytes. `gate_youtube_authentic --visual music/visuals/loop_10min.mp4`
@@ -698,9 +703,14 @@ gates, the plans, the chart, or the cluster; no new card was created.
   `"instrumental": False`, line 93 `"style_weight": None`, and the render CronJob invokes
   `acestep_plan.py <plan> --name <stem>` with **no** `--allow-empty` — the wrapper defines the
   flag at line 115, but the CronJob never passes it.
-- Rail B: `music/suno-gen.py` is absent from local `main` **and** from all of local `main`'s
-  history (`git log main -- music/suno-gen.py` → empty), present on `origin/main` from
-  `ba28f55`; merge-base `e278f61`.
+- Rail B: `music/suno-gen.py` (50 030 B) **is in this tree and in local `main`** — the
+  reconciliation merge `ab33ad1` (14:23) is what brought it in (its diff adds the file, +1025
+  lines), so `git log main -- music/suno-gen.py` now returns both commits that carry it
+  (`295fc49`, 2026-10-09 added it; `ba28f55`, 2026-10-14 touched it), and the worktree copy is
+  byte-identical to `main:music/suno-gen.py`. **This reverses the brief-stage claim** that local
+  `main` carried neither the file nor any commit touching it: the reference stands, the absence
+  does not. Merge-base with `origin/main` was `e278f61` at the brief stage and is `97be84f` now
+  (measured `178be75`, 2026-10-16).
 - §8.1: `stages.yaml` references exactly seven gates and neither `gate_sync_ready` nor
   `gate_loop_points` is among them; `gate_sync_ready.py:204-207` only asserts that
   `loop_points.json` exists and then says `run gate_loop_points.py for the seam check`.
@@ -799,11 +809,11 @@ NOT re-run.** The surviving chain resumes at the stage after brief — `genre-se
 | 1 | header | card `t_9cc9b48f` (7.5) owns the genre | surviving card `t_60767fb1`, true score **7.0**; digest `2e603d85…` superseded |
 | 2 | §1, §11 | the registry `defaults:` block cited at 19–25 | the block is **20–25**; line 19 is blank (`check_brief_line_refs` FAIL) — corrected |
 | 3 | §1 | two quoted `reject_signals` | rubric carries **6 criteria** and **6 reject_signals**; `no_stated_tempo_key` and `clipped_master` added to the quotes |
-| 4 | §3.3, §6.4 | planner cap `MAX_DURATION_S = 420`; a 600 s render is impossible | cap **600** (`planner.py:104`, commit `52ae620`); `elemental-earth-chamber-loop.json` is `duration: 600` with a `.rendered` marker; 600.000 s = 375 bars at 150 BPM, whole-bar |
-| 5 | §4, §7, §12 | 6 lyric blueprints; `bpm = 100` fallback wrong for 150 BPM | **7** blueprints (+`jungle-dnb.yaml`); the fallback reads the caption's own BPM (`planner.py:199`, `:212`), so this genre plans at 150 |
+| 4 | §3.3, §6.4 | planner cap `MAX_DURATION_S = 420` (**anchored**); a 600 s render is impossible | cap **600** (`planner.py:148`, card `t_ae1d9243`; commit `52ae620` raised it, and the constant moved from `:104`); `elemental-earth-chamber-loop.json` is `duration: 600` with a `.rendered` marker; 600.000 s = 375 bars at 150 BPM, whole-bar |
+| 5 | §4, §7, §12 | 6 lyric blueprints; `bpm = 100` fallback wrong for 150 BPM | **7** blueprints (+`jungle-dnb.yaml`, added 15:49 by card `t_e6d422ec`); the fallback reads the caption's own BPM (`planner.py:199`, `:212`), so this genre plans at 150 |
 | 6 | §5 | cadence fit 6.7 | **3.3** (surviving card's true breakdown) |
 | 7 | §6.1 | render log `found=3 rendered=0 skipped=3`; 3 plans; 1 queue entry | `found=13 rendered=1 skipped=12 failed=0`; **13 plans, 12 markers, 1 master + `loops/`**; queue holds **11 entries**, none of this genre |
-| 8 | §6.1 | `music/suno-gen.py` absent; lineages diverged | present (42 652 B); `origin/main` is an ancestor; **0 behind / 72 ahead** at `c296db6`; `check_stage_scripts` PASS 11/11 |
+| 8 | §6.1 | `music/suno-gen.py` absent; lineages diverged | present (50 030 B); `origin/main` is an ancestor; **0 behind / 72 ahead** at `c296db6`; `check_stage_scripts` PASS 11/11 |
 | 9 | §6.2 | engine `v0.1.2`; `spec.py` has no `bpm` field | engine **`v0.1.3`**; `spec.py` carries `bpm` and `keyscale` (card `t_25a6499c` D1/D2) |
 | 10 | §6.3 | three blockers: `instrumental: False`, no `--allow-empty`, hardcoded 120 BPM | **all resolved**: wrapper 354 lines = the repo copy, carrying `instrumental`/`bpm`/`keyscale` (lines 174/189/190); `check_lyrics` early-returns for instrumental (line 119); live fixture `t_8c5a6b91/t8c5a6b91-empty-lyrics.json` + `.rendered`; `translate.py` reads `req.bpm` at line 63 |
 | 11 | §6.5 (new) | — | the render rail refuses a loop-claim master that fails `loop_close.py --check-only` (`.looprefused`, job rc=1, card `t_b21aeb51`); this genre's `loop-10min` shape makes its master a loop claim |
@@ -811,7 +821,7 @@ NOT re-run.** The surviving chain resumes at the stage after brief — `genre-se
 | 13 | §8.2 | payload sync FAILs; `SRC` names a tree with no `music/`; chart wrapper ahead of the repo's | `check-payload-sync.sh` → **PASS**; `SRC` default is the lane checkout; chart wrapper 354 lines, identical to the repo's |
 | 14 | §8.3 | suite green | still green — `OK: every gate passed its good artifact and failed its broken one` |
 | 15 | §8.5, §12 | residue 6 `ready` + 3 `running` | **37 done / 7 running / 3 ready**; `check_oracle_board` PASS rc=0, one open card per open genre |
-| 16 | §11 | `brain/playbooks/music-lane-architecture.md` reported absent | exists in this tree and in `HEAD`, 34 328 B, rewritten at `7411afa` (head touching it `6b24a52`) |
+| 16 | §11 | `brain/playbooks/music-lane-architecture.md` reported absent | exists in this tree and in `HEAD`, rewritten at `7411afa` (head touching it `6b24a52`) |
 | 17 | §3.4, §9 | `gate_youtube_authentic` fails the shipped template | unchanged: `only 4 distinct frame signature(s) across 600.0s (10 required) — this is a raw dump`, plus the missing-disclosure reason |
 
 Held as written (re-measured, unchanged): the genre block and the five `defaults:` keys; the
@@ -887,3 +897,99 @@ none:
   carry. The re-emitted-card stage marker this card arrived with is `t_6599927d`.
 - The loop-10min delivery chain — the discarded render output and the rail's loop close — is
   `t_320bae4c` and `t_d7f6d053`; neither changes this brief's recommendation.
+
+## 15. The census correction row is stamped; the drift check now sees every shape this lane writes (card `t_c5a98379`, 2026-10-16)
+
+`music/scripts/check_brief_drift.py` could see a bare count and a "N of the M genres" census, but
+not the other ways this lane states the blueprint census. Card `t_c5a98379` widened it and ran it
+across `music/briefs/**`. On the widened check this brief FAILed once, in §12's correction table.
+
+- **Superseded revision of this file:** `sha256 d0dbe76af7c0fc57ee94390402de61ac8949356238f6c91339caa9e6c42036cc` (889 lines / 54 344 B).
+- **Corrected in place (§12 correction row 5):** the row reads "**7** blueprints
+  (+`jungle-dnb.yaml`, added 15:49 by card `t_e6d422ec`)". The number was already the live one;
+  what was missing is the stamp — the row quotes BOTH the pre-pass value ("6 lyric blueprints")
+  and the pass's value, and a line carrying the measurement it was taken at is a history record,
+  which the check skips by rule. That rule is the remedy the check's own FAIL text prints.
+- **Live at this pass (2026-10-16 17:18 CDT):** `music/lyrics/blueprints/*.yaml` holds 7 files —
+  `activist`, `anime-ending`, `anime-opening`, `chill-lounge`, `epic-orchestral-boss`,
+  `jungle-dnb`, `trance`. This genre still has none, so §4's decision that none is needed stands.
+- **The check's change:** four shapes it could not see — an emphasis-wrapped number, a census pair
+  with no `genres` after it, the same pair split across two lines, and a brace list of the
+  blueprints directory — plus a bare count of blueprints. Anchoring, the fenced-quote rule and the
+  two classes it already covered are unchanged. `--selftest` runs 23 cases.
+- **Regression proof, same card:** `--rev e40c7f9` FAILs with 20 stale counts, 8 of them in the
+  new shapes (this brief's brace list at `e40c7f9:321` among them) and none of them visible to the
+  previous check; this worktree PASSes. Re-run both from the repo root.
+
+## 16. The Rail B absence claim was stale (card `t_bdb94fb7`, 2026-10-16)
+
+`music/scripts/check_brief_absences.py` FAILed rc=1 on §7's Rail B bullet. The brief-stage claim
+(13:17) that `music/suno-gen.py` was absent from local `main` **and from all of its history** no
+longer held. Re-measured on `178be75`:
+
+```
+$ git log --diff-filter=A --format='%h %ad %s' --date=short main -- music/suno-gen.py
+295fc49 2026-10-09 suno-gen: instrumental mode — the reason 8 genre templates could never validate
+$ git log --oneline main -- music/suno-gen.py
+ba28f55 music: instrumental mode in generation path (8/12 templates unblocked)
+295fc49 suno-gen: instrumental mode — the reason 8 genre templates could never validate
+$ git diff --stat ab33ad1^ ab33ad1 -- music/suno-gen.py
+ music/suno-gen.py | 1025 +++++++++++++++++++++++++++++++++++++++++++++++++++++
+```
+
+The reconciliation merge `ab33ad1` (14:23) is what brought the file into this checkout's `main`,
+and the worktree copy is byte-identical to `main:music/suno-gen.py`. §7's bullet is corrected in
+place: the reference stands, the absence does not. `check_brief_absences.py` is rc=0 repo-wide
+after the four-brief pass of this card.
+
+- **Superseded revision of this file:** `sha256 f797b25c257522d3bf4d8cec493f96d1a319d76b71d99611b580a9922f14fc3d` (914 lines / 56 493 B).
+
+No registry value, gate, plan, blueprint, chart file or cluster object was touched, and the two
+open `check_brief_line_refs` findings in this brief (its `music/genres.yaml` ranges) are not this
+pass's — they were left exactly as they stand.
+
+## 17. Declared scoring scope — machine-checked against the live rubric (card `t_00ac4f10`, 2026-10-16)
+
+`music/scripts/check_brief_rubric_scope.py` reads the `rubric_scope` block below and
+compares it, field by field, to this genre's scope COMPUTED from `music/rubrics/gamer.json`
+by the panel's own resolver (`music/rubrics/panel.py`: `applicable_criteria()`,
+`applicable_signals()`). It FAILs when the criterion set, the weights, the weight sum, the
+applicable reject signals or the rubric version disagree with the live file. The block is a
+claim about NOW; the prose above keeps this family's pre-fix record (gamer v1: five
+criteria, Σw 11, scope only inside a criterion NAME) and the check never reads prose, so
+that record keeps passing.
+
+Regenerate the block after any rubric edit — one command, no hand-edit:
+
+    /usr/bin/python3 music/scripts/check_brief_rubric_scope.py --print-truth chiptune-8bit
+
+```json
+{
+  "rubric_scope": {
+    "genre": "chiptune-8bit",
+    "family": "gamer",
+    "rubric_version": 2,
+    "pass_threshold": 7.0,
+    "criteria": [
+      "chip_timbre_authenticity",
+      "loop_safety",
+      "asset_packaging",
+      "loudness_target"
+    ],
+    "weights": {
+      "chip_timbre_authenticity": 3,
+      "loop_safety": 3,
+      "asset_packaging": 1,
+      "loudness_target": 1
+    },
+    "weight_sum": 8,
+    "reject_signals": [
+      "chip_impossible_timbre",
+      "loop_fade_or_truncation",
+      "clipped_master",
+      "no_stated_tempo_key"
+    ],
+    "reject_signals_unnamed": 0
+  }
+}
+```

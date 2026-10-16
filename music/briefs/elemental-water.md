@@ -36,6 +36,13 @@
 >    (`t_e6d422ec`, 15:56).
 > 4. `sha256 3f19591d395550df4778cd21bdf461690b8848bf6923b192f202efb578cceca4` (671 lines /
 >    42450 B) — **superseded by THIS pass** (`t_354d5d25`); §16 lists the classes it corrected.
+> 5. `sha256 fb78ecde6d5ae120e4fb7e9e742ee19100f7c6888ddce914310c26a655d5a13b` (971 lines /
+>    64 164 B) — two `check_brief_absences.py` findings cleared (`t_bdb94fb7`, 2026-10-16);
+>    §17 records them.
+> 6. `sha256 e51cd0b293e286d6d98afbfaaaa67806bf97a174903e84685b6a3ed1cf505c71` (1000 lines /
+>    65 873 B) — **superseded by THIS pass** (`t_6aa1e97f`): the §14 Runbook bullet's line count
+>    corrected from 88 to 133 after the runbook gained the `asset-pack` stage section; §18
+>    records it.
 >
 > **Oracle (card title):** 7.2/10. **Oracle (measured now, live):** **7.00/10**, reproduced by
 > `music/oracle.py --dry-run` in this pass. 7.00 ≥ 5.0, so the routing verdict — produce — is
@@ -488,7 +495,7 @@ and leaves the `elemental-air` leg to that card.
 ## 9. Generation path — the three blockers are CLOSED; what remains is this genre's queue entry
 
 The lane's own generate prompt names `music/suno-gen.py`. **That file is in this checkout**
-(42 652 B, `is_instrumental_template()` at `music/suno-gen.py:141`) — card `t_8a715681`
+(50 030 B, `is_instrumental_template()` at `music/suno-gen.py:265`) — card `t_8a715681`
 (diverged checkout, now `done`) reconciled the tree, so the file can be read from disk rather than
 from a git object — the pair read **0 behind / 86 ahead** of `origin/main` at 16:50 CDT on
 2026-10-16 (the local tip rises with every commit this lane lands) — and `is_instrumental_template()` keys on the template's `## Lyrics guidance` section and
@@ -774,9 +781,11 @@ genre's three lanes — rather than assuming the YouTube gate (`t_d9983bb9`).
 - Registry: `music/genres.yaml`, `music/lanes.yaml` — validated live (14 genres, 10 lanes)
 - Template: `music/prompts/elemental-water.md` (3810 B; style field measured 537/1000 chars)
 - Visual: `music/visuals/element-water.md` (1046 B)
-- Runbook: `brain/runbooks/music-game-assets.md` (**88 lines**, re-measured in this pass — the
-  write-time transcript said 53) — of the executables it names, `butler` and
-  `~/.hermes/vault/itch_io_key` are still absent (§10); `music/assets/pack.py` exists
+- Runbook: `brain/runbooks/music-game-assets.md` (**133 lines**, re-measured again in this pass —
+  the write-time transcript said 53, the 16:1x pass measured 88, and the file gained the
+  `asset-pack` stage section, §18) — of the executables it names, `butler` and
+  `~/.hermes/vault/itch_io_key` are still absent (§10); the pack builder it names is here:
+  `music/assets/pack.py` exists
 - Gates: `music/gates/` — `gate_quota` PASS live; `gate_sync_ready` exercised live on an empty
   dir (16 findings, quoted in §5); `bash music/gates/check_gate_suite.sh` **rc=0**, interpreter
   `/usr/bin/python3`, on 2026-10-16 16:3x CDT
@@ -810,7 +819,7 @@ genre's three lanes — rather than assuming the YouTube gate (`t_d9983bb9`).
   `check_doc_refs.py`, `check_stage_advance.py`, `check_scheduler_units.py` (NOTE: driver
   `DRY_RUN=1`), `check_gate_matrix_scheduled.py`, `check_brief_bpm_solutions.py` rc=0;
   `bash music/gates/check_gate_suite.sh` rc=0
-- Upstream truth read from disk in this pass: `music/suno-gen.py:141` (`is_instrumental_template`)
+- Upstream truth read from disk in this pass: `music/suno-gen.py:265` (`is_instrumental_template`)
   — the git-object read the write-time brief used is no longer necessary at 0 behind
 - Engine truth read from the running pod in this pass: **`sunolocal-source-75d58dbc97-7jfmc`**,
   image `localhost/sunolocal:v0.1.3` (`/opt/sunolocal/music/sunolocal/translate.py` lines 62-76,
@@ -820,7 +829,7 @@ genre's three lanes — rather than assuming the YouTube gate (`t_d9983bb9`).
 
 - **Dangling reference — RESOLVED (`t_b0a4db92`, done).** `brain/playbooks/music-lane-architecture.md`
   is cited as "READ FIRST" by this lane's profile, `stages.yaml`, `genres.yaml`, `lanes.yaml`,
-  `autonomy.yaml` and `gates/*`, and it is in this tree and in `HEAD` now (34 328 B, rewritten at
+  `autonomy.yaml` and `gates/*`, and it is in this tree and in `HEAD` now (rewritten at
   `7411afa`, head touching it `6b24a52`). `brain/research/music-monetization-2026.md` (11 067 B)
   is there too. The doc's §2 genre registry carries this genre's row, §3 its lanes and §13 its
   pack lane; `music/scripts/check_doc_refs.py` resolves every `§` reference to a heading. Card
@@ -955,12 +964,14 @@ against live state and correct the ones that had aged.
    `renders[]` log with no entry for this genre; the only genre-named asset is a 5.000 s
    1280×720 prototype clip (ffprobe-measured).
 9. **§13 / §14** — the advance channel (`kanban_comment` tool, `t_5a93164a`), the genre-resolved
-   visual gate (`gate_for_stage` → `gate_youtube_authentic`, `t_d9983bb9`), the runbook's real
-   line count (**88**, not 53), the rubric version, the moved `oracle.py` line citations, the
+   visual gate (`gate_for_stage` → `gate_youtube_authentic`, `t_d9983bb9`), the runbook's line
+   count **as it stood in that pass** (**88**, not 53; **133** now that the runbook documents the
+   `asset-pack` stage — §18), the rubric version, the moved `oracle.py` line citations, the
    re-run check list, the engine pod (`sunolocal-source-75d58dbc97-7jfmc`, v0.1.3) and the status
    of every cited card (all `done`).
 10. **Two standing-check findings that named this brief were cleared**: `check_brief_figures`
-    ("53 lines" → 88) and `check_brief_absence` ("`music/suno-gen.py` is absent" → present, §9).
+    ("53 lines" → 88) and `check_brief_absence` — its 2026-10-16 finding about
+    `music/suno-gen.py` is cleared; the file is in the tree now (§9).
     No check names this brief now.
 
 **Not done in this pass, on purpose:** the genre was re-scored, not re-scored *by hand* — 7.0 is
@@ -969,3 +980,99 @@ to the `nexus-core` queue card this genre does not yet have, and writing the ren
 the brief would collide with the card that owns the genre's title and duration. No file outside
 `music/briefs/elemental-water.md` was modified by this pass.
 
+## 17. Two absence findings on this file cleared (card `t_bdb94fb7`, 2026-10-16)
+
+`music/scripts/check_brief_absences.py` FAILed rc=1 on two lines of this file, both ways a
+line-scoped check reads prose as a claim about a path:
+
+| # | Site | Before | After |
+|---|---|---|---|
+| 1 | §14, Runbook bullet | the pack builder and the runbook's own unfindable executables shared one line at 2026-10-16, so `music/assets/pack.py` sat beside the word "absent" | the pack builder gets its own sentence; the runbook's unfindable executables (`butler`, `~/.hermes/vault/itch_io_key`) keep the claim |
+| 2 | §16 item 10 | a CLEARED `check_brief_absence` finding quoted in the present tense | stamped as the 2026-10-16 finding it was; the file is in the tree now (§9) |
+
+Neither line denied the file that was there, so neither was a stale figure — the check is
+line-scoped, and the remedy is the one its own FAIL text prints: correct the citing brief. No check
+was edited or weakened.
+
+```
+$ /usr/bin/python3 music/scripts/check_brief_absences.py
+PASS check_brief_absences: 0 file-absence claim(s) ...                                          # rc=0
+```
+
+The counts after that headline are elided on purpose: they are live readings, and this section
+itself adds candidate lines to them.
+
+- **Superseded revision of this file:** `sha256 fb78ecde6d5ae120e4fb7e9e742ee19100f7c6888ddce914310c26a655d5a13b` (971 lines / 64 164 B).
+
+## 18. The runbook stopped describing the pack step as manual-only; its line count moved to 133 (card `t_6aa1e97f`, 2026-10-16)
+
+`brain/runbooks/music-game-assets.md` presented the pack step as a command a human runs
+by hand, so the runbook was the only place a reader learned the step exists — while
+`music/stages.yaml` had already grown the `asset-pack` stage (bot `producer`, after
+`gate`, before `package`; card `t_eb079b91`). The runbook now documents that stage: the
+stage's position, the per-genre resolution
+
+```
+/usr/bin/python3 music/registry.py derived-for-stage --stage asset-pack --genre <g>
+```
+
+(`build: yes` for the six gamer genres, `build: no` for the other eight — resolved live
+in this pass), the output convention `packages/<master-stem>-asset-pack`, the
+generator's rc (`0` ACCEPTED, `1` REJECTED), both gates, and that publish stays behind
+the `human-approval` gate. It points at
+`brain/playbooks/music-lane-architecture.md` §13 instead of being the sole record. The
+manual commands stay as the fallback for one pack built by hand.
+
+The runbook therefore measures **133 lines** (88 before this pass), and the §14 Runbook
+bullet above was corrected to match in the same commit. Checks run in this pass
+(`/usr/bin/python3`, from `/home/j_kro/ai-content-pipeline`):
+`music/scripts/check_brief_figures.py` **rc=0** and `music/scripts/check_doc_refs.py`
+**rc=0**.
+
+- **Superseded revision of this file:** `sha256 e51cd0b293e286d6d98afbfaaaa67806bf97a174903e84685b6a3ed1cf505c71` (1000 lines / 65873 B).
+
+## 18. Declared scoring scope — machine-checked against the live rubric (card `t_00ac4f10`, 2026-10-16)
+
+`music/scripts/check_brief_rubric_scope.py` reads the `rubric_scope` block below and
+compares it, field by field, to this genre's scope COMPUTED from `music/rubrics/gamer.json`
+by the panel's own resolver (`music/rubrics/panel.py`: `applicable_criteria()`,
+`applicable_signals()`). It FAILs when the criterion set, the weights, the weight sum, the
+applicable reject signals or the rubric version disagree with the live file. The block is a
+claim about NOW; the prose above keeps this family's pre-fix record (gamer v1: five
+criteria, Σw 11, scope only inside a criterion NAME) and the check never reads prose, so
+that record keeps passing.
+
+Regenerate the block after any rubric edit — one command, no hand-edit:
+
+    /usr/bin/python3 music/scripts/check_brief_rubric_scope.py --print-truth elemental-water
+
+```json
+{
+  "rubric_scope": {
+    "genre": "elemental-water",
+    "family": "gamer",
+    "rubric_version": 2,
+    "pass_threshold": 7.0,
+    "criteria": [
+      "elemental_atmosphere",
+      "loop_safety",
+      "asset_packaging",
+      "loudness_target"
+    ],
+    "weights": {
+      "elemental_atmosphere": 3,
+      "loop_safety": 3,
+      "asset_packaging": 1,
+      "loudness_target": 1
+    },
+    "weight_sum": 8,
+    "reject_signals": [
+      "elemental_fight_material",
+      "loop_fade_or_truncation",
+      "clipped_master",
+      "no_stated_tempo_key"
+    ],
+    "reject_signals_unnamed": 0
+  }
+}
+```

@@ -288,11 +288,27 @@ done
 # `game-assets` lane must never ship (music/rubrics/gamer.json reject_signals:
 # "fade-out or truncated ending on a game-loop claim").
 FADED_LOOP="$F/faded_loop"
-mkdir -p "$FADED_LOOP"
+mkdir -p "$F/faded_loop"
 cp "$F/loop_faded.wav" "$FADED_LOOP/master.wav"
 cat > "$FADED_LOOP/loop_points.json" <<'EOF'
 {"loop_start_s": 5.0, "loop_end_s": 10.0, "seamless": true}
 EOF
+
+# --- the three end-guard fixtures (card t_8297d2c6) ------------------------
+# The 1.0 s fade: level ruler blind (4.7 dB), end guard refuses it.
+# The quiet loop (-28 dB, above the -50 dB floor): must still PASS.
+# The both-ends-silent loop: the symmetric hole of the level ruler.
+for name in faded_short quiet silent_ends; do
+  dir="$F/${name}_loop"
+  mkdir -p "$dir"
+  cp "$F/loop_${name}.wav" "$dir/master.wav"
+  cat > "$dir/loop_points.json" <<'EOF'
+{"loop_start_s": 5.0, "loop_end_s": 10.0, "seamless": true}
+EOF
+done
+FADED_SHORT_LOOP="$F/faded_short_loop"
+QUIET_LOOP="$F/quiet_loop"
+SILENT_ENDS_LOOP="$F/silent_ends_loop"
 
 # --- asset packs (generator-built + conforming + broken) -----------
 # Built by music/assets/pack.py for the generator pack: see card t_5ed495eb.
@@ -344,6 +360,17 @@ pass "trance lyrics pass (human claim)" \
 fail_expected "suno-generated lyric rejected" 1 \
   "$PY" "$GATES/gate_lyrics_original.py" \
   --lyrics-file "$GATES/fixtures/suno-generated-umbrellas-in-space.txt"
+
+# The lyrics stage's OWN runner (card t_450e7f39, 2026-10-16). It carries the
+# wrapped-direction regression (t_bc6a0c00) and the committed-sheet corpus, and
+# NOTHING ran it on a schedule: measured 2026-10-16, its suite reported
+# "FAILED (failures=3)" and the runner "BROKEN: 1 of 14 check(s) misbehaved" —
+# three committed instrumental sheets (commit ce845f6) were being used as the
+# negative control for a rule about singable lines — while this matrix stayed
+# green, because it never invoked that runner. A runner no schedule runs is a
+# check that cannot fail.
+pass "the lyrics stage's own runner (music/gates/check_gate_lyrics_original.sh)" \
+  env PY="$PY" bash "$REPO/music/gates/check_gate_lyrics_original.sh"
 
 # ------------------------------------------------------------------
 # 3. gate_stems_present
@@ -449,8 +476,101 @@ fail_reason "faded loop tail fails on the LEVEL ruler, not the curvature one" 1 
   --loop-points "$FADED_LOOP/loop_points.json" \
   --scratch "$SCRATCH/loop_scratch"
 
+# --- the short fade, the hole the level ruler cannot see (t_8297d2c6) ------
+# A 1.0 s fade-out tail is SMOOTH (curvature passes it) and its 1.0 s / 6 dB
+# level delta is only 4.7 dB (the level ruler passes it, by arithmetic: a
+# linear fade of length d >= L reads (L/d)/sqrt(3)). The END guard is the
+# ruler that refuses it: inside its last 1.0 s the first half sits 8.5 dB
+# above the second. The refusal must NAME the ramp — if this case ever exits
+# 0, the false PASS of card t_8297d2c6 has returned.
+fail_reason "a 1.0s fade-out tail fails on the END RAMP, not the level" 1 \
+  "loop end ramps" \
+  "$PY" "$GATES/gate_loop_points.py" \
+  --master "$FADED_SHORT_LOOP/master.wav" \
+  --loop-points "$FADED_SHORT_LOOP/loop_points.json" \
+  --scratch "$SCRATCH/loop_scratch"
+# ... and the same artifact's level measurement must still be UNDER the
+# ceiling, so the suite proves which ruler decided.
+if "$PY" "$GATES/gate_loop_points.py" \
+     --master "$FADED_SHORT_LOOP/master.wav" \
+     --loop-points "$FADED_SHORT_LOOP/loop_points.json" \
+     --scratch "$SCRATCH/loop_scratch" >/tmp/gate_out.$$ 2>&1; then
+  echo "BAD   the 1.0s fade case passed the gate"
+  fails=$((fails+1))
+elif grep -qF "loop level drops" /tmp/gate_out.$$; then
+  echo "BAD   the 1.0s fade was refused by the LEVEL ruler — it is no longer the short-fade case"
+  sed 's/^/        /' /tmp/gate_out.$$
+  fails=$((fails+1))
+else
+  echo "FAILS the 1.0s fade is refused for the END RAMP while its level delta stays under the ceiling"
+fi
+
+# --- the end guard must not punish a quiet (nonzero) ending ---------------
+# -28 dB is quiet and it clears the lane's -50 dB floor, so the end guard
+# must leave it alone: quiet is not silence (card t_8297d2c6).
+pass "a quiet but NONZERO loop ending still passes (above the -50 dB floor)" \
+  "$PY" "$GATES/gate_loop_points.py" \
+  --master "$QUIET_LOOP/master.wav" \
+  --loop-points "$QUIET_LOOP/loop_points.json" \
+  --scratch "$SCRATCH/loop_scratch"
+# ... and a loop silent at BOTH ends is refused FOR THE SILENCE: two silent
+# ends match each other, which is exactly the elemental-air master the level
+# ruler accepted (head-1s -59.5 dB, tail-1s -58.7 dB, delta 0.8 dB).
+fail_reason "a loop silent at both ends fails on the silence floor" 1 \
+  "is silence" \
+  "$PY" "$GATES/gate_loop_points.py" \
+  --master "$SILENT_ENDS_LOOP/master.wav" \
+  --loop-points "$SILENT_ENDS_LOOP/loop_points.json" \
+  --scratch "$SCRATCH/loop_scratch"
+
 # ------------------------------------------------------------------
-# 8b. asset packs — gate_sync_ready pack mode + gate_loop_points sweep
+# 8b. the standalone loop-seam report (cards t_97494e6a, t_88879c37)
+# ------------------------------------------------------------------
+# `music/scripts/loop_seam_check.py` delegates its curvature ruler to
+# gate_loop_points and used to read the DELEGATED RUN'S EXIT STATUS as the curvature
+# verdict. That gate now runs THREE rulers, so a level-only refusal was printed as a
+# CURVATURE failure: measured 2026-10-16 on a 2.21x loop (UNDER the 3.0x ceiling) the
+# tool printed `curvature: FAIL 2.21x` and printed the gate's level-fix line as
+# curvature evidence. Its own --selftest — the finding written down as an executable
+# expectation — went red and STAYED red, because nothing ran it. That is the same
+# shape as this suite's reason to exist (t_b16b9046): a check with no runner rots
+# silently, and a brief ends up quoting the rot.
+#
+# These cases are what makes the fix a check rather than a claim:
+#   * the selftest runs HERE, and its documented expectation is NOT edited to match a
+#     broken tool — A both rulers PASS; B curvature PASS 2.21x / level FAIL 8.9 dB
+#     (the fade is still caught); C and D curvature FAIL. A future ruler change that
+#     moves any of those is RED here, not in a brief.
+#   * on the faded fixture the tool's report must say the curvature ruler PASSes and
+#     the LEVEL ruler is the one refusing (before the fix: `curvature: FAIL 2.21x`).
+#   * the 1.0s fade is the false-pass guard on the tool itself: both of the tool's own
+#     rulers PASS it (curvature 2.21x, level 4.7 dB) while the gate's end-ramp guard
+#     refuses it — so the tool must report the gate's refusal instead of a pass. A
+#     tool that agrees to a false pass is worse than the defect it was written for.
+say "loop_seam_check (cards t_97494e6a, t_88879c37)"
+pass "loop_seam_check --selftest: A both PASS, B curvature PASS 2.21x + level FAIL 8.9 dB, C/D curvature FAIL" \
+  "$PY" "$REPO/music/scripts/loop_seam_check.py" --selftest
+fail_reason "loop_seam_check on a faded loop: the CURVATURE ruler says PASS (2.21x is under the ceiling)" 1 \
+  "curvature: PASS" \
+  "$PY" "$REPO/music/scripts/loop_seam_check.py" \
+  --master "$FADED_LOOP/master.wav" \
+  --loop-points "$FADED_LOOP/loop_points.json" \
+  --scratch "$SCRATCH/loop_scratch"
+fail_reason "loop_seam_check on a faded loop: the LEVEL ruler is the one that refuses it" 1 \
+  "level    : FAIL" \
+  "$PY" "$REPO/music/scripts/loop_seam_check.py" \
+  --master "$FADED_LOOP/master.wav" \
+  --loop-points "$FADED_LOOP/loop_points.json" \
+  --scratch "$SCRATCH/loop_scratch"
+fail_reason "loop_seam_check never outvotes the gate: a 1.0s fade passes both its rulers, the gate's end ramp refuses it" 1 \
+  "gate     : FAIL" \
+  "$PY" "$REPO/music/scripts/loop_seam_check.py" \
+  --master "$FADED_SHORT_LOOP/master.wav" \
+  --loop-points "$FADED_SHORT_LOOP/loop_points.json" \
+  --scratch "$SCRATCH/loop_scratch"
+
+# ------------------------------------------------------------------
+# 8c. asset packs — gate_sync_ready pack mode + gate_loop_points sweep
 #     (card t_5ed495eb: the generator's own output must pass the gate it is
 #      built for, every loop must be seam-checked, and the pack shape must
 #      NOT weaken the per-track shape the sync lane still requires)
@@ -657,6 +777,210 @@ fi
 say "the planner regression suite (music/tests/test_planner.py)"
 pass "planner: every genre plans + the duration rail admits 16 s and refuses 15 s (t_96dfc521)" \
   "$PY" "$REPO/music/tests/test_planner.py"
+
+# ------------------------------------------------------------------
+# 15. the render log (card t_d6b0cb36)
+# ------------------------------------------------------------------
+# `music/quota-ledger.json` says of its own `renders:` list that it is "the
+# pipeline's only durable render log". Measured on nexus 2026-10-16 that log held
+# ONE entry while EIGHT `.rendered` markers certified a delivered render: seven
+# delivered masters (chill-lounge-slow-gold, commentary-beds-lo-fi-jazz-bed,
+# commentary-beds-lo-fi-jazz-sting, elemental-earth-chamber-loop,
+# elemental-fire-emberfall, final-round,
+# sentimental-piano-room-with-the-light-going) were absent while
+# /var/lib/sunolocal/artifacts/ held every one of them. The music existed; the LOG
+# was short, because nothing kept the two in step - and nothing could: the render
+# pod mounts its payload readOnly from the chart's ConfigMap and its only writable
+# volume is the plans hostPath, the ledger is a file in THIS repo (read by
+# music/oracle.py:load_quota), and `grep -rn quota-ledger ~/mining-k8s` finds
+# nothing. So the answer is a check, not an auto-write (card t_d6b0cb36, decision
+# 1), and these cases are what makes it one:
+#   * a delivered render with no ledger entry must be RED, and the message must
+#     name the command that fixes it;
+#   * a `refused` marker needs NO entry - "Do NOT write a ledger entry for a
+#     `refused` marker: those are drafts waiting on a human";
+#   * a plan outside the genre registry (the rail's own smoke plan is genre
+#     `test`) is a NOTE, not a RED;
+#   * --record must derive the entry from live state and RE-RUNNING IT MUST NOT
+#     DOUBLE-RECORD (the card's own condition), while leaving every quota counter
+#     untouched;
+#   * the check must be green after --record, and a replaced master must be a
+#     NOTE rather than a silent pass;
+#   * a ledger the check cannot read, and a plans directory that is not there,
+#     must both be NON-ZERO (rc 3): "no markers" is not "in step".
+# The live half (the real /var/lib/music-plans against the real ledger) is NOT
+# run here, deliberately: this suite is the fixture-based acceptance matrix, and
+# a live assertion inside it would report a drifted log as a BROKEN gate. That
+# half is section 2c of music/scripts/run_gate_matrix.sh, where it exits 4 and is
+# therefore never read as a gate defect either.
+say "the render log (music/scripts/check_render_ledger.py, card t_d6b0cb36)"
+pass "render ledger selftest: no entry is RED, a refusal needs none, --record cannot double-record" \
+  "$PY" "$REPO/music/scripts/check_render_ledger.py" --selftest
+fail_reason "the render ledger check is rc 3, not a pass, when the ledger will not read" 3 \
+  "FAIL check_render_ledger" \
+  "$PY" "$REPO/music/scripts/check_render_ledger.py" --check --plans "$SCRATCH" \
+  --ledger "$SCRATCH/no-such-ledger.json"
+fail_reason "an absent plans dir is rc 3, not a pass ('no markers' is not 'in step')" 3 \
+  "FAIL check_render_ledger" \
+  "$PY" "$REPO/music/scripts/check_render_ledger.py" --check \
+  --plans "$SCRATCH/no-such-plans" --ledger "$REPO/music/quota-ledger.json"
+
+# ------------------------------------------------------------------
+# 16. the planner carries a HUMAN SHEET into the plan (card t_e69368ff)
+# ------------------------------------------------------------------
+# `--lyrics-mode draft` writes a SCAFFOLD (the tags plus the template's craft
+# notes, and no singable line), and the render rail refuses a scaffold on
+# purpose - so every draft entry in the queue reached the rail and stopped
+# there. Measured on the queued trance entry (card t_a7a7d998): the plan carried
+# 9 section tags and 0 singable lines, `.refused` was recorded for it, and the
+# human-authored sheet for that same track already existed and was already
+# claimed (`music/lyrics/trance/signal-before-dawn`, sha256 e667e248..., gate
+# `gate_lyrics_original` PASS) - with no planner input that could put it into
+# the plan. `--lyrics-mode ai` is not the fix: AI words void the authorship
+# claim the sheet exists to make.
+#
+# `--lyrics-file` carries the sheet VERBATIM (bytes read, utf-8 decoded, so the
+# plan's lyrics hash IS the sheet's manifest hash) and binds the authorship line
+# to the sheet's path and sha256. These cases are what makes that a check rather
+# than a claim:
+#   * the plan built from the sheet passes the RENDER RAIL's own guard
+#     (`acestep_plan.py` without --allow-empty) end to end, while a plan built
+#     without the sheet is still refused with rc 4;
+#   * a sheet with no claim, a claim whose hash no longer covers the file, an
+#     `ai` claim, an empty sheet, and a sheet for another genre are all rc 2 and
+#     write NO plan - the render rail reads plan files, so a refused sheet must
+#     not leave one behind (card t_96dfc521's rule);
+#   * the CHART PAYLOAD's planner copy carries the flag, because the CronJob
+#     mounts a copy of the payload, not this repo (card t_a14e5d52's drift).
+say "the planner carries a human-authored sheet (music/tests/test_planner_lyrics_file.py)"
+pass "planner --lyrics-file: sheet carried verbatim, the rail's guard accepts it, a scaffold is still refused (t_e69368ff)" \
+  "$PY" -m unittest music.tests.test_planner_lyrics_file
+
+# ------------------------------------------------------------------
+# 17. the render rail's backfill (card t_d7f6d053)
+# ------------------------------------------------------------------
+# The rail closes the delivered loop for the plan it has JUST rendered, so every
+# plan rendered BEFORE that step existed (card t_b21aeb51) keeps its `.rendered`
+# marker, is skipped, and never gets its loop. Measured live 2026-10-16: 7
+# `.rendered` markers in /var/lib/music-plans with no render at the documented
+# path - elemental-earth's 600 s `loop-10min` claim among them, on a card
+# (t_909069f0) already CLOSED on an acceptance nobody could check. The bytes were
+# still in the engine's own store, so the fix is a backfill, not a re-render:
+# recover the master to the documented path and close the loop with the same
+# music/scripts/loop_close.py the rail runs.
+#
+# These cases are what makes that a check rather than a claim: the backfill must
+# REFUSE a mapping it cannot name (a title alone can belong to two plans), use
+# the ENGINE's extension, be a no-op on the second run, and never write the
+# engine's store - and the chart must run it, mount that store read-only, and
+# let a refusal be reported instead of failing the render loop.
+say "the render rail's backfill (music/scripts/backfill_render.py)"
+pass "backfill selftest: refuses what it cannot name, recovers, closes, no-ops" \
+  "$PY" "$REPO/music/scripts/backfill_render.py" --selftest
+pass "backfill suite: mapping rules, engine ext, no-op re-run, store untouched" \
+  "$PY" -m unittest music.tests.test_backfill_render
+pass "the backfill reads the engine's store READ-ONLY (sqlite mode=ro)" \
+  grep -qF -- '?mode=ro' "$REPO/music/scripts/backfill_render.py"
+fail_expected "the backfill never opens the engine's store read-write" 1 \
+  grep -qF -- 'mode=rw' "$REPO/music/scripts/backfill_render.py"
+
+CHART_DIR="${MINING_K8S:-$REPO/../mining-k8s}/helm/charts/music-pipeline"
+if [ -f "$CHART_DIR/templates/cronjob-render.yaml" ]; then
+  pass "the rail runs the backfill" \
+    grep -qF -- 'backfill_render.py' "$CHART_DIR/templates/cronjob-render.yaml"
+  pass "the rail runs it BEFORE the ComfyUI probe (a backfill needs no GPU)" \
+    awk '/BACKFILL, "--all"/ {b=NR} /system_stats/ {c=NR} END {exit !(b && c && b < c)}' \
+    "$CHART_DIR/templates/cronjob-render.yaml"
+  pass "a backfill that cannot run is REPORTED, not fatal to the render loop" \
+    grep -qF -- 'the backfill did not run (' "$CHART_DIR/templates/cronjob-render.yaml"
+  pass "the rail mounts the engine's store read-only" \
+    grep -qF -- 'readOnly: true' "$CHART_DIR/templates/cronjob-render.yaml"
+  pass "the chart names the store it mounts and points the job at it" \
+    grep -qF -- 'storeMountPath' "$CHART_DIR/values.yaml"
+  pass "the chart's payload carries the backfill AND the check knows its name" \
+    grep -qF -- 'check_file music/scripts/backfill_render.py' "$CHART_DIR/check-payload-sync.sh"
+  pass "the payload copy IS the lane's script, byte for byte" \
+    cmp -s "$REPO/music/scripts/backfill_render.py" \
+    "$CHART_DIR/files/music/scripts/backfill_render.py"
+else
+  echo "SKIP  the chart is not at $CHART on this host (set MINING_K8S=...)"
+fi
+
+# ------------------------------------------------------------------
+# 18. the asset-pack key (card t_4906bc6e)
+# ------------------------------------------------------------------
+# `music/assets/pack.py`'s `estimate_key()` opened with a short-input early
+# return that answered "C minor" for audio it had not analysed, and the
+# generator wrote that value into the manifest `key`, into `metadata.key` (the
+# object this suite's own pack cases read), into every loop record, into
+# loop_points.json, into the README and into the clearance document — the
+# record a pack's licence rests on. Card t_f65b0f4c fixed the same shape in the
+# planner's plan; this is the asset-pack half.
+#
+# Measured on nexus 2026-10-16 (numpy 2.5.3 / scipy, /usr/bin/python3) the
+# pre-fix branch held TWO defects: under 2048 samples it returned the
+# fabricated "C minor", and 2048..4095 samples — above that guard — made
+# `sps.stft` shrink nperseg to the input length and raise
+# `ValueError: noverlap must be less than nperseg`. The analyser's real usable
+# length is its own window (4096 samples); below it there is no estimate.
+#
+# These cases are what makes it a check rather than a claim: the test file is
+# RED against the pre-fix code (15 checks failed there, measured), it builds a
+# pack whose ONLY loop can exist but whose audio cannot be measured and asserts
+# every artifact says the explicit unknown, and section 4 fails if the floor
+# was implemented by making the analyser answer nothing for everything.
+say "the asset-pack key is measured or explicitly unknown (music/tests/test_pack_key.py)"
+pass "pack key: no fabricated key below the analyser's window, and --key still wins (t_4906bc6e)" \
+  "$PY" "$REPO/music/tests/test_pack_key.py"
+
+# ------------------------------------------------------------------
+# 19. the fixture builders write nothing into the repo (card t_7ab98781)
+# ------------------------------------------------------------------
+# `music/gates/_visual_fixtures.py` wrote its ffmpeg concat demuxer list to the
+# BARE RELATIVE name `concat_list.txt`. This suite cd's to the repo root before
+# it builds fixtures, and `concat_list.txt` is a TRACKED file there, so EVERY
+# matrix run overwrote it with that run's own fixture paths and left the shared
+# checkout dirty - measured on nexus 2026-10-16: `git diff concat_list.txt`
+# held three `file '<that run's scratch>/pscene_N.mp4'` lines. A tree dirtied by
+# a fixture byproduct is how that byproduct gets swept into somebody's commit by
+# `git add -A`. The builder now derives the list from its OUTPUT path and
+# refuses a relative one; these cases hold that down without needing ffmpeg.
+#
+# The sibling half of the same card - the planner suite writing its plans to
+# fixed names in the shared temp dir - is section 8 of `test_planner.py`, which
+# leg 14 above runs.
+say "the fixture builders write only into the scratch they are given (t_7ab98781)"
+pass "fixtures: the concat list goes next to its output, and a relative output is refused" \
+  "$PY" "$REPO/music/tests/test_gate_fixture_scratch.py"
+
+# ------------------------------------------------------------------
+# 20. the CDP rail's style field (card t_0525127c)
+# ------------------------------------------------------------------
+# `music/prompts/commentary-beds.md` sells a KIT and says so itself: "Two
+# separate generations — never one". It declares TWO style fields - `## Style
+# field — INTRO STING` (line 8, 420 chars) and `## Style field — LOOPABLE TALK
+# BED` (line 14, 422 chars). `music/suno-gen.py`'s reader took the FIRST fenced
+# block after the first heading:
+#
+#     m = re.search(r"## Style field.*?```text\n(.*?)```", text, re.S)
+#
+# Measured 2026-10-16 against the pre-fix revision (sha256 9698f330...):
+# `load_style_prompt("commentary-beds")` returned the STING's 420 chars, and a
+# second argument raised `TypeError: load_style_prompt() takes 1 positional
+# argument but 2 were given` — so the kit's bed was unreachable from the rail
+# and any run from that genre could only produce the sting. The planner carried
+# the same defect and was fixed first (card t_3497b627, commit 29f0c19).
+#
+# The rail now calls the planner's own parser (`parse_style_fields` +
+# `resolve_style_caption`) through `planner_module()`, takes the field the
+# CALLER names (`--style-field`), and refuses on an unknown name or an omission
+# where the template declares two — with no fallback to the first block. The
+# test file is RED against the pre-fix rail (26 checks failed there, measured:
+# `--suno-gen /tmp/<prefix>/suno-gen.py`), and section 4/6 of it hold the 13
+# single-field templates and the shared-parser claim.
+say "the CDP rail's style field is the one the caller names (t_0525127c)"
+pass "style field: the kit's bed is reachable by name, and an unnamed/unknown field is refused" \
+  "$PY" "$REPO/music/tests/test_suno_gen_style_field.py"
 
 # ------------------------------------------------------------------
 rm -f /tmp/gate_out.$$
