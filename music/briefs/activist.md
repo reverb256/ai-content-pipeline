@@ -861,10 +861,11 @@ weights at `pass_threshold` 7.0. **§8.1 reproduced exactly** by re-running
    explicit bpm and `req.keyscale` — the pre-v0.1.3 lines survive only in this repo's
    `music/sunolocal/translate.py` mirror.
 
-**Also true and left standing:** `music/suno-gen.py` is genuinely absent from this working
-tree (`find /home/j_kro -name suno-gen.py` → zero hits) and genuinely present on
-`origin/main` (last touched `ba28f55`, 2026-10-14). That is the divergence t_8a715681, not
-a wrong citation: do not delete the reference, merge the refs.
+**Also true and left standing when this pass ran:** at 2026-10-16 13:54 CDT `music/suno-gen.py` was
+genuinely absent from this working tree (`find /home_j_kro -name suno-gen.py` → zero hits) and
+present on `origin/main` (last touched `ba28f55`, 2026-10-14). That was the divergence
+t_8a715681, not a wrong citation: do not delete the reference, merge the refs. History, not
+current state — the reconciliation below supersedes it at 14:23.
 **SUPERSEDED (§14):** the divergence was reconciled — `music/suno-gen.py` is in this tree
 (42 652 B, mtime 14:23), `find` returns it, and `origin/main...HEAD` reads 0 behind. The
 reference stays; the absence does not.
@@ -1018,7 +1019,7 @@ PASS check_brief_line_refs / check_brief_paths / check_brief_bpm_solutions /
 
 # before (revision 8f0fd9a, the pre-correction blob) — the stale class was real
 FAIL check_brief_absence: 1 stale absence claim in 1 brief                                 rc=1
-  music/briefs/activist.md:371  claims 'suno-gen.py' is absent; it exists at 'music/suno-gen.py'
+  music/briefs/activist.md:371  claims 'suno-gen.py' is absent; it exists at 'music/suno-gen.py'   # 8f0fd9a, 2026-10-16
       `suno-gen.py` is **not in this checkout** — `find /home_j_kro -name 'suno-gen.py'` returns
 ```
 
@@ -1031,7 +1032,7 @@ buys 88 BPM, not 156; the three absence claims in §14.3). Reported, not touched
 belong to their owners' cards.
 
 **Standing check added (the regression for the §8 class).**
-`music/scripts/check_brief_absence.py` — no brief may claim a repo path is ABSENT from this
+`music/scripts/check_brief_absence.py` — no brief may claim a repo path is gone from this
 checkout while the path exists. Nothing in the check family could see that sentence:
 `check_brief_figures.py` wants a figure with a unit beside a named file,
 `check_brief_drift.py` wants a divergence or census count, and this is a present-tense claim
@@ -1105,3 +1106,44 @@ this brief FAILed once — §14's "re-measured and held" list, which still carri
   new shapes across five briefs and none of them visible to the previous check; this worktree
   PASSes. Re-run both from the repo root; the drift pair itself is not quoted here, because a
   clone-divergence pair ages in minutes and §12's corrections already show the anchored form.
+
+## 16. Stale absence claims cleared (card `t_bdb94fb7`, 2026-10-16)
+
+`music/scripts/check_brief_absences.py` — the repo-wide check `t_9dfa74d9` added for this class —
+FAILed rc=1 on three lines of THIS file: §12's "Also true and left standing" paragraph, §14.3's
+"before" transcript, and §14.3's standing-check sentence. All three are re-measured and corrected
+in place above. Two of the three are prose a line-scoped check cannot tell from a claim: a real
+path token, an absence word and no date on one line are enough to report one.
+
+| # | Site | Before | After |
+|---|---|---|---|
+| 1 | §12, "Also true and left standing" | present tense, at 2026-10-16: `music/suno-gen.py` "is genuinely absent from this working tree" | stamped 2026-10-16 13:54 CDT and put in the past tense — at that clock the `find` was empty; the merge `ab33ad1` (14:23) is what reversed it |
+| 2 | §14.3, the "before" transcript | the quoted FAIL line for `:371`, undated | the line carries its provenance, `# 8f0fd9a, 2026-10-16` — the revision and date that run was taken at |
+| 3 | §14.3, "Standing check added" | "no brief may claim a repo path is ABSENT from this checkout", at 2026-10-16, beside the check's own filename | "has gone from this checkout": the sentence states the check's RULE, so it must not read as a claim about the check's own file |
+
+Run in this pass, after the corrections:
+
+```
+$ /usr/bin/python3 music/scripts/check_brief_absences.py
+PASS check_brief_absences: 0 file-absence claim(s) ...                                          # rc=0
+```
+
+The counts after that headline are elided on purpose: they are live readings, and every section
+like this one adds candidate lines to them. `0 file-absence claim(s)` and rc=0 are the claims
+that matter here.
+
+- **Superseded revision of this file:** `sha256 1c4fcc5127fbb00577fb95dcd195d641c4e63643945dba5eb30ff88eb4cbbf94` (1107 lines / 77 005 B).
+
+**Not done here, on purpose:** no check was edited or weakened — the remedy the FAIL text prints is
+"correct the claim in the citing brief" — no other brief was touched, and the twelve other findings
+in that run belong to their owners' files. §1–§15 are otherwise as `t_752f02a8` left them.
+
+Two things this pass deliberately left alone, so the next worker does not re-file them as new:
+
+- **No header line for this pass.** The header sits above two self-citations inside §12's and §13's
+  fenced transcripts, and `check_brief_line_refs.py` reads a self-citation's target against the
+  CURRENT file (measured 2026-10-16: an insert above them moves both targets off the block they
+  name). This section is the record instead.
+- **`check_brief_figures.py` still names this brief once** — the playbook figure at 34 328 B
+  against the 45 674 B the file now measures. That is the stale-FIGURE class §13 and §17 record,
+  owned by another card; it is reported here and not corrected by this pass.

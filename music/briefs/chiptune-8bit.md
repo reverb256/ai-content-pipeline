@@ -24,6 +24,9 @@
 > **Superseded digest:** this file was
 > `sha256 2e603d85ef4e5b3ce41c2d69b5ff1b9210828e289bb2b6c6c3ed1dda64974457`
 > (692 lines / 39 339 B) when this pass began. The revision below supersedes that copy.
+> **Rail B absence claim corrected (card `t_bdb94fb7`, 2026-10-16):** §7 had said `music/suno-gen.py`
+> was out of local `main` and out of its history; the reconciliation merge put it in both. §16
+> records the correction and the superseded revision.
 
 Every number and quoted string below comes from a command run or a file read during this
 stage. Nothing is recalled. Where something is unknown, it says so.
@@ -700,9 +703,14 @@ gates, the plans, the chart, or the cluster; no new card was created.
   `"instrumental": False`, line 93 `"style_weight": None`, and the render CronJob invokes
   `acestep_plan.py <plan> --name <stem>` with **no** `--allow-empty` — the wrapper defines the
   flag at line 115, but the CronJob never passes it.
-- Rail B: `music/suno-gen.py` is absent from local `main` **and** from all of local `main`'s
-  history (`git log main -- music/suno-gen.py` → empty), present on `origin/main` from
-  `ba28f55`; merge-base `e278f61`.
+- Rail B: `music/suno-gen.py` (42 652 B) **is in this tree and in local `main`** — the
+  reconciliation merge `ab33ad1` (14:23) is what brought it in (its diff adds the file, +1025
+  lines), so `git log main -- music/suno-gen.py` now returns both commits that carry it
+  (`295fc49`, 2026-10-09 added it; `ba28f55`, 2026-10-14 touched it), and the worktree copy is
+  byte-identical to `main:music/suno-gen.py`. **This reverses the brief-stage claim** that local
+  `main` carried neither the file nor any commit touching it: the reference stands, the absence
+  does not. Merge-base with `origin/main` was `e278f61` at the brief stage and is `97be84f` now
+  (measured `178be75`, 2026-10-16).
 - §8.1: `stages.yaml` references exactly seven gates and neither `gate_sync_ready` nor
   `gate_loop_points` is among them; `gate_sync_ready.py:204-207` only asserts that
   `loop_points.json` exists and then says `run gate_loop_points.py for the seam check`.
@@ -912,3 +920,30 @@ across `music/briefs/**`. On the widened check this brief FAILed once, in §12's
 - **Regression proof, same card:** `--rev e40c7f9` FAILs with 20 stale counts, 8 of them in the
   new shapes (this brief's brace list at `e40c7f9:321` among them) and none of them visible to the
   previous check; this worktree PASSes. Re-run both from the repo root.
+
+## 16. The Rail B absence claim was stale (card `t_bdb94fb7`, 2026-10-16)
+
+`music/scripts/check_brief_absences.py` FAILed rc=1 on §7's Rail B bullet. The brief-stage claim
+(13:17) that `music/suno-gen.py` was absent from local `main` **and from all of its history** no
+longer held. Re-measured on `178be75`:
+
+```
+$ git log --diff-filter=A --format='%h %ad %s' --date=short main -- music/suno-gen.py
+295fc49 2026-10-09 suno-gen: instrumental mode — the reason 8 genre templates could never validate
+$ git log --oneline main -- music/suno-gen.py
+ba28f55 music: instrumental mode in generation path (8/12 templates unblocked)
+295fc49 suno-gen: instrumental mode — the reason 8 genre templates could never validate
+$ git diff --stat ab33ad1^ ab33ad1 -- music/suno-gen.py
+ music/suno-gen.py | 1025 +++++++++++++++++++++++++++++++++++++++++++++++++++++
+```
+
+The reconciliation merge `ab33ad1` (14:23) is what brought the file into this checkout's `main`,
+and the worktree copy is byte-identical to `main:music/suno-gen.py`. §7's bullet is corrected in
+place: the reference stands, the absence does not. `check_brief_absences.py` is rc=0 repo-wide
+after the four-brief pass of this card.
+
+- **Superseded revision of this file:** `sha256 f797b25c257522d3bf4d8cec493f96d1a319d76b71d99611b580a9922f14fc3d` (914 lines / 56 493 B).
+
+No registry value, gate, plan, blueprint, chart file or cluster object was touched, and the two
+open `check_brief_line_refs` findings in this brief (its `music/genres.yaml` ranges) are not this
+pass's — they were left exactly as they stand.

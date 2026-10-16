@@ -36,6 +36,9 @@
 >    (`t_e6d422ec`, 15:56).
 > 4. `sha256 3f19591d395550df4778cd21bdf461690b8848bf6923b192f202efb578cceca4` (671 lines /
 >    42450 B) — **superseded by THIS pass** (`t_354d5d25`); §16 lists the classes it corrected.
+> 5. `sha256 fb78ecde6d5ae120e4fb7e9e742ee19100f7c6888ddce914310c26a655d5a13b` (971 lines /
+>    64 164 B) — two `check_brief_absences.py` findings cleared (`t_bdb94fb7`, 2026-10-16);
+>    §17 records them.
 >
 > **Oracle (card title):** 7.2/10. **Oracle (measured now, live):** **7.00/10**, reproduced by
 > `music/oracle.py --dry-run` in this pass. 7.00 ≥ 5.0, so the routing verdict — produce — is
@@ -776,7 +779,8 @@ genre's three lanes — rather than assuming the YouTube gate (`t_d9983bb9`).
 - Visual: `music/visuals/element-water.md` (1046 B)
 - Runbook: `brain/runbooks/music-game-assets.md` (**88 lines**, re-measured in this pass — the
   write-time transcript said 53) — of the executables it names, `butler` and
-  `~/.hermes/vault/itch_io_key` are still absent (§10); `music/assets/pack.py` exists
+  `~/.hermes/vault/itch_io_key` are still absent (§10); the pack builder it names is here:
+  `music/assets/pack.py` exists
 - Gates: `music/gates/` — `gate_quota` PASS live; `gate_sync_ready` exercised live on an empty
   dir (16 findings, quoted in §5); `bash music/gates/check_gate_suite.sh` **rc=0**, interpreter
   `/usr/bin/python3`, on 2026-10-16 16:3x CDT
@@ -960,7 +964,8 @@ against live state and correct the ones that had aged.
    re-run check list, the engine pod (`sunolocal-source-75d58dbc97-7jfmc`, v0.1.3) and the status
    of every cited card (all `done`).
 10. **Two standing-check findings that named this brief were cleared**: `check_brief_figures`
-    ("53 lines" → 88) and `check_brief_absence` ("`music/suno-gen.py` is absent" → present, §9).
+    ("53 lines" → 88) and `check_brief_absence` — its 2026-10-16 finding about
+    `music/suno-gen.py` is cleared; the file is in the tree now (§9).
     No check names this brief now.
 
 **Not done in this pass, on purpose:** the genre was re-scored, not re-scored *by hand* — 7.0 is
@@ -968,4 +973,28 @@ reproduced from `oracle.py`, and no card was re-emitted. No queue entry was writ
 to the `nexus-core` queue card this genre does not yet have, and writing the render queue from
 the brief would collide with the card that owns the genre's title and duration. No file outside
 `music/briefs/elemental-water.md` was modified by this pass.
+
+## 17. Two absence findings on this file cleared (card `t_bdb94fb7`, 2026-10-16)
+
+`music/scripts/check_brief_absences.py` FAILed rc=1 on two lines of this file, both ways a
+line-scoped check reads prose as a claim about a path:
+
+| # | Site | Before | After |
+|---|---|---|---|
+| 1 | §14, Runbook bullet | the pack builder and the runbook's own unfindable executables shared one line at 2026-10-16, so `music/assets/pack.py` sat beside the word "absent" | the pack builder gets its own sentence; the runbook's unfindable executables (`butler`, `~/.hermes/vault/itch_io_key`) keep the claim |
+| 2 | §16 item 10 | a CLEARED `check_brief_absence` finding quoted in the present tense | stamped as the 2026-10-16 finding it was; the file is in the tree now (§9) |
+
+Neither line denied the file that was there, so neither was a stale figure — the check is
+line-scoped, and the remedy is the one its own FAIL text prints: correct the citing brief. No check
+was edited or weakened.
+
+```
+$ /usr/bin/python3 music/scripts/check_brief_absences.py
+PASS check_brief_absences: 0 file-absence claim(s) ...                                          # rc=0
+```
+
+The counts after that headline are elided on purpose: they are live readings, and this section
+itself adds candidate lines to them.
+
+- **Superseded revision of this file:** `sha256 fb78ecde6d5ae120e4fb7e9e742ee19100f7c6888ddce914310c26a655d5a13b` (971 lines / 64 164 B).
 

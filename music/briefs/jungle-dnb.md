@@ -42,6 +42,9 @@
 > three §14 claims that still described it as open.
 > **Superseded revision of this file (before that pass):**
 > `sha256 5b3914191c5108814cccaaaa2c51f8a5b5eff1efc17455f7ddc4c173dac486ea` (1168 lines / 76 392 B).
+> **Superseded revision of this file (before the absence-claim pass, `t_bdb94fb7`, 2026-10-16):**
+> `sha256 dbec2ef82dee346e751ff0cc1f95fab2dec2e77b682d657bc2c0d00fadb1bc82` (1375 lines / 94 569 B).
+> §19 records the one line corrected.
 
 Every number and quoted string below comes from a command run or a file read during this
 stage. Nothing is recalled. Where something is unknown, it says so and names the test.
@@ -761,8 +764,8 @@ In stage order, with what each one actually executes:
      (§6.3). Either pass the plan's bpm through the client, or set `style_weight = 0.9`
      (→ 168) — 0.9, not the template's documented 0.8, which yields 156 and lands below the
      pocket floor.
-  2. **Run the A/B test first** (§6.3): one render at `style_weight = 0.9`, one with it
-     absent, both measured with `music/rubrics/measure.py`. Until that is done, nobody
+  2. **Run the A/B test first** (§6.3): one render at `style_weight = 0.9`, one with the field
+     left unset, both measured with `music/rubrics/measure.py`. Until that is done, nobody
      knows whether the `bpm` input even steers ACE-Step. Do not spend a queue slot
      pretending it does.
   3. **The lyric sheet must be complete before render**, because `ace_comfy.py` passes
@@ -1373,3 +1376,15 @@ against a widened placeholder rule — a sibling's gate change in flight).
 
 - **Superseded by this pass (card `t_a54fb00d`, 2026-10-16):** `sha256 f9d76960fb3c836b84653e7f5037bad161f01d7d75699fe965e3e9868bfd572c` (1262 lines / 85 699 B).
 - **Superseded by this pass, same card, second commit (the environment-failure hardening of the new check, 2026-10-16):** `sha256 710fbd9bceca8d3b9528448a6f9e1e4cc72ed387ead673b23b58f53fa8f1a3fe` (1367 lines / 93 767 B).
+
+## 19. A `measure.py` line that only looked like an absence claim (card `t_bdb94fb7`, 2026-10-16)
+
+`music/scripts/check_brief_absences.py` FAILed rc=1 on item 2 of the generate prompt (line 765
+at `178be75`): "one render at `style_weight = 0.9`, one with it absent, both measured
+with `music/rubrics/measure.py`". The absence belongs to the `style_weight` FIELD, not to the
+measurement script — and `music/rubrics/measure.py` is present, which the line never denied. A
+line-scoped check cannot tell use from mention, so the sentence is reworded to "one with the field
+left unset": the A/B instruction and its meaning are unchanged. `check_brief_absences.py` is rc=0
+repo-wide after the four-brief pass of this card.
+
+- **Superseded by this pass (card `t_bdb94fb7`, 2026-10-16):** `sha256 dbec2ef82dee346e751ff0cc1f95fab2dec2e77b682d657bc2c0d00fadb1bc82` (1375 lines / 94 569 B).
