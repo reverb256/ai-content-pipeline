@@ -353,7 +353,13 @@ if [ "${STALE_WRITE_CHECKS:-1}" != "0" ]; then
   [ "$stale_armed_rc" -eq 0 ] || stale_rc="$stale_armed_rc"
   [ "$stale_audit_rc" -eq 0 ] || stale_rc="$stale_audit_rc"
   say "$TS - stale-write guard: armed_rc=$stale_armed_rc audit_rc=$stale_audit_rc (window: $window)"
-  stale_verdict="$(tail -n 1 "$OUT" 2>/dev/null || echo '(no stale-write output)')"
+  # The one line worth putting in the state string: the first stale write the
+  # audit named, or the guard's own verdict when there was none. `tail` alone can
+  # land on a blank line (measured: the state string came out empty).
+  stale_verdict="$(grep -m1 '^REFUSE ' "$OUT" 2>/dev/null || true)"
+  [ -n "$stale_verdict" ] || stale_verdict="$(grep -m1 '^check_stale_write' "$OUT" 2>/dev/null || true)"
+  [ -n "$stale_verdict" ] || stale_verdict="$(grep -m1 '^note  ' "$OUT" 2>/dev/null || true)"
+  [ -n "$stale_verdict" ] || stale_verdict="(no stale-write output)"
   # rc=1 is a stale write that landed in the window (someone bypassed the guard,
   # or the guard was disarmed while it happened); rc=3 is a guard that is not
   # armed. Both are reported: an unanswerable check is not a pass.
