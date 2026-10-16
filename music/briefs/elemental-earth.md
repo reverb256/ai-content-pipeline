@@ -513,6 +513,10 @@ observed failure.
 - **`t_5ed495eb`** (NEW, distributor; parent = this card) — the asset-pack ↔ game-assets gate
   mismatch (D5, §3), filed during this stage with the 12 findings and the two seam runs. It
   blocks the primary lane of all six gamer genres, not just this one.
+- **`t_909069f0`** (NEW, nexus-core; parents = this card + `t_25a6499c`) — queue this track into
+  the live generation path. It carries the exact render parameters measured in §7a
+  (`styleWeight` 0.2333, tag sheet as `lyrics`, cue appended to `style`, 600 s duration) and is
+  gated so it cannot run before the instrumental-mode fix lands.
 
 ## 13. Provenance
 
