@@ -8,6 +8,7 @@
     {
       "id": "tempo_idiom",
       "name": "Tempo matches the idiom (opening vs ending)",
+      "applies_to": "all",
       "weight": 3,
       "type": "measured",
       "anchor": "Openings 130-180 BPM (J-rock often 170+); endings 70-120 BPM (Virtual Reflections CAMPAIGN.md anisong craft table; genres.yaml anime-opening notes).",
@@ -17,6 +18,7 @@
     {
       "id": "royal_road",
       "name": "IV-V-iii-vi 'royal road' progression (王道進行)",
+      "applies_to": "all",
       "weight": 3,
       "type": "craft",
       "anchor": "The IV-V-iii-vi progression is nicknamed 'the anime progression'; a 2023 Music Theory Spectrum study found it across a large share of Japan's best-selling songs for decades. Opens on the subdominant, lands on the minor vi (CAMPAIGN.md anisong craft reference).",
@@ -26,6 +28,7 @@
     {
       "id": "final_chorus_key_change",
       "name": "FINAL CHORUS JUMPS UP ONE KEY (openings) / gentle key lift (endings)",
+      "applies_to": "all",
       "weight": 3,
       "type": "craft",
       "anchor": "The final-chorus modulation up ONE KEY is the genre's DEFINING gesture — in J-pop practice that is a +1 semitone (or +2 semitone) lift; omit it and the track reads as generic rock (CAMPAIGN.md; genres.yaml anime-opening notes: 'A generation without the key-changed final chorus is OUT of genre - reject it'). The final chorus typically occupies the last ~20-30% of the track and is its loudest section. Endings: gentle key lift in the final chorus; hard-cut ending is a defect — the tail fades the light (genres.yaml anime-ending notes).",
@@ -35,6 +38,7 @@
     {
       "id": "tv_edit_density",
       "name": "90-second TV-edit density (openings)",
+      "applies_to": ["anime-opening"],
       "weight": 2,
       "type": "craft",
       "anchor": "Openings are written to survive a 90-second TV edit: maximum information density, no wasted bars; dense layers — piano AND strings together, busy drums, melodic bass (CAMPAIGN.md craft table).",
@@ -44,6 +48,7 @@
     {
       "id": "japanese_vocals",
       "name": "Japanese vocals in Japanese script",
+      "applies_to": "all",
       "weight": 2,
       "type": "craft",
       "anchor": "Japanese script (kana/kanji), NOT romaji. For Suno, lyrics must be written in Japanese script for correct pronunciation (CAMPAIGN.md craft table). Romaji lyrics produce wrong pronunciation; English vocals are out of idiom for the anison lane. Chorus lines typically 7-9 morae per phrase in J-pop lyric practice.",
@@ -53,6 +58,7 @@
     {
       "id": "loudness_target",
       "name": "Master hits the lane loudness target",
+      "applies_to": "all",
       "weight": 1,
       "type": "measured",
       "anchor": "Streaming -14 LUFS (pipeline gate_loudness spec).",
@@ -61,8 +67,16 @@
     }
   ],
   "reject_signals": [
-    "anime-opening without the key-changed final chorus — OUT of genre, reject regardless of other scores (genres.yaml is explicit)",
-    "anime-ending with a hard-cut ending — defect, the tail fades the light",
+    {
+      "id": "opening_no_key_change",
+      "signal": "anime-opening without the key-changed final chorus — OUT of genre, reject regardless of other scores (genres.yaml is explicit)",
+      "applies_to": ["anime-opening"]
+    },
+    {
+      "id": "ending_hard_cut",
+      "signal": "anime-ending with a hard-cut ending — defect, the tail fades the light",
+      "applies_to": ["anime-ending"]
+    },
     "English-only lyrics on an anison claim",
     "tempo outside the idiom range with no in-range candidate",
     "clipped master (max_volume_db >= -0.1)"

@@ -44,6 +44,22 @@ done
 # --- artifact scan walks brain/, performance/ AND campaigns/ ------------------
 ARTIFACTS=$(find brain performance campaigns -type f \( -name '*.md' -o -name '*.txt' -o -name 'metadata.json' -o -name 'lessons.json' \) 2>/dev/null | wc -l | tr -d ' ')
 
+# --- rubric scope integrity (incident: card t_426a82a3) ----------------------
+# A rubric criterion whose sub-idiom scope exists only in its NAME is scored
+# for EVERY genre of the family. On 2026-10-16 that put a correct 92 BPM
+# elemental-air exploration theme at 41/11 = 3.73 against the panel's 7.0
+# threshold, for a genre the oracle scores 7.5. The check is
+# `panel.rubric_scope_defects()` inside the music panel's unit tests.
+# Quiet PASS, loud FAIL — the same rule every other metric here follows.
+# Override the interpreter if numpy/PyYAML live elsewhere (RUBRIC_PY=...).
+RUBRIC_PY="${RUBRIC_PY:-/usr/bin/python3}"
+if RUBRIC_TEST_OUT=$("$RUBRIC_PY" music/rubrics/test_panel_math.py 2>&1); then
+  RUBRIC_TEST="PASS"
+else
+  RUBRIC_TEST="FAILED"
+  FAILS+=("rubric scope test: music/rubrics/test_panel_math.py FAILED with $RUBRIC_PY — criterion scope data is broken (incident card t_426a82a3); last lines: $(printf '%s' "$RUBRIC_TEST_OUT" | tail -3 | tr '\n' ' ')")
+fi
+
 # --- previous week's actions --------------------------------------------------
 PREV=$(ls -1 performance/weekly/*.md 2>/dev/null | grep -v "/$DATE" | sort | tail -1 || true)
 PREV_ACTIONS="(no previous digest found)"
@@ -128,6 +144,7 @@ PY
   echo "## Metrics"
   echo "- Git commits (7d): $GIT_COMMITS"
   echo "- Review artifacts (brain/, performance/, campaigns/): $ARTIFACTS"
+  echo "- Rubric scope test (music/rubrics/test_panel_math.py): $RUBRIC_TEST"
   echo "- Kanban boards:"
   echo "$KANBAN_STATS_MD"
   echo
