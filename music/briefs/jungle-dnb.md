@@ -34,6 +34,14 @@
 > longer earns the 5.0 premium. Threshold 5.0 → produce: the number moved, the routing verdict
 > did not. Both live components and the floor the total flattens at are in §1.2; the oracle
 > ruling and the re-scored digest are in §14.
+> **Verified (citation sweep, `t_e86c2110`):** 2026-10-16T16:12-05:00 (CDT) — see §17. The
+> `genres.yaml` defaults-range class this file's §14 regression exists to catch is now GREEN
+> repo-wide: `check_brief_line_refs.py` → PASS, 118 cited ranges across 14 briefs, rc=0, and
+> `--selftest` PASS. The two sites §14 left open were fixed by their own genres' cards before
+> this card was claimed; this pass verified the landing, re-measured the sweep, and corrected the
+> three §14 claims that still described it as open.
+> **Superseded revision of this file (before that pass):**
+> `sha256 5b3914191c5108814cccaaaa2c51f8a5b5eff1efc17455f7ddc4c173dac486ea` (1168 lines / 76 392 B).
 
 Every number and quoted string below comes from a command run or a file read during this
 stage. Nothing is recalled. Where something is unknown, it says so and names the test.
@@ -356,7 +364,7 @@ Two live counterexamples make the rule concrete rather than theoretical:
 | Rail | Entry point | Live? |
 |---|---|---|
 | A — `sunolocal` (in-cluster, CPU-plan + GPU render via ComfyUI on zephyr) | `music-pipeline` CronJob (17 */6 * * * → planner) → `music-pipeline-render` CronJob (41 */4 * * *) → `/payload/music/scripts/acestep_plan.py` → `sunolocal.mining.svc.cluster.local:8123` | **YES.** Service answers `{"status":"ok"}`. |
-| B — Suno CDP (Premier session, `music/suno-gen.py`) | `music/suno-gen.py` | **NO — the file does not exist in this tree.** `ls music/suno-gen.py` → `No such file or directory` |
+| B — Suno CDP (Premier session, `music/suno-gen.py`) | `music/suno-gen.py` | **Rail reachable now.** The file was missing when this table was first measured and is in this tree (42 652 B, mtime 14:23 — card `t_8a715681` reconciled). Rail A is still the rail the CronJobs run. |
 
 ```
 $ cd /home/j_kro/ai-content-pipeline && git status -sb | head -1
@@ -900,7 +908,7 @@ open for this genre at the brief stage.
 | t_5a93164a | nexus-core | `advance-stage.sh` is a silent no-op in workers (§11.2) |
 | t_bc6a0c00 | nexus-core | the draft-lyric guard passes parenthetical direction lines (§6.4) |
 | t_19d0714b | ops | dispatcher ownership + the duplicate-card decision (§11.6) |
-| t_b0a4db92 | coo | `brain/playbooks/music-lane-architecture.md` is cited by 10+ files and does not exist — every `§` reference in this lane is uncheckable, including §2/§3/§5/§11.2 quoted in `lanes.yaml`, `autonomy.yaml` and `gates/README.md` |
+| t_b0a4db92 | coo | `brain/playbooks/music-lane-architecture.md` is cited by 10+ files and was reported absent, which left every `§` reference in this lane uncheckable, including §2/§3/§5/§11.2 quoted in `lanes.yaml`, `autonomy.yaml` and `gates/README.md` — **RESOLVED**: the doc is in `HEAD` (rewritten `7411afa`, head touching it `6b24a52`) and `music/scripts/check_doc_refs.py` PASSes |
 | t_9546841b | music-producer | `gate_loudness` ruler (volumedetect RMS vs ebur128 LUFS) |
 
 **New, created by this brief (one card, because the genre needs a queue entry no existing
@@ -914,7 +922,7 @@ covers:**
 | Card | Assignee | Defect |
 |---|---|---|
 | `t_eb648761` | oracle | `trend_signal`'s fallback scores a **failed** fetch (5.0) above a measured-null scrape (3.0) — the whole of this genre's 7.2-vs-7.0 spread (§1.2). **Superseded before dispatch:** the card that owns this defect, `t_bf0e5edd`, had an uncommitted fix in the same working tree by 14:25 (`TREND_NO_SIGNAL = 3.0` + `music/scripts/check_oracle_determinism.py`), so this card should be closed as a duplicate, not worked. |
-| `t_e86c2110` | music-producer | `anime-opening` and `chiptune-8bit` still cite `genres.yaml` **lines 19–25** for a block that is **20–25** (line 19 is blank). `music/scripts/check_brief_line_refs.py`, added by the §14 pass, is the regression and currently FAILs on exactly those two sites. |
+| `t_e86c2110` | music-producer | `anime-opening` and `chiptune-8bit` cited the `genres.yaml` **defaults block as 19–25** when it is **20–25** (line 19 is blank). `music/scripts/check_brief_line_refs.py`, added by the §14 pass, is the regression and FAILed on exactly those two sites at that reading. **Landed before this card was claimed:** `t_58072b6c` fixed `anime-opening.md` at 16:08:03 (commit `80b25a1`) and `t_60767fb1` fixed `chiptune-8bit.md` at 16:08:47 (`41b7b1e`); the sweep card verified the landing — PASS, 118 ranges, rc=0 (§17). |
 
 **Open item for j_kro (creative direction, not this lane's call):** the brief queue entry
 needs a `title`. `music/lyrics/blueprints/jungle-dnb.yaml` (card `t_e6d422ec`, §16) now supplies
@@ -959,9 +967,12 @@ still does not decide: j_kro owns the release title.
   update), `check_brief_bpm_solutions.py` (the 0.9 → 168 claim), `check_brief_paths.py`,
   `check_prompt_style_counts.py`, `check_stage_scripts.py` (FAILs only on `music/suno-gen.py`,
   the divergence t_8a715681 owns — not this brief) — the jungle-dnb brief is clean in all of them
-- **Still dangling:** `brain/playbooks/music-lane-architecture.md` does not exist in this
-  repo (t_b0a4db92), so section numbers quoted from it elsewhere in this lane cannot be
-  verified.
+- **Dangling reference — RESOLVED (`t_b0a4db92`, done).** `brain/playbooks/music-lane-architecture.md`
+  is in this repo and in `HEAD` (34 328 B, rewritten at `7411afa`, head touching it `6b24a52`),
+  so the section numbers quoted from it elsewhere in this lane **are** verifiable:
+  `music/scripts/check_doc_refs.py` → `OK: every section reference resolves to a heading in the
+  doc`. The doc's §2 genre registry carries this genre's row, and its §14 citation map lists the
+  files that read it.
 
 ---
 
@@ -1048,10 +1059,13 @@ both `music/` and `music/gates/`, so a bare basename is a real ambiguity, and re
 pod-qualified paths are out of the worktree by construction. `--selftest` builds the incident
 shape in a throwaway repo and asserts the FAIL, the PASS and the skip.
 
-Repo-wide **after this file's fix: 3 of 62 citations FAIL** — `anime-opening.md:54` and
-`chiptune-8bit.md:51,541` (the same one-line error in two other genres; 59 OK, 40 skipped as
-unresolvable, never guessed). Card `t_e86c2110` owns that sweep; the check goes green when it
-lands.
+Repo-wide **at this pass's own reading (2026-10-16T14:15 CDT): 3 of 62 citations FAILed** —
+`anime-opening.md:54` and `chiptune-8bit.md:51,541` (the same one-line error in two other
+genres; 59 OK, 40 skipped as unresolvable, never guessed). Card `t_e86c2110` owns that sweep.
+**The sweep is green (§17):** the two sites were fixed by their own genres' cards at 16:08 CDT
+(commits `80b25a1`, `41b7b1e`), and `t_e86c2110` re-measured the check at 16:12 CDT → **PASS,
+118 cited ranges across 14 briefs, rc=0**, `--selftest` PASS. The 62-citation census above is the
+§14 reading and is left as a dated record, not restamped.
 
 ### Oracle ruling (operator note, 2026-10-16) — true score **6.5**
 
@@ -1089,7 +1103,8 @@ never to trust the last number seen.
 
 No registry value, gate, plan, blueprint, chart file, cluster object or campaign artifact was
 modified. One child card was created for a defect with no owner — `t_e86c2110` (the two stale
-citations in `anime-opening` / `chiptune-8bit`). A second, `t_eb648761` (the trend fallback),
+citations in `anime-opening` / `chiptune-8bit`; landed by those genres' cards and verified by the
+sweep, §17). A second, `t_eb648761` (the trend fallback),
 was created before this pass found that the card owning that defect, `t_bf0e5edd`, already had
 an uncommitted fix for it in the same working tree at 14:25: **close `t_eb648761` as a
 duplicate, do not work it.** Everything else this brief raises already has an owner in §12.
@@ -1154,7 +1169,7 @@ lyrics.py scaffold --genre jungle-dnb BEFORE  rc=2  FAIL: no lyric blueprint for
 ```
 
 - **Superseded revision of this file:** `sha256 1f866e212992a6dc4485bf78f4b408a32b2d1d79e15a31396460817cba606c37` (1113 lines / 71235 B).
-- **The scaffold is still refused, and no track dir was left behind.** `gate_lyrics_original --track-dir … --strict` FAILs the scaffolded sheet with 7 × "placeholder guidance left in" plus `authorship.status=incomplete`, so the draft guard is intact; the scaffold was written into a scratch copy of `music/`, not this worktree, so `music/lyrics/jungle-dnb/` does not exist here.
+- **The scaffold is still refused, and no track dir was left behind.** `gate_lyrics_original --track-dir … --strict` FAILs the scaffolded sheet with 7 × "placeholder guidance left in" plus `authorship.status=incomplete`, so the draft guard is intact; the scaffold was written into a scratch copy of `music/`, not this worktree, so `music/lyrics/jungle-dnb/` is absent here.
 - **Still owed, and not this card's step:** the chart payload copy. `music-pipeline-payload` does not carry `jungle-dnb.yaml` until card `t_97c92df2` runs `sync-payload.sh` under `/home/j_kro/mining-k8s/helm/charts/music-pipeline/` and commits that repo; `check-payload-sync.sh` holds the two copies identical.
 - **Census consequence, corrected in the same commit:** the briefs that cited the census as six were restated as live claims — `activist.md` (§1 and its §13), `chiptune-8bit.md` (§13), `elemental-earth.md` (§15), `elemental-water.md` (§6.3 and §15) and this file (§1, §4, §8, §12, §15). `commentary-beds.md` was **not** touched: card `t_b976f49f` had that file modified and uncommitted while this pass ran, so its census bullet stays with that card.
 - **Same class, not fixed here (no check reads code comments).** `music/planner/planner.py` and `music/tests/test_planner.py` still quote the blueprint census as it stood when they were written:
@@ -1166,3 +1181,60 @@ lyrics.py scaffold --genre jungle-dnb BEFORE  rc=2  FAIL: no lyric blueprint for
   ```
 
   Each figure was accurate when written; each now reads 7 of 14. Filed as a follow-up card rather than edited inside this one.
+
+---
+
+## 17. Citation-sweep verification (card `t_e86c2110`, 2026-10-16T16:12 CDT)
+
+§14 created `t_e86c2110` for the two sites its new regression left open, expecting the sweep card
+to fix them. It did not have to: each genre's own card fixed its §1 citation first. So this pass
+owes verification, not another edit — no second brief was written, and no registry value, gate,
+plan, blueprint, chart file or cluster object was touched.
+
+| # | §14 claim | Measured 2026-10-16 at 16:12 CDT | Verdict |
+|---|---|---|---|
+| 1 | `anime-opening` §1 cites the `genres.yaml` defaults block as 19–25 | line 73 of `music/briefs/anime-opening.md` reads **20–25** (commit `80b25a1`, 16:08:03). The 19–25 strings left further down (:74, :391, :496, :588) are that pass's own before/after records, not live citations | **landed** |
+| 2 | `chiptune-8bit` §1 cites it as 19–25 | line 61 of `music/briefs/chiptune-8bit.md` reads **20–25** (commits `41b7b1e` 16:08:47, `472ad9f`); the 19–25 left at :798 is its corrected-claim row | **landed** |
+| 3 | repo-wide "3 of 62 citations FAIL" | PASS at 16:12 CDT: **118 cited line range(s) across 14 brief(s), rc=0**, 53 skipped (ambiguous referent ×28, anchored to a rev/time ×12, not in the worktree ×13); **119 ranges at 16:20, still 0 failing** — siblings kept adding citations while this section was written | **green** |
+| 4 | the two files on their own | `--briefs music/briefs/anime-opening.md` → PASS, 6 ranges, rc=0; `--briefs music/briefs/chiptune-8bit.md` → PASS, 12 ranges, rc=0 | ok |
+| 5 | `--selftest` | PASS — correct range rc=0, off-by-one rc=1 with one caught citation, ambiguous basename rc=0 and skipped | ok |
+| 6 | the fix must carry its supersession | `chiptune-8bit.md`'s header records the superseded digest `sha256 2e603d85…` (692 lines / 39 339 B); `anime-opening.md`'s records `sha256 0e5cdfc9…` (337 lines, commit `afa242e`) | ok |
+
+**The census moved from 62 to 118 and that is not a regression.** The briefs grew while this class
+was being worked — the same ~8 concurrent `music-producer` workers expanded them — and the check
+measures every citation it can resolve. The population is unchanged at 14 briefs. §14's 62 is left
+standing as its own dated reading, and every number in this section is stamped with the time and
+revision it was read at, because the tree does not hold still: within five minutes of the 16:15
+readings below, `check_brief_line_refs` read 119 ranges (from 118) and `check_brief_figures` read 2
+findings (from 8), both with nothing in this file either way.
+
+**One FAIL that fired during the fix belongs to the check, not to the briefs, and is filed.** At the
+16:10 run the check reported a third failure, at line 835 of `music/briefs/chiptune-8bit.md`, for a
+path-and-line token *quoted* inside a fenced block labelled "Verbatim results": that block records
+the check's own output at revision `c296db6`, named on the prose line above the fence. The brief
+makes no claim about the referent's line — it reports what the tool said. The failure was also
+transient (the referent was being rewritten by a live card, `t_97494e6a`, so the target line moved
+and the same citation passed two minutes later) and mis-attributed (the message asks the citing
+brief to correct another genre's line numbering). Filed as `t_8d6c40ac` with the root cause — the
+revision anchor sits on the fence's prose line, not on the quoting line — and two narrow candidate
+fixes. The quoted output was left verbatim: mutating it would falsify the record.
+
+**Standing checks at this pass** (`/usr/bin/python3 music/scripts/<name>.py`, all at 16:12–16:15 CDT
+@ `5aed5cc`): `check_brief_line_refs` PASS, 118 ranges across 14 briefs; `check_brief_paths` PASS,
+22 citations; `check_brief_bpm_solutions` PASS, 5 styleWeight claims; `check_prompt_style_counts`
+PASS, 15 declared lengths; `check_brief_drift` PASS, 16 live counts (0 behind / 82 ahead at
+`5aed5cc`, 14 genres, 7 blueprints); `check_stage_scripts` PASS, 11 script paths;
+`check_brief_figures` **FAIL** — **1 of 120** at 16:12 (line 600 of `music/briefs/elemental-water.md`);
+at 16:16, 8 of 122, seven of them briefs still carrying `brain/playbooks/music-lane-architecture.md`'s
+recorded size while card `t_fa731c5b` fixed them; that 8-of-122 reading was taken with an
+UNCOMMITTED working-tree edit by that card holding the playbook at a size it never landed with
+(the card reverted it before committing — editing the doc invalidates the byte size many briefs
+record — so the committed doc reads 34 328 B, `sha256
+1658b9126574a66be01791b8d28a07a3e8efe0b6ca6cf6ec2b20da63f9f2c1da`); at 16:20, 2 of 122, the same class shrinking live. **No finding is this
+file's in any of the three readings**, and this pass changed no figure — the differences are other
+people's writes landing under a shared tree.
+
+- **Superseded revision of this file:** `sha256 5b3914191c5108814cccaaaa2c51f8a5b5eff1efc17455f7ddc4c173dac486ea` (1168 lines / 76 392 B).
+- **Not changed, not re-filed otherwise:** the trend-fallback card `t_eb648761` is still a
+  duplicate to close, and the blueprint-census comments in `music/planner/planner.py` and
+  `music/tests/test_planner.py` still belong to card `t_a54fb00d` (§16).

@@ -418,7 +418,7 @@ present here.
 CC-XXX-YY-NNNNN and **pass the ISRC check digit (ISO 3901)**". The code in the same file
 enforces `^[A-Z]{2}[A-Z0-9]{3}\d{2}\d{5}$` — **12 characters, no check digit** (IFPI
 Bulletin 2015/01: an ISRC has no check digit). The regex is right; the docstring is wrong
-and will send a human looking for a checksum that does not exist.
+and will send a human looking for a check digit that the standard does not define.
 
 ---
 
@@ -607,9 +607,10 @@ states the live measurement, the card that closed it, and what remains.
   `genres.yaml`, `lanes.yaml`, `autonomy.yaml`, `gates/README.md` and every gate script. The
   earlier revisions of this brief recorded that neither existed on this machine. Both are on
   disk and in `HEAD` now: `brain/playbooks/music-lane-architecture.md` (34328 B) and
-  `brain/research/music-monetization-2026.md` (11067 B). Card `t_b0a4db92` is `done`; card
-  `t_fa731c5b` tracks the sibling briefs that still carry the old reading. Every §-number this
-  brief quotes is still quoted from the gate or template that states it.
+  `brain/research/music-monetization-2026.md` (11067 B). Card `t_b0a4db92` is `done`, and card
+  `t_fa731c5b` stripped the same old reading from the sibling briefs; the playbook was rewritten
+  at `7411afa` (head touching it `6b24a52`). Every §-number this brief quotes is still quoted
+  from the gate or template that states it.
 
 ## 14. Next stage
 

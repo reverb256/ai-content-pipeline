@@ -358,7 +358,7 @@ Open items for `genre-select` / `lyrics` / `generate` (state re-measured 2026-10
 1. **OPEN — write the Japanese lyric sheet** (10 sections, human authorship, claim recorded
    by `music/lyrics/lyrics.py`). Nothing renders before this exists: the queued plan was
    refused at render for exactly this reason (§7). **This is the gate on this track.**
-   `music/lyrics/anime-ending/` does not exist (measured).
+   `music/lyrics/anime-ending/` is absent (measured).
 2. **CLOSED** — the anisong blueprint exists (4422 B) and the plan now reads `bpm 92`
    (item 1 above).
 3. **CLOSED** — the payload gap was fixed as a class, not one file. `music-pipeline-payload`
@@ -401,7 +401,8 @@ Open items for `genre-select` / `lyrics` / `generate` (state re-measured 2026-10
 - **Dangling reference — RESOLVED.** *(Corrected in the surviving-card pass.)*
   `brain/playbooks/music-lane-architecture.md` is cited as "READ FIRST" by this lane's profile,
   `stages.yaml`, `genres.yaml`, `lanes.yaml`, `autonomy.yaml`, `gates/README.md` and
-  `gates/*.py`. Live now it **exists**: 34328 B, tracked in HEAD.
+  `gates/*.py`. Live now it **exists**: 34 328 B, tracked in HEAD, rewritten at `7411afa` (head touching
+  it `6b24a52`).
   `brain/research/music-monetization-2026.md` exists too (11067 B), as does `brain/RULINGS.md`
   (4118 B). All three are absent from `origin/main` — they are committed locally only. So the
   section numbers this brief quotes from the architecture (§4, §5, §11.2) **are** checkable
@@ -536,7 +537,7 @@ sweep), 2026-10-16 15:54:
 ### Still open
 
 1. **The lyrics are the gate on this track.** A human-authored Japanese sheet for 10 sections
-   (`music/lyrics/anime-ending/` does not exist). Card `t_9917d23b` (writer) covers the scaffold
+   (`music/lyrics/anime-ending/` is absent). Card `t_9917d23b` (writer) covers the scaffold
    and draft sheets; the human authorship claim is still j_kro's. Nothing renders before it —
    the queued plan was refused for exactly this reason (§7).
 2. `instrumental_version`, `license_tiers` and a real `clearance_doc` for the `sync` and
@@ -544,7 +545,7 @@ sweep), 2026-10-16 15:54:
 3. **The kanban route is open but gated:** the board driver runs and routes correctly, armed
    `DRY_RUN=1` pending a j_kro decision on board ownership (card `t_41f354be` §4). Stage markers
    written by comment (the path this card uses) do not depend on it.
-4. Master / stems / package for this track: not built. `music/packages/` does not exist. The
+4. Master / stems / package for this track: not built. `music/packages/` is absent. The
    album record is now in this tree (§6), so re-measure the host question before routing it.
 5. The payload carries 6 lyric blueprints; the repo has 7 (`jungle-dnb.yaml`, added 15:49, is
    not in the payload). Could be sync timing rather than a gap — unverified, so recorded, not
