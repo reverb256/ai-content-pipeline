@@ -269,8 +269,24 @@ def policy_risk_score(genre_lanes: list, lanes: dict) -> float:
     return max(0.0, min(10.0, score))
 
 
+# The trend component's floor: "fetched fine, observed no signal". A fetch that
+# FAILS must score the same. The score is a property of the genre, not of the
+# network. Until 2026-10-16 the except branch below returned 5.0 while this
+# state returned 3.0, so every BROKEN run scored 0.2 ABOVE the working run on
+# the 10-point total — and the higher-scoring card of each twin pair was the
+# one whose web fetch broke (28 cards for 14 genres, card t_bf0e5edd).
+# Regression checks: music/scripts/check_oracle_determinism.py (component),
+# music/scripts/check_oracle_board.py (one open card per genre).
+TREND_NO_SIGNAL = 3.0
+
+
 def trend_signal_score(genre_name: str) -> float:
-    """Score 0-10 based on external trend signals (web search)."""
+    """Score 0-10 based on external trend signals (web search).
+
+    Three fetch outcomes, and none of them may outscore a working fetch:
+    200 with >=5 snippets -> 10.0, 200 with 0 snippets -> TREND_NO_SIGNAL,
+    200 with some snippets -> proportional, fetch raises -> TREND_NO_SIGNAL.
+    """
     try:
         query = f"{genre_name} music trend 2026"
         url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
@@ -282,11 +298,15 @@ def trend_signal_score(genre_name: str) -> float:
         if count >= 5:
             return 10.0
         elif count == 0:
-            return 3.0
+            return TREND_NO_SIGNAL
         else:
-            return 3.0 + (count / 5.0) * 7.0
-    except Exception:
-        return 5.0
+            return TREND_NO_SIGNAL + (count / 5.0) * 7.0
+    except Exception as exc:
+        # A failed probe is degraded signal, not a bonus. Report it so the
+        # failure is visible in the journal, and score it as no signal.
+        print(f"  warn: trend fetch failed for {genre_name} ({exc!r}); scoring it "
+              f"as no signal ({TREND_NO_SIGNAL})", file=sys.stderr)
+        return TREND_NO_SIGNAL
 
 
 def score_genre(genre_name: str, genre_spec: dict, lanes: dict, quota: dict) -> dict:
