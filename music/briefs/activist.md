@@ -525,8 +525,16 @@ publish).
 - Rulings: `brain/RULINGS.md` read in full (the protest-lyric ruling at §Music, line 61,
   plus the panel mechanics); `brain/playbooks/music-lane-architecture.md` is still cited by
   the profile, `stages.yaml`, `genres.yaml`, `lanes.yaml`, `autonomy.yaml`, every gate and
-  `music/rubrics/vocal.json` (source `"arch"`), and still does not exist anywhere on this
-  machine — the same dangling reference the sibling briefs record (card t_b0a4db92)
+  `music/rubrics/vocal.json` (source `"arch"`). **The file existed nowhere on this machine
+  at 13:35 when this brief was written and at 13:50 when this pass went looking — and it
+  appeared, UNTRACKED, at 13:59:25 during the same pass: 21 696 B / 502 lines, beside an
+  untracked `brain/research/music-monetization-2026.md` (11 067 B).** Neither is committed
+  and neither is on `origin/main` (`git cat-file -e` → absent), so every committed citation
+  of that path still dangles for anyone who clones; the authoring card **t_b0a4db92** must
+  commit them. Until then do not treat either file as authoritative — an untracked
+  working-tree file is not a citation target. (The doc embeds a registry snapshot, and at
+  line 101 it carries the same `video_shape: lyric-video` whose artifact §7 shows is
+  missing; it does not resolve that defect.)
 - **Standing checks, run at verification (§12):**
   `music/scripts/check_brief_figures.py` → `--selftest` PASS, then 56 of 58 recomputed
   figures OK across 14 briefs (the 2 failures are commentary-beds, another genre, card
@@ -580,7 +588,7 @@ weights at `pass_threshold` 7.0. **§8.1 reproduced exactly** by re-running
 `load_track` → title/1079 chars/39 lines/7 tags, `instrumental=True` refused with the same
 `FATAL` string.
 
-**Corrected (seven):**
+**Corrected (seven, plus one amendment after the first commit):**
 
 1. Header/§2 — live re-score is **7.20**, not 7.00: `trend_signal` measured **5.0** (the
    exception branch) this run against **3.0** when the brief was written. Both values are
@@ -610,6 +618,16 @@ weights at `pass_threshold` 7.0. **§8.1 reproduced exactly** by re-running
 tree (`find /home/j_kro -name suno-gen.py` → zero hits) and genuinely present on
 `origin/main` (last touched `ba28f55`, 2026-10-14). That is the divergence t_8a715681, not
 a wrong citation: do not delete the reference, merge the refs.
+
+**8. §11 amendment (§12) — the "missing" architecture doc appeared mid-pass.** `7e54e03`
+recorded, correctly at measurement time, that
+`brain/playbooks/music-lane-architecture.md` "does not exist anywhere on this machine". At
+13:59:25 — between that commit and this amendment, in the same working tree — another worker
+wrote it: 21 696 B / 502 lines, plus `brain/research/music-monetization-2026.md` (11 067 B).
+Both are untracked and both are absent from `origin/main`, so the citation still dangles for
+anyone who clones, and the corrected §11 now says exactly that. Same drift class as
+corrections 1 and 2 — this time the artifact itself moved, not a count. It was caught only
+because the pass re-read the tree after committing instead of trusting its own earlier read.
 
 **Standing check added (the regression for corrections 2 and 5).**
 `music/scripts/check_brief_drift.py` — the check that would have caught two of the three
