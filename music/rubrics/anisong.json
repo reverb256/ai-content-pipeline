@@ -12,7 +12,7 @@
       "weight": 3,
       "type": "measured",
       "anchor": "Openings 130-180 BPM (J-rock often 170+); endings 70-120 BPM (Virtual Reflections CAMPAIGN.md anisong craft table; genres.yaml anime-opening notes).",
-      "evidence": "measure.py bpm + bpm_candidates. Accept a candidate in range at confidence >= 0.25.",
+      "evidence": "measure.py bpm_candidates (per band, each with its ac, lag, prominence and band) and bpm_pulse; read bpm_note before trusting bpm - a band-edge argmax (edge: true) is a cut, not a peak. Accept a candidate in range at ac >= 0.25. A 'no measurable pulse' verdict is unverifiable, not out-of-range (card t_ed609eb0).",
       "guide": "10 = in-range candidate with confidence >= 0.35. 7 = in-range at lower confidence. 4 = 5+ BPM outside. 1 = nothing in range."
     },
     {

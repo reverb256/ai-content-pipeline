@@ -19,14 +19,17 @@ rubrics/
   <family>.json        one rubric per genre FAMILY (not per genre):
                        ambient, edm, acoustic, utility, vocal, gamer, anisong
   measure.py           MEASURED evidence extraction (ffmpeg + numpy):
-                       duration, loudness, BPM candidates, silence map,
-                       crest factor, RMS spread, high-energy fraction
+                       duration, loudness, BPM candidates per band, the
+                       ac at the requested anchor, silence map, crest factor,
+                       RMS spread, high-energy fraction
   panel.py             the panel runner: measures the artifact, prompts
                        every judge, aggregates by geometric median,
                        writes review.json + panel-detail.json
   probe_judges.py      one-token liveness probe for each judge endpoint
   test_panel_math.py   unit tests: Weiszfeld math, aggregation, rubric
                        schema, registry coverage (run before any change)
+  test_measure_bpm.py  unit tests: the tempo measurement and the card
+                       t_ed609eb0 regression fixtures (run before any change)
 ```
 
 ## Genre-generic contract
@@ -148,6 +151,92 @@ fix scopes the data AND gives the third sub-idiom its own craft criterion,
    gate_quality.py` validates (master sha256 binding, reviewer_model
    != producer_model, verdict, findings, reviewed_at) — the gate needs
    no changes. `panel-detail.json` carries the full per-judge evidence.
+
+## Tempo: what the tool measures, and what it does not (card `t_ed609eb0`)
+
+`bpm` is a **candidate set with evidence**, never one bare number. Read
+`bpm_candidates` first, then `ac_at_anchor` when an anchor was requested.
+
+| field | meaning |
+|---|---|
+| `bpm` | the headline candidate (rules below). `null` when nothing is measurable. |
+| `bpm_confidence` | the ac of the headline's lag. |
+| `bpm_candidates` | every candidate: `bpm`, `ac`, `confidence`, `lag`, `lag_bpm`, `prominence`, `best_band`, `bands`, `edge`. |
+| `bpm_bands` | per band (`full`, `bass`, `mid`, `high`): `argmax_bpm`, `argmax_ac`, `median_ac`, `top_peaks`. |
+| `bpm_pulse` | `measurable` or `none`. `none` means no candidate reaches ac 0.25. |
+| `bpm_note` | why the headline is not the obvious number, when it is not. `null` otherwise. |
+| `ac_at_anchor` | with `--anchor-bpm N`: the ac AT the anchor's lag, per band, plus `near` (the best ac within ±10 % of the anchor period) and a `verdict`. |
+
+**Bands.** The onset envelope is measured in four bands: `full` (0 to
+Nyquist), `bass` (20-500 Hz), `mid` (500-8000 Hz), `high` (2000-8000 Hz). A
+whole-band envelope cannot see a percussion-free bed: the low-frequency pad
+energy carries most of the spectral flux, and the weak transients that carry
+the tempo are averaged away. The 2-8 kHz band sees them.
+
+**Selection rules**, in order:
+
+1. Candidates are the autocorrelation local maxima of every band inside the
+   60-190 BPM lag range, each folded by 0.5 / 1.0 / 2.0 into that range, at ac
+   >= 0.20. Folded candidates keep their OWN lag's ac — the pre-fix code read
+   the ac at `int(60*fps/b)`, up to a lag away from the peak it claimed, so a
+   candidate's confidence could belong to a tempo 5 BPM away.
+2. Ranking is by **prominence** = peak ac minus that band's median ac over the
+   lag range. Prominence compares peaks of envelopes with different baselines;
+   raw ac does not.
+3. **The band edge.** The lag search range is cut at 60 BPM. An argmax that
+   sits there is a cut, not a located peak, and it is kept in
+   `bpm_candidates` with `edge: true`. When a non-edge candidate reaches
+   75 % of its ac, the non-edge candidate becomes the headline and
+   `bpm_note` names the artefact. A genuine 60 BPM track keeps its edge
+   headline, because its half-tempo partner is far weaker.
+4. **The anchor.** With `--anchor-bpm N`, a measured candidate within 3 BPM of
+   the anchor at ac >= 0.25 becomes the headline, and `bpm_note` names the
+   candidate the prominence ranking alone would have reported. No anchor: the
+   ranked top wins and octave relations stay visible in the candidate
+   list.
+5. If the headline's ac is below 0.25, `bpm` is `null` and `bpm_pulse` is
+   `none`. The tool says it cannot measure a tempo instead of reporting a
+   number it cannot support.
+
+**Lag quantisation.** The envelope frame rate is `sr/HOP` = 43.07 Hz, so the
+lag grid steps by about 3 BPM at 92 BPM (lag 28 = 92.3, lag 29 = 89.1).
+`ac_at_anchor.lag_bpm` states the tempo the grid can actually express, and
+`ac_at_anchor.near` is the honest answer to "is there periodicity at the
+anchor".
+
+### The acceptance rule for a percussion-free genre
+
+Every instrumental ambient genre in the registry (elemental-air / earth / fire
+/ water, chill-lounge, sentimental-piano) is percussion-free or near it by its
+own template. For those genres, judge the tempo like this — this is the
+authoritative rule, and it is what a queue card's acceptance text must say:
+
+- **Authoritative tool:** `measure.py`, run with the genre anchor:
+  `/usr/bin/python3 music/rubrics/measure.py <artifact> --anchor-bpm <N>` (or
+  `panel.py --anchor-bpm N`, which passes it to `measure.py`).
+- **Pass:** `ac_at_anchor.verdict == "supported"` — a candidate within 3 BPM of
+  the anchor at ac >= 0.25, or the anchor's own lag ac >= 0.25 within ±10 % of
+  its period.
+- **Not measurable, not a fail:** `bpm_pulse == "none"` and
+  `ac_at_anchor.verdict == "not_supported"` means the tool cannot see a pulse.
+  `bpm` is `null`. The tempo claim is then decided by the stem or ear check,
+  and the card must say so — it is never a silent FAIL and never a pass.
+- **Never** accept or reject on `bpm` alone, and never on a bare "within a few
+  BPM of the anchor" that does not name the field.
+
+Incident this encodes — card `t_ed609eb0` (2026-10-16). `_bpm()` folded 0.5 /
+1.0 / 2.0 only from its whole-band argmax, and on the elemental-air render
+(`suno-0fa09abe521341629d4f4c59147ae72f.flac`, sha256 `1543a42b…`, 334.000000
+s, requested 92 BPM, no percussion by genre rule) that argmax sat at the 60 BPM
+edge. The anchor never entered `bpm_candidates`. Measured, pre-fix:
+`bpm 60.1` (conf 0.369), candidates `[60.1 / 0.369, 120.2 / 0.072]` — and
+`60.1` (conf 0.706) for a commentary sting that is really 120 BPM, and `86.1`
+for the elemental-earth loop that is really 88 BPM. Post-fix, same artifacts:
+`92.3` (ac 0.3705, the 2-8 kHz band's top peak, anchor verdict `supported`),
+`117.5` (ac 0.5504), `86.1` (ac 0.3902). The band-edge value stays visible as
+`bpm_bands.full.argmax_bpm` and as an `edge: true` candidate.
+`test_measure_bpm.py` pins all of this; `negctl` it against
+`git show <pre-fix>:music/rubrics/measure.py` and the fixture checks fail.
 
 ## Verified acceptance run (2026-10-08)
 

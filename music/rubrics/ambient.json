@@ -11,7 +11,7 @@
       "weight": 3,
       "type": "measured",
       "anchor": "Lo-fi/chill lounge: 70-90 BPM, sweet spot 75-85, most-streamed lo-fi cluster 75-85; above 90 it drifts to boom-bap, ambient lo-fi can drop to 60-65 (BeatKey lo-fi guide; musicproductionwiki lo-fi hip hop; Soundtrap lo-fi production).",
-      "evidence": "measure.py bpm + bpm_candidates. Accept a candidate inside the range at confidence >= 0.25.",
+      "evidence": "measure.py bpm_candidates (per band: full / bass / mid / high, each candidate with its ac, lag, prominence and supporting band), bpm_pulse, and ac_at_anchor when the genre anchor is passed. Accept a candidate inside the range at ac >= 0.25. A whole-band argmax at the 60 BPM search edge is not a tempo: read bpm_note. If bpm_pulse is 'none' the tool cannot see a pulse - mark the criterion unverifiable, never score it as out-of-range for that reason alone (card t_ed609eb0).",
       "guide": "10 = in-pocket candidate with confidence >= 0.35. 7 = in pocket at lower confidence or within 3 BPM of an edge. 4 = 5+ BPM outside. 1 = nothing in range."
     },
     {
@@ -54,7 +54,7 @@
   "reject_signals": [
     "a vocal hook, chorus, or build-drop structure on a chill-lounge claim (out of genre - reject)",
     "bright modern top end (pct_energy_above_8khz > 25) with a warmth/warm-degradation claim",
-    "measured tempo outside 60-95 BPM with no in-range candidate",
+    "measured tempo outside 60-95 BPM with no in-range candidate while bpm_pulse is measurable (a tool that reports no measurable pulse is not evidence of the wrong tempo - card t_ed609eb0)",
     "clipped master (max_volume_db >= -0.1)",
     "hard abrupt digital ending on a loop claim (the lane needs loopable ends; fade or resolve)"
   ],

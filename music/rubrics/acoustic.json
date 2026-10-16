@@ -11,7 +11,7 @@
       "weight": 2,
       "type": "measured",
       "anchor": "Sentimental piano / emotional underscore: slow, typically 50-90 BPM (TunePocket emotional piano cue: 50 BPM; Artyfile 'Softer Beat': 72 BPM; Artyfile 'Two Become One': 62 BPM). Faster than ~110 reads as pop, not sentimental.",
-      "evidence": "measure.py bpm + bpm_candidates; the style prompt's tempo claim.",
+      "evidence": "measure.py bpm_candidates (per band, each with its ac, lag, prominence and band) and bpm_pulse; read bpm_note when the headline is not the obvious number - a band-edge argmax is a cut, not a peak. The style prompt's tempo claim. A 'no measurable pulse' verdict means the tool cannot see a pulse: mark the criterion unverifiable, never out-of-range (card t_ed609eb0).",
       "guide": "10 = measured candidate in 50-90 with confidence >= 0.3 and prompt agrees. 7 = in range at lower confidence or prompt/prompt-measurement mismatch resolved plausibly (half/double). 4 = 5+ BPM outside. 1 = nothing in range."
     },
     {

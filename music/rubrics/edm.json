@@ -12,7 +12,7 @@
       "weight": 3,
       "type": "measured",
       "anchor": "Trance: uplifting pocket 136-142 BPM, 138 is the standard DJs mix at; progressive 128-134; outside 128-145 it is a different genre wearing trance's clothes (classictrance.com production playbook; BeatKey substyle table). Jungle: 160-175 BPM, classic jungle 160-170, modern DnB 170-176 with 174 the centre (EDMProd jungle guide; Veena DnB table; tunaryinstruments DnB guide).",
-      "evidence": "measure.py bpm + bpm_candidates. Accept a candidate inside the range when confidence >= 0.25. If the top candidate is a clean double/half of an in-range candidate, prefer the interpretation that matches the claimed substyle.",
+      "evidence": "measure.py bpm_candidates (per band, each with its ac, lag, prominence and band) and bpm_pulse; read bpm_note before trusting bpm - a candidate flagged edge: true sits at the 60 BPM end of the lag search and is a cut, not a peak. Accept a candidate inside the range when ac >= 0.25. If the top candidate is a clean double/half of an in-range candidate, prefer the interpretation that matches the claimed substyle (bpm_note names the octave partner).",
       "guide": "10 = a measured candidate sits inside the pocket with confidence >= 0.35. 7 = in-pocket candidate at lower confidence, or within 3 BPM of the edge. 4 = 5+ BPM outside the pocket. 1 = nothing near any pocket."
     },
     {

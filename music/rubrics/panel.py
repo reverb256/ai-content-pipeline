@@ -647,6 +647,12 @@ def main(argv=None) -> int:
     ap.add_argument("--lyrics", default=None, help="lyrics file (vocal familes)")
     ap.add_argument("--producer-model", default=None,
                     help="model that produced the track (independence check)")
+    ap.add_argument("--anchor-bpm", type=float, default=None,
+                    help="the genre's tempo anchor (e.g. 92 for elemental-air). "
+                         "Adds the measured autocorrelation AT the anchor "
+                         "(ac_at_anchor) to the evidence the judges see — the "
+                         "anchor's own score, not only the argmax. Card "
+                         "t_ed609eb0.")
     ap.add_argument("--out-dir", default=".",
                     help="where to write review.json + panel-detail.json")
     ap.add_argument("--panel", default=",".join(DEFAULT_PANEL),
@@ -681,7 +687,7 @@ def main(argv=None) -> int:
               + "; ".join(scope_defects), file=sys.stderr)
 
     # 1. measure the artifact (gates execute, never trust names)
-    evidence = measure_track(audio)
+    evidence = measure_track(audio, anchor_bpm=args.anchor_bpm)
     evidence["claimed_genre"] = args.genre
     evidence["claimed_family"] = family
 
@@ -699,6 +705,9 @@ def main(argv=None) -> int:
           f"rubric={family}.json "
           f"criteria_applied={crit_ids_applied} "
           f"criteria_excluded={crit_ids_excluded} "
+          f"anchor_bpm={args.anchor_bpm if args.anchor_bpm else '-'} "
+          f"measured_bpm={evidence.get('bpm')} "
+          f"pulse={evidence.get('bpm_pulse')} "
           f"members={members}", flush=True)
     judge_scores, failures = [], []
     for name in members:
