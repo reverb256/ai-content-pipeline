@@ -1347,6 +1347,13 @@ pair with no `genres` after it is that check's S4 shape — a brief shape, not r
 docstring can mention blueprints in one clause and count a different census in the next; and the
 brace-list shape is a PATH, which code prose does not write as a census.
 
+It was also run the way the fleet suite runs this lane's other checks — against a clean
+`git archive HEAD music` extract (`verify-fleet.sh` section 13i, PR #42): PASS rc=0, 3 claims
+across 114 `.py` files. Two environment behaviours were measured and are handled on purpose: a
+partial extract with no `music/visuals/*.md` makes the registry refuse to load (the `visual_style`
+paths), and the check then FAILs rc=1 with `cannot recompute the census …` plus a fix line instead
+of a traceback — a stack trace in the fleet suite reads as a lane regression, and this is not one.
+
 **Standing checks at this pass** (2026-10-16 17:35–17:44 CDT, worktree with other cards' writes
 landing): `check_code_census` PASS, 3 claims across 113 files; `check_brief_drift` PASS, 21 live
 counts (0 behind / 9 ahead of `origin/main` at `bacf245`, 14 genres, 7 blueprints);
@@ -1365,3 +1372,4 @@ PASS, `test_acestep_plan` PASS, `test_loop_close` PASS, `test_gate_loop_points_f
 against a widened placeholder rule — a sibling's gate change in flight).
 
 - **Superseded by this pass (card `t_a54fb00d`, 2026-10-16):** `sha256 f9d76960fb3c836b84653e7f5037bad161f01d7d75699fe965e3e9868bfd572c` (1262 lines / 85 699 B).
+- **Superseded by this pass, same card, second commit (the environment-failure hardening of the new check, 2026-10-16):** `sha256 710fbd9bceca8d3b9528448a6f9e1e4cc72ed387ead673b23b58f53fa8f1a3fe` (1367 lines / 93 767 B).

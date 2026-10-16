@@ -82,6 +82,10 @@ NO_BLUEPRINT = re.compile(
     rf"(?:have|has|lack|carry)\s+no\s+(?:lyric\s+)?blueprint", re.I)
 
 
+class CensusUnavailable(Exception):
+    """The live census cannot be recomputed here — an environment problem, not a finding."""
+
+
 # ---------------------------------------------------------------------------
 # prose extraction (pure enough to test: text in, units out)
 # ---------------------------------------------------------------------------
@@ -221,10 +225,24 @@ def scan_unit(unit: str, live: dict, where: str, base: int = 1) -> tuple[list[st
 # ---------------------------------------------------------------------------
 
 def live_census(repo: Path) -> tuple[int, int, set[str]]:
-    """(genres registered, lyric blueprints that exist, their genre names)."""
+    """(genres registered, lyric blueprints that exist, their genre names).
+
+    Raises `CensusUnavailable` rather than letting the loader's traceback out: this check is meant
+    to run inside `verify-fleet.sh` section 13i, which extracts `music/` from HEAD, and a partial
+    extract (no `music/visuals/*.md`, which `genres.yaml` resolves its `visual_style` paths against)
+    makes the registry refuse to load. A stack trace there reads as a lane regression; it is not
+    one, and the message must say so.
+    """
     sys.path.insert(0, str(repo / "music"))
     import registry  # noqa: PLC0415  (needs sys.path set first)
-    genres = len(registry.load_registry()["genres"])
+    try:
+        genres = len(registry.load_registry()["genres"])
+    except Exception as exc:  # noqa: BLE001  (any loader failure is "cannot recompute", not a finding)
+        first = str(exc).splitlines()[0][:160] if str(exc) else exc.__class__.__name__
+        raise CensusUnavailable(
+            f"cannot recompute the census at {repo}: the registry did not load "
+            f"({exc.__class__.__name__}: {first}) — this check needs the full music/ tree, "
+            f"including music/visuals/*.md, which genres.yaml resolves against") from exc
     names = {p.stem for p in (repo / "music" / "lyrics" / "blueprints").glob("*.yaml")}
     return genres, len(names), names
 
@@ -337,7 +355,13 @@ def main() -> int:
         return selftest()
 
     repo = Path(args.repo).resolve()
-    genres, blueprints, names = live_census(repo)
+    try:
+        genres, blueprints, names = live_census(repo)
+    except CensusUnavailable as exc:
+        print(f"FAIL check_code_census: {exc}")
+        print("  Fix: point --repo at a full checkout of the lane (or at a clean extract that "
+              "includes music/visuals/*.md). This is an environment failure, not a stale figure.")
+        return 1
     live = {"genres": genres, "blueprints": blueprints, "blueprint_names": names}
     rels = source_files(repo, args.rev)
     if not rels:
