@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "tracks": {
+    "reflection-vrchat-erp": {
+      "track_id": "reflection-vrchat-erp",
+      "title": "Reflection \u2014 VRChat ERP Intimacy",
+      "genre": "chill-lounge",
+      "lane": "streaming",
+      "campaign": "virtual-reflections",
+      "credits_used": 500,
+      "generation_hours": 2.0,
+      "studio_exports": 1,
+      "streams": 847,
+      "revenue_usd": 0.0,
+      "youtube_views": 12,
+      "youtube_revenue_usd": 0.0,
+      "retention_30s": 0.42,
+      "ctr": null,
+      "sources": {
+        "local_audio": "campaigns/virtual-reflections/audio/reflection-vrchat-erp.flac"
+      },
+      "is_exported": true,
+      "is_published": false,
+      "human_gate_pending": true
+    },
+    "lofi-rain-001": {
+      "track_id": "lofi-rain-001",
+      "title": "Rainy Window (lofi mix)",
+      "genre": "chill-lounge",
+      "lane": "youtube-longform",
+      "campaign": "",
+      "credits_used": 500,
+      "generation_hours": 1.5,
+      "studio_exports": 1,
+      "streams": 15420,
+      "revenue_usd": 42.3,
+      "youtube_views": 8900,
+      "youtube_revenue_usd": 18.75,
+      "retention_30s": 0.58,
+      "ctr": 0.034,
+      "sources": {
+        "distrokid_tsv": "sample",
+        "youtube_api": "sample"
+      },
+      "is_exported": true,
+      "is_published": true,
+      "human_gate_pending": false
+    },
+    "trance-spray-001": {
+      "track_id": "trance-spray-001",
+      "title": "Untitled Trance #47",
+      "genre": "trance",
+      "lane": "streaming",
+      "campaign": "",
+      "credits_used": 500,
+      "generation_hours": 1.0,
+      "studio_exports": 1,
+      "streams": 234,
+      "revenue_usd": 0.0,
+      "youtube_views": null,
+      "youtube_revenue_usd": null,
+      "retention_30s": null,
+      "ctr": null,
+      "sources": {
+        "distrokid_tsv": "sample"
+      },
+      "is_exported": true,
+      "is_published": true,
+      "human_gate_pending": false
+    },
+    "elemental-fire-001": {
+      "track_id": "elemental-fire-001",
+      "title": "Elemental Fire (game loop)",
+      "genre": "elemental-fire",
+      "lane": "game-assets",
+      "campaign": "",
+      "credits_used": 500,
+      "generation_hours": 1.0,
+      "studio_exports": 1,
+      "streams": null,
+      "revenue_usd": null,
+      "youtube_views": null,
+      "youtube_revenue_usd": null,
+      "retention_30s": null,
+      "ctr": null,
+      "sources": {},
+      "is_exported": false,
+      "is_published": false,
+      "human_gate_pending": true
+    }
+  }
+}
