@@ -20,4 +20,8 @@ WorkingDirectory=/home/j_kro/ai-content-pipeline
 Environment=HOME=/home/j_kro
 Nice=10
 IOSchedulingClass=idle
-TimeoutStartSec=300
+# TimeoutStartSec raised 300 -> 1800 (2026-10-16, t_75aacf8b). The analyst oneshot is a FULL
+# agent run (web searches across 6 platforms), and 300s killed it before it could finish:
+# journal Oct 15 07:05:04 and Oct 16 07:05:00 "start operation timed out. Terminating." ->
+# "Failed with result 'timeout'", status=130. The job had NEVER completed once.
+TimeoutStartSec=1800
