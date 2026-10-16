@@ -15,8 +15,8 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash -c 'cd /home/j_kro/Projects/ai-content-pipeline && hermes -p analyst chat -q "Run the daily music policy watch. Scan for AI-policy changes on: Suno (suno.com), YouTube (inauthentic content / AI disclosure), DistroKid, Songtradr, itch.io, Gumroad. Use web search to check for policy updates in the last 24h. If a policy change is detected, create an URGENT card on the music kanban board with stage: escalate (human gate). If no changes, log to performance/music-policy-watch.log. Never auto-adapt to a policy change — surface it to j_kro." --oneshot -Q'
-WorkingDirectory=/home/j_kro/Projects/ai-content-pipeline
+ExecStart=/bin/bash -c 'cd /home/j_kro/ai-content-pipeline && hermes -p analyst chat -q "Run the daily music policy watch. Scan for AI-policy changes on: Suno (suno.com), YouTube (inauthentic content / AI disclosure), DistroKid, Songtradr, itch.io, Gumroad. Use web search to check for policy updates in the last 24h. If a policy change is detected, create an URGENT card on the music kanban board with stage: escalate (human gate). If no changes, log to performance/music-policy-watch.log. Never auto-adapt to a policy change — surface it to j_kro." --oneshot -Q'
+WorkingDirectory=/home/j_kro/ai-content-pipeline
 Environment=HOME=/home/j_kro
 Nice=10
 IOSchedulingClass=idle
