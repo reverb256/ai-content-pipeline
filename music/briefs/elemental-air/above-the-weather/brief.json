@@ -93,7 +93,7 @@
     {
       "id": "D4",
       "what": "Stale stage prompt names a script this checkout does not contain",
-      "evidence": "music/stages.yaml generate stage -> 'music/suno-gen.py'. 'ls music/suno-gen.py' in /home/j_kro/ai-content-pipeline -> No such file or directory. It exists on origin/main (commit 295fc49, completed by ba28f55). git rev-list --left-right --count main...origin/main -> 7 ahead / 15 behind.",
+      "evidence": "music/stages.yaml generate stage -> 'music/suno-gen.py'. 'ls music/suno-gen.py' in /home/j_kro/ai-content-pipeline -> No such file or directory. It exists on origin/main (commit 295fc49, completed by ba28f55). git rev-list --left-right --count main...origin/main -> 7 ahead / 15 behind at this brief; re-measured 2026-10-16 13:45 CDT by the duplicate pass (t_3cb6e654) -> 24 ahead / 15 behind on local tip 7f0b3cc. The local count rises as this lane commits briefs to the same tree; the upstream deficit does not.",
       "impact": "the generate stage instructs its bot to run a file that is not here; reconcile the branches"
     },
     {
@@ -105,7 +105,7 @@
     {
       "id": "D6",
       "what": "Instrumental documentation counts are wrong in the deployed code",
-      "evidence": "DEPLOYED translate.py and origin/main music/suno-gen.py both say '8 of the 12 genre templates'; the suno-gen.py docstring then lists nine names including epic-orchestral-boss, which has no instrumental marker. Measured census over the '## Lyrics guidance' section of music/prompts/*.md: 8 of 14 genres are instrumental, and epic-orchestral-boss is NOT one of them.",
+      "evidence": "Misattributed in the first revision of this brief (corrected 2026-10-16 13:45 CDT by the duplicate pass, t_3cb6e654). The DEPLOYED /opt/sunolocal/music/sunolocal/translate.py (line 29, read inside pod sunolocal-source-65fcc845d-fd5r6) says '8 of the 14 genre templates are instrumental' and then names NINE (chill-lounge, sentimental-piano, commentary-beds, the four elementals, chiptune-8bit, epic-orchestral-boss) - denominator right, list wrong. origin/main music/suno-gen.py line 184 says '8 of the 12 genre templates' and repeats epic-orchestral-boss. 'grep -rn \"8 of the 12\" /opt/sunolocal' inside the pod returns nothing (rc=1), so that string is NOT in the deployed translator. Measured census over the '## Lyrics guidance' section of music/prompts/*.md: 8 of 14 genres are instrumental, and epic-orchestral-boss is NOT one of them.",
       "impact": "documentation only; behaviour is correct because is_instrumental_template() reads the template instead of a list"
     }
   ],
@@ -114,10 +114,26 @@
 
   "_lyrics": "none - instrumental genre by design (music/prompts/elemental-air.md); no music/lyrics/elemental-air/ directory exists",
   "_assets_on_disk": "none - no master, no stems, no render for this genre anywhere in the tree",
-  "_duplicate_card": "t_3cb6e654 (music-oracle: elemental-air, score 7.7, status ready) duplicates card t_92a09bdc (score 7.5). Briefs are keyed by genre, so both resolve to this brief - do not produce it twice.",
+  "_duplicate_card": "t_3cb6e654 (music-oracle: elemental-air, score 7.7) duplicated card t_92a09bdc (score 7.5). Briefs are keyed by genre, so both resolve to this brief - do not produce it twice. CLOSED AS A DUPLICATE of t_92a09bdc on 2026-10-16 13:45 CDT by the worker that claimed it: no second brief written, no second stage chain started.",
+  "_duplicate_resolution": {
+    "card": "t_3cb6e654 (score 7.7, second oracle wave 2026-10-09 03:37:53; survivor t_92a09bdc score 7.5, first wave 03:27:53 - performance/music-oracle-runs.log)",
+    "disposition": "duplicate of t_92a09bdc; no second brief written; briefs are genre-keyed so both cards resolve to this artifact",
+    "pass": "re-measured every figure against live state 2026-10-16 13:45 CDT; see brief.md 'Duplicate-card pass' + Provenance",
+    "corrections": [
+      "brief.md header: 'card created 2026-10-09 03:27:46 (epoch 1791534469)'. date -d @1791534469 -> 2026-10-09 03:27:49 CDT: the epoch was right, the wall-clock rendering was 3 s early.",
+      "brief.md SS7 / this file D6: the '8 of the 12 genre templates' string was attributed to the deployed translate.py. Measured: deployed translate.py line 29 says '8 of the 14' and names NINE incl. epic-orchestral-boss; only origin/main music/suno-gen.py:184 says '8 of the 12'. grep -rn '8 of the 12' /opt/sunolocal -> rc=1 (no match).",
+      "brief.md SS11 O4: 'upstream ships music/licences/perpetual_game_asset_v1.txt' is wrong. git cat-file -e origin/main:music/licences/perpetual_game_asset_v1.txt -> absent. The file exists only on origin/wip/atlas-backup-20261014 (commit 3882292, 'WIP backup 2026-10-14 (atlas)'). packages/welcome-asset-pack/README.md on origin/main points at that path, so upstream's own README carries a dangling reference."
+    ],
+    "remeasures_unchanged": "registry (14 genres / 10 lanes), elemental-air entry (gamer; game-assets+youtube-gaming+streaming; 2/wk; loop-10min), 92 BPM caption (494 chars), 334 s / 128 bars bar math, instrumental census 8/14, engine route (sunolocal-source image localhost/sunolocal:v0.1.2, /health ok, ace default, yue2 0/0), four _deferred stubs, gate constants, rubric weights and threshold 7.0, gate_quota 0/60, all six handoff cards and their parent links",
+    "divergence_re_measured": "main...origin/main = 24/15 on tip 7f0b3cc (7/15 when the brief was written)",
+    "superseded_sha256": {
+      "brief.md": "ba6fbbf8f13d81a61f8cd7e58cfe47e8bf657169c48865991728953b2ea85cfd",
+      "brief.json": "8bfd6c7195525308877e0e98fad1ef02a57fa7ec08da1ec1585d10b7f4a84ad7"
+    }
+  },
   "_handoffs": {
     "t_25a6499c": "(nexus-core, ready) engine defects D1/D2/D3 - bpm hardcoded 120, key = style caption, queue schema has no instrumental field. Already filed by the sentimental-piano brief; this brief adds the elemental-air numbers (92 BPM, styleWeight 0.2667) and files nothing new there.",
-    "t_8a715681": "(nexus-core, ready) reconcile the diverged live checkout (local main 7 ahead / 15 behind origin/main; music/suno-gen.py unreachable from this tree). Already filed; this brief re-measured the counts.",
+    "t_8a715681": "(nexus-core, ready) reconcile the diverged live checkout (local main 7 ahead / 15 behind origin/main at this brief; re-measured 24 ahead / 15 behind on tip 7f0b3cc at the 13:45 duplicate pass; music/suno-gen.py unreachable from this tree). Already filed; this brief re-measured the counts.",
     "t_5ed495eb": "(distributor, ready) asset-pack output does not satisfy the game-assets gate. Blocks the game-assets pack for this genre (finding O5).",
     "t_b8afb055": "(NEW, nexus-core; parents = t_92a09bdc + t_25a6499c) queue this track into the live generation path. Carries the measured render parameters from _generation_request, the reason engine must be 'ace' (yue2 0/0) and the fact that /api/v1/stems is a deferred stub. Gated on t_25a6499c.",
     "t_5a93164a": "(NEW, nexus-core; parent = t_92a09bdc) no music stage can advance its own card: advance-stage.sh is refused for dispatcher-spawned workers (HERMES_DELEGATED_CHILD_CONTEXT is set), script exit 1, silent no-op; all four previous brief cards ended 'done' at stage brief. Decision needed (finding O6).",

@@ -1,13 +1,26 @@
 # Brief — elemental-air: "Above The Weather"
 
 Card: kanban `music` **t_92a09bdc** · stage: `brief` · assignee: `music-producer`
-Oracle score: **7.5/10** · card created 2026-10-09 03:27:46 (epoch 1791534469)
+Oracle score: **7.5/10** · card created 2026-10-09 03:27:49 CDT (epoch 1791534469;
+the first revision of this header said 03:27:46 — a 3-second rendering error, corrected
+2026-10-16 13:45 CDT by the duplicate pass, `t_3cb6e654`)
 Brief written: 2026-10-16 (CDT) · track slug: `above-the-weather`
-Repo: `/home/j_kro/ai-content-pipeline` — local `main` @ `ade6e87`, **7 ahead / 15 behind `origin/main`**
+Repo: `/home/j_kro/ai-content-pipeline` — at write time local `main` @ `ade6e87`, **7 ahead /
+15 behind `origin/main`**. Re-measured 2026-10-16 13:45 CDT by the duplicate-card pass
+(`t_3cb6e654`): local `main` @ `7f0b3cc`, **24 ahead / 15 behind**. The local tip moves as
+this lane commits its briefs on the same tree; the 15-commit upstream deficit does not.
+
+Superseded revision of this file (before the duplicate pass of 2026-10-16 13:45 CDT):
+`sha256 ba6fbbf8f13d81a61f8cd7e58cfe47e8bf657169c48865991728953b2ea85cfd`. The pass corrected
+three figures (§7 instrumental-count attribution, §11 O4 licence-file location, this header's
+card-creation time) and re-measured the branch divergence. `brief.json` superseded:
+`sha256 8bfd6c7195525308877e0e98fad1ef02a57fa7ec08da1ec1585d10b7f4a84ad7`.
 
 Briefs in this lane are keyed by **GENRE**, not by card. A second oracle card for the
-same genre exists — `t_3cb6e654` ("music-oracle: elemental-air (score 7.7)", status `ready`)
+same genre exists — `t_3cb6e654` ("music-oracle: elemental-air (score 7.7)", status `ready`
+when this brief was written, `running` while the duplicate pass closed it)
 from the second scoring wave. Both cards resolve to **this** brief. Do not produce it twice.
+The twin is **closed as a duplicate of `t_92a09bdc`**; no second brief exists and none is wanted.
 
 Every number below comes from a command run during this stage. Nothing is transcribed
 from another brief.
@@ -258,11 +271,21 @@ activist  blueprints  chill-lounge  lyrics.py  trance      # no elemental-* dire
 
 Two documentation defects surfaced in this census (both upstream, not this checkout's to fix):
 
-- Deployed `sunolocal/translate.py` and `suno-gen.py` both say **"8 of the 12 genre
-  templates"**, and the `suno-gen.py` docstring then lists nine names including
-  **epic-orchestral-boss**, whose template contains no instrumental marker. The count is
-  **8 of 14**; the correct list is the table above.
-- Thus: 8 of 14 (not 8 of 12, not 9).
+- The **deployed** `sunolocal/translate.py` (line 29 of the file read inside the running
+  pod) says **"8 of the 14 genre templates are instrumental"** and then names **nine**:
+  `(chill-lounge, sentimental-piano, commentary-beds, the four elementals, chiptune-8bit,
+  epic-orchestral-boss)`. Its denominator is right; its list is not — `epic-orchestral-boss`
+  has no instrumental marker.
+- Upstream `music/suno-gen.py` (line 184 on `origin/main`) says **"8 of the 12 genre
+  templates"** and repeats `epic-orchestral-boss` in the same sentence. Both numbers are
+  wrong there.
+
+*Corrected 2026-10-16 13:45 CDT (duplicate pass, `t_3cb6e654`).* The first revision of this
+brief said "Deployed `sunolocal/translate.py` and `suno-gen.py` both say '8 of the 12 genre
+templates'". Re-measured: the deployed translator says 8 of **14**; the string "8 of the 12"
+occurs only in `origin/main:music/suno-gen.py:184`. The finding is unchanged — the measured
+count is **8 of 14**, the correct list is the table above — but the file attribution is now
+correct. `grep -rn '8 of the 12' /opt/sunolocal` inside the pod returns nothing (rc=1).
 
 ### Engine A (live now): sunolocal → ACE-Step
 
@@ -350,12 +373,16 @@ $ git rev-list --left-right --count main...origin/main
 7       15
 ```
 
+*Re-measured 2026-10-16 13:45 CDT (duplicate pass, `t_3cb6e654`): the same command now reports
+`24      15`, on local tip `7f0b3cc`.* The local count rises whenever this lane commits a brief
+to the same tree; the upstream deficit stays at 15 because nothing has been merged.
+
 The file exists on `origin/main` (added by `295fc49`, completed by `ba28f55`), and the local
 lineage is 15 commits behind it — `music/suno-gen.py`, `music/sunolocal/`, the instrumental
 handling and the asset-pack generator are all upstream-only. The engine actually in service
 is the ACE-Step path above; the Suno CDP path additionally needs a logged-in CDP browser.
 Fix is branch reconciliation, not a rewrite. (Same finding as the trance brief, re-measured:
-the gap was 2/15 then, 7/15 now.)
+the gap was 2/15 then, 7/15 at this brief, 24/15 at the 13:45 duplicate pass.)
 
 ### A one-line doc/code mismatch in the streaming gate
 
@@ -445,8 +472,20 @@ seam levels), **`asset_packaging`** (weight 1, stated BPM/key + loop-point marke
   cannot seam audio, revisit the duration (**115 bars = 300.000 s**, exactly 2 plays).
 - **O4 — Clearance doc and license tiers.** `game-assets` and `streaming` need a real
   `clearance_doc.pdf`; none exists in the tree for any genre. `direct-license` (not a lane here)
-  needs `license_tiers`. Upstream ships `music/licences/perpetual_game_asset_v1.txt`; this
-  checkout has no `music/licences/`.
+  needs `license_tiers`. This checkout has no `music/licences/`.
+  **Corrected 2026-10-16 13:45 CDT (duplicate pass, `t_3cb6e654`): the licence file is NOT
+  upstream on `origin/main`.** Measured: `git cat-file -e
+  origin/main:music/licences/perpetual_game_asset_v1.txt` → `fatal: path … does not exist in
+  'origin/main'`; `git ls-tree -r --name-only origin/main | grep -iE 'licen[cs]|perpetual'`
+  returns only `LICENSE` and `packages/welcome-asset-pack/LICENCE.txt`. The file
+  `music/licences/perpetual_game_asset_v1.txt` exists only on
+  `origin/wip/atlas-backup-20261014` (commit `3882292`, "WIP backup 2026-10-14 (atlas)").
+  So upstream's own asset-pack README — which ends "see
+  `music/licences/perpetual_game_asset_v1.txt` — multi-tier (personal / commercial /
+  exclusive)" — carries a **dangling reference on `origin/main`**, the same defect class as O2.
+  The first revision of this brief said "Upstream ships `music/licences/perpetual_game_asset_v1.txt`";
+  that is wrong for `origin/main`. The file has to be authored from the WIP branch's text or
+  written fresh; it cannot be copied from the branch the generate stage will run against.
 - **O5 — Asset pack machinery is upstream-only.** `music/assets/pack.py` and
   `scripts/gates/gate_asset_pack.py` do not exist in this checkout, so the game-assets pack
   (loops ≥5, stems ≥12, one_shots ≥5, seams ≤ −60 dBFS) cannot be built here yet. This is the
@@ -463,6 +502,11 @@ seam levels), **`asset_packaging`** (weight 1, stated BPM/key + loop-point marke
   (nexus-core) during this stage.
 - **O7 — Duplicate oracle card.** `t_3cb6e654` (elemental-air, 7.7) duplicates this card. The
   dedupe guard landed locally in `ade6e87`; the pre-existing duplicates still need closing.
+  **Resolved 2026-10-16 13:45 CDT: `t_3cb6e654` is closed as a duplicate of `t_92a09bdc`**
+  by the worker that claimed it. No second brief was written and no second stage chain was
+  started; this brief remains the single artifact for the genre. Its score was re-read from the
+  card body — `t_3cb6e654` scores 7.7 in the second wave, `t_92a09bdc` 7.5 in the first — and a
+  score is a card field, not a brief input, so the registry entry is unchanged.
 - **F2 — Rubric/genre mismatch (raised here, not fixed here).** `music/rubrics/gamer.json`
   criterion `battle_energy` (weight 3 of 8) is id-scoped `"(elemental-*, epic-orchestral-boss)"`
   with a battle anchor and a guide whose floor case is "1 = slow ambient track with a battle
@@ -512,6 +556,28 @@ seam levels), **`asset_packaging`** (weight 1, stated BPM/key + loop-point marke
   `music/docs/fusion-system-design.md`.
 - Board: `kanban` `music` — card + duplicate read from a read-only snapshot of
   `~/.hermes/kanban/boards/music/kanban.db`.
+- **Duplicate-card pass, 2026-10-16 13:45 CDT (`t_3cb6e654`) — re-measured, not re-read.**
+  `music/registry.py validate` (rc 0, 14 genres / 10 lanes); `music/gates/gate_quota.py`
+  (rc 0, 0/60); `git rev-list --left-right --count main...origin/main` (24/15 @ `7f0b3cc`);
+  `music/scripts/check_stage_scripts.py` (rc 1, unchanged); `ffprobe
+  music/visuals/loop_10min.mp4` (600.000000 s, 1280×720, video+audio) and
+  `music/visuals/element_air.mp4` (5.000000 s); caption char count 494; `music/visuals/element-air.md`
+  read in full; `music/rubrics/gamer.json` read (weights 3/3/3/1/1, `pass_threshold` 7.0,
+  reject-signal strings); gate sources re-read (`gate_sync_ready` `MIN_STEMS=4` /
+  `STEM_TOLERANCE_S=0.5` / `REQUIRED_META`; `gate_loop_points` `CLICK_RATIO_MAX=3.0`, span ≥ 2.0 s;
+  `gate_youtube_authentic` cadence 2.0 / 10 frames / 0.85, `DISCLOSURE_NAMES`;
+  `gate_release_ready` `ISRC_RE`, `ARTWORK_NAMES`, `REQUIRED_META`; `music/planner/planner.py`
+  30/420). Live engine re-read: `mining/sunolocal-source` 1/1 Running, image
+  `localhost/sunolocal:v0.1.2`, `GET /health` → `{"status":"ok"}`, `GET /api/v1/models` → the
+  `ace`/`yue2` block quoted in §7, pod-local `translate.py` line 29 (`8 of the 14`) and the four
+  `_deferred` stubs in `studio.py`; `yue2-zephyr` 0/0, endpoints `<none>`, health code 000.
+  Upstream re-reads: `git cat-file -e origin/main:music/licences/perpetual_game_asset_v1.txt`
+  → absent; `git log --all --source -1 -- music/licences/perpetual_game_asset_v1.txt` →
+  `origin/wip/atlas-backup-20261014`; `origin/main:music/suno-gen.py:184`;
+  `origin/main:scripts/gates/gate_asset_pack.py` (`loops` 5 / `stems` 12 / `one_shots` 5,
+  `CLICK_FREE_THRESHOLD_DBFS` −60.0); `origin/main:packages/welcome-asset-pack/README.md`
+  (184.57 BPM / C major / 44100 Hz / 16-bit). Two corrections and one re-measurement came out
+  of it — §7 and §11 O4, plus the header divergence line.
 - **Dangling references (unchanged):** `brain/playbooks/music-lane-architecture.md` and
   `brain/research/music-monetization-2026.md` are cited as authoritative by `stages.yaml`,
   `genres.yaml`, `lanes.yaml`, `autonomy.yaml`, `gates/README.md` and every gate script, and
@@ -526,3 +592,12 @@ Stage `brief` is complete. Next: `genre-select` — with O6 noted, because this 
 step cannot be executed from inside this worker and no previous brief card has advanced.
 The production path for this track is `t_b8afb055` (queue into the generation path, gated on
 the instrumental fix `t_25a6499c`).
+
+**Duplicate-card pass, 2026-10-16 13:45 CDT (card `t_3cb6e654`).** The twin card was closed
+as a duplicate of `t_92a09bdc`. Every figure in this brief was re-measured against live state
+by that pass; three were wrong or misattributed and are corrected above (header card-creation
+time; §7 instrumental-count attribution; §11 O4 licence-file location), and the
+branch-divergence figures were re-measured
+(§7, header). Nothing else changed: registry entry, lanes, cadence, 92 BPM, 334 s / 128 bars,
+instrumental status, engine route and the handoff cards all reproduce exactly. The previous
+revision's hash is recorded in the header.
