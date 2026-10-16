@@ -555,26 +555,27 @@ in the draft. Nothing here may be replaced by AI lyrics: that is exactly what vo
 
 ### 10.5 Checks run on the committed content
 
-This brief, run at 16:07 CDT against the working tree (and re-run against the committed blob
-before this comment was posted):
+This brief, run per-brief at 16:09 CDT against the committed content:
 
 ```
 PASS check_brief_figures      8 recomputed figure(s) for this brief, 20 skipped     rc=0
-PASS check_brief_drift        1 live count for this brief (0 behind / 74 ahead,
+PASS check_brief_drift        1 live count for this brief (0 behind / 77 ahead,
                               14 genres, 7 blueprints)                              rc=0
-PASS check_brief_line_refs    8 cited line range(s) resolve and hold, 1 anchored skip rc=0
+PASS check_brief_line_refs    6 cited line range(s) resolve and hold, 1 anchored skip rc=0
 ```
 
-Repo-wide, at the same 16:07 CDT (these move as other workers commit):
+Repo-wide, at the same 16:09 CDT (these move as other workers commit):
 
 ```
-PASS check_brief_paths        19 `mining-k8s/...` citations across 14 briefs resolve rc=0
+PASS check_brief_drift        15 live count(s) across 14 briefs                      rc=0
+PASS check_brief_paths        22 `mining-k8s/...` citations across 14 briefs resolve  rc=0
 PASS check_prompt_style_counts 15 declared lengths / 14 templates                    rc=0
+PASS check_brief_bpm_solutions 5 styleWeight claim(s) buy the BPM they state          rc=0
 PASS check_stage_scripts      11 referenced script path(s) all present               rc=0
 PASS check_gate_lane_surface  every gate accepts the lanes lanes.yaml gives it        rc=0
 PASS check_stage_advance      12 producing stages advance reachably, 2 human gates   rc=0
 PASS check_scheduler_units    10 unit file(s) match; every named path resolves        rc=0
-PASS check_oracle_board       7 open oracle genres, one open card each                rc=0
+PASS check_oracle_board       6 open oracle genres, one open card each                rc=0
 PASS check_oracle_determinism failed fetch never outscores an empty success           rc=0
 PASS gate_quota               period 2026-10, standard 0/60, studio 0                 rc=0
 ```
@@ -598,17 +599,36 @@ caught within the same pass and anchored to `16:03 CDT`. That is the intended be
 unanchored count is a claim about now, and now moves (0 behind / 73 ahead at 16:03, 74 ahead
 four minutes later).
 
-Three repo-wide FAILs are live in OTHER briefs at 16:07 CDT. Reported, not touched here — this
-pass stages one file:
+Two repo-wide FAILs were live in OTHER briefs at 16:09 CDT. Reported, not touched here — this
+pass stages one file. Each is a concurrent worker's file, and each is the same class this brief
+just cleared for anime-opening:
 
 ```
-FAIL check_brief_figures      music/briefs/elemental-water.md:600   "53 lines" vs 88 lines
-FAIL check_brief_line_refs    music/briefs/elemental-fire.md:605   planner.py:83 BLANK OPEN
-FAIL check_brief_bpm_solutions music/briefs/elemental-earth.md:730  styleWeight 0.2334 -> 88 BPM
+FAIL check_brief_figures       `music/briefs/elemental-water.md`    — a figure no longer matches
+FAIL check_brief_line_refs     `music/briefs/chiptune-8bit.md` and `music/briefs/elemental-fire.md`
+                               — cited ranges that open on a blank line
 ```
 
-Each is a concurrent worker's file and each is the same class this brief just cleared for
-anime-opening: a figure, a line range, or a tempo claim that stopped matching live state.
+A third one this pass saw, `check_brief_bpm_solutions` on `music/briefs/elemental-earth.md`, was
+PASSing again by 16:09 — the shared tree moves under every run, which is why every figure above
+carries its clock.
+
+Quoted without their figures and ranges on purpose: a check's own output, pasted whole, is a
+fresh claim about live state. This pass proved that the hard way — the first version of this
+block pasted those three lines verbatim, and two of them became claims about THIS brief:
+
+```
+BEFORE  check_brief_figures    FAIL: this brief — a pasted foreign FAIL line named another
+                               brief's file and carried its line counts, so both were
+                               recomputed against that brief and neither matched          rc=1
+BEFORE  check_brief_line_refs  FAIL: this brief — the same pasted block carried a
+                               planner.py range that opens on a blank line (BLANK OPEN)   rc=1
+AFTER   both PASS — the quotation names each brief and the CLASS that failed, with no
+        figure and no line range for a checker to recompute                              rc=0
+```
+
+That is the checks catching a claim the pass wrote about someone else's artifact — the same
+shape as the drift FAIL above, and it is why this block quotes classes and not numbers.
 
 ### 10.6 What this pass did not do
 
