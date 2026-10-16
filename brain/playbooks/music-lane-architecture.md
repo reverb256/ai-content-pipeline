@@ -149,20 +149,38 @@ editing the driver. The file holds 14 stages, 12 producing plus 2 human gates.
 | `package` | producer | manifest + metadata + ISRC + artwork | `gate_release_ready` |
 | `visual` | videobot | platform-native video | `gate_youtube_authentic` |
 | `publish` | publishbot / distributor | private upload or distribution | human approval before public |
-| `track` | analyst | streams, revenue, lane ROI | closes the card |
+| `track` | analyst | streams, revenue, lane ROI | closes the card with `kanban_complete` |
 | `human-approval` | — | parked for j_kro | `human_gate: true`, `auto_next: publish` |
 | `escalate` | — | parked for j_kro | `human_gate: true` |
 
-Each producing prompt ends with an explicit advance call, because the driver re-reads the
-stage marker every 30 min:
+Each producing prompt ends with an explicit advance step, because the driver re-reads the
+stage marker every 30 min. That step must name a channel **the caller can reach** — two
+different processes run a music stage, and only one channel works for both:
+
+| Caller | Its environment | Channel that works |
+|---|---|---|
+| the driver: `hermes -p <bot> chat -q "<prompt>"` | unfenced, no kanban toolset | CLI: `bash scripts/automation/advance-stage.sh {card} <next-stage> --board music` |
+| the generic kanban dispatcher: a spawned kanban worker | terminal and every subprocess it starts are fenced | tool: `kanban_comment(task_id="{card}", body="stage: <next-stage>")` |
+
+So each prompt names the `kanban_comment` **tool** first, keeps the CLI as the labelled
+fallback, and requires the caller to CHECK the exit status. The marker must be the LAST
+`stage:` match in the card's `hermes kanban show` output (body, then run summary, then
+comments) — the driver takes the last match. A stage whose gate FAILS must not advance.
+
+Measured 2026-10-16 (card t_5a93164a): a dispatcher-spawned worker that runs the CLI step
+gets
 
 ```
-bash scripts/automation/advance-stage.sh {card} <next-stage> --board music
+kanban: delegate_task child contexts cannot mutate Kanban tasks via the CLI   # exit 1
 ```
 
-The `--board music` flag is required. `advance-stage.sh` defaults to `faceless-youtube`,
-so before the 2026-10-16 fix (card t_38e84953) every music advance went to the wrong
-board. A stage whose gate FAILS must not advance. The maker reworks it.
+so the marker never moves and the driver re-dispatches the same stage. That is the exact
+failure the advance step was added to prevent, one layer down; `advance-stage.sh` now fails
+loudly and names the tool route instead. Guarded by `music/scripts/check_stage_advance.py`.
+
+The `--board music` flag is required on the CLI fallback. `advance-stage.sh` defaults to
+`faceless-youtube`, so before the 2026-10-16 fix (card t_38e84953) every music advance went
+to the wrong board.
 
 ### 4.1 Who dispatches a music card — the answer
 
@@ -329,7 +347,7 @@ Paths verified on both hosts unless the row says otherwise.
 | Quota tracking | — | `music/quota-ledger.json`, `gate_quota` |
 | Oracle / card source | — | `music/oracle.py`, `music/scheduler/music-oracle.timer` (daily 08:00, nexus) |
 | Scheduler units | — | `music/scheduler/music-{oracle,policy-watch,pipeline-driver,weekly-digest}.{service,timer}` |
-| Lane checks (drift guards) | — | `music/scripts/check_*.py` (stage scripts, scheduler units, brief figures, brief drift, brief line refs, oracle determinism, prompt style counts) |
+| Lane checks (drift guards) | — | `music/scripts/check_*.py` (stage scripts, stage advance, scheduler units, brief figures, brief drift, brief line refs, oracle determinism, prompt style counts) |
 | Lyrics | `writer` profile | `music/lyrics/`, `music/prompts/*` |
 | Video render | `videobot`, `music/visuals/*.mp4` shape templates | album / mix / loop shapes |
 | Review | `reviewer-deepseek` + panel | `music/rubrics/*.json`, `music/rubrics/measure.py` |

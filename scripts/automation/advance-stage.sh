@@ -13,6 +13,19 @@
 # written to the WRONG board — the music card's stage marker never moved and
 # the driver would re-dispatch the same stage forever. Same fix shape as
 # pipeline-driver.sh got in t_b17ddffc.
+#
+# LOUD FAILURE + CHANNEL GUIDANCE 2026-10-16 (t_5a93164a): this script used to
+# pipe the CLI through `tail -1`, so a REFUSED mutation still printed a
+# plausible line and the caller could not tell there was no advance. A
+# dispatcher-spawned kanban worker cannot use this script at all: its terminal
+# and every subprocess it starts are fenced (agent/delegation_context.py::
+# kanban_path_is_fenced, hermes_cli/kanban.py::_is_delegated_child_cli_mutation),
+# so `hermes kanban --board <b> comment` exits 1 with
+#   kanban: delegate_task child contexts cannot mutate Kanban tasks via the CLI
+# Such a worker must post the marker with the kanban_comment TOOL instead:
+#   kanban_comment(task_id="<card>", body="stage: <next-stage>")
+# This script stays for the callers the fence does NOT cover: the pipeline
+# driver's `hermes -p <bot> chat`, cron jobs, and a human shell on the host.
 set -euo pipefail
 
 CARD="${1:?usage: advance-stage.sh <card-id> <new-stage> [--board <slug>]}"
@@ -38,7 +51,32 @@ while [ "$#" -gt 0 ]; do
 done
 
 # Update the card's stage. The driver's stage_of greps the LAST "stage: <x>"
-# marker it finds for the card (body first, then comments), so a comment is
-# the append-only way to move a card forward without rewriting the body.
-hermes kanban --board "$BOARD" comment "$CARD" "stage: $STAGE" 2>&1 | tail -1
+# marker it finds for the card (body, then run summary, then comments), so a
+# comment is the append-only way to move a card forward without rewriting the
+# body. The marker must be the LAST board write, so do not follow it with prose
+# that itself reads "stage: <word>".
+RC=0
+OUT=$(hermes kanban --board "$BOARD" comment "$CARD" "stage: $STAGE" 2>&1) || RC=$?
+
+if [ "$RC" -ne 0 ]; then
+  printf '%s\n' "$OUT" >&2
+  echo "advance-stage: FAILED (rc=$RC) — card $CARD was NOT advanced to stage: $STAGE (board $BOARD)" >&2
+  case "$OUT" in
+    *"cannot mutate Kanban tasks"*)
+      echo "advance-stage: this shell is a dispatcher-spawned kanban worker, or a descendant of one." >&2
+      echo "  Its environment is fenced, so the 'hermes kanban' CLI cannot mutate the board (t_5a93164a)." >&2
+      echo "  The flag order does not help — --board $BOARD was already passed." >&2
+      echo "  Post the marker with the kanban_comment TOOL from the worker itself:" >&2
+      echo "      kanban_comment(task_id=\"$CARD\", body=\"stage: $STAGE\")" >&2
+      echo "  Non-delegated callers (the pipeline driver's 'hermes -p <bot> chat', cron," >&2
+      echo "  a human shell) are unaffected and keep using this script." >&2
+      ;;
+    *)
+      echo "advance-stage: the CLI refused or failed; do not report an advance." >&2
+      ;;
+  esac
+  exit "$RC"
+fi
+
+printf '%s\n' "$OUT"
 echo "card $CARD advanced to stage: $STAGE (board $BOARD)"

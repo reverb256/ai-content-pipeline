@@ -11,19 +11,33 @@
 #   human_gate: true  NEVER auto-dispatch. Parked for j_kro / a human.
 #   auto_next: <stage>  (human gates only) advance target after approval.
 #
-# STAGE ADVANCE (added 2026-10-16, t_38e84953)
+# STAGE ADVANCE (added 2026-10-16 t_38e84953; advance CHANNEL fixed t_5a93164a)
 # -------------------------------------------
 # The driver picks a card up at whatever stage marker it carries, and it
 # re-reads that marker every 30 min. A stage prompt that does not move the
 # marker leaves the card where it is, so the driver re-dispatches the SAME
 # stage forever. Every producing prompt below therefore ends with an explicit
-# advance call:
+# advance step, and that step must be reachable from the caller that runs it.
 #
-#   bash scripts/automation/advance-stage.sh {card} <next-stage> --board music
+# TWO callers run a music stage, and they need DIFFERENT channels:
+#   * the driver dispatches a plain `hermes -p <bot> chat` (no kanban toolset,
+#     unfenced env) -> the CLI works: bash scripts/automation/advance-stage.sh
+#   * the generic kanban dispatcher spawns a kanban WORKER; its terminal and
+#     every subprocess it starts are fenced, so `hermes kanban --board music
+#     comment` is refused with "delegate_task child contexts cannot mutate
+#     Kanban tasks via the CLI" and exits 1 (t_5a93164a) -> only the
+#     kanban_comment TOOL works.
+# So each prompt names the TOOL first, keeps the CLI as a labelled fallback,
+# and requires the caller to CHECK the exit status. Checked by
+# music/scripts/check_stage_advance.py.
 #
-# The --board music flag is required: advance-stage.sh defaults to
-# faceless-youtube, and before this fix every music advance was written to
-# the wrong board (the marker never moved). A stage whose gate FAILS must
+# The --board music flag stays required on the CLI fallback: advance-stage.sh
+# defaults to faceless-youtube, and before t_38e84953 every music advance was
+# written to the wrong board (the marker never moved).
+#
+# The marker must be the LAST `stage:` match in the card's `hermes kanban show`
+# output (the driver takes the last match: body, then run summary, then
+# comments). A stage whose gate FAILS must
 # NOT advance — it stays put and the maker reworks it.
 #
 # Stage list: brain/playbooks/music-lane-architecture.md §4.
@@ -35,51 +49,51 @@ version: 1
 stages:
   - stage: brief
     bot: producer
-    prompt: "Run the brief stage for kanban task {card} (board music). Resolve the genre + lane + intent from the music registry (music/genres.yaml, music/lanes.yaml via music/registry.py). Write the brief: genre, target lanes, cadence, video shape. Save + comment on the kanban task. Then advance the card: bash scripts/automation/advance-stage.sh {card} genre-select --board music."
+    prompt: "Run the brief stage for kanban task {card} (board music). Resolve the genre + lane + intent from the music registry (music/genres.yaml, music/lanes.yaml via music/registry.py). Write the brief: genre, target lanes, cadence, video shape. Save + comment on the kanban task. Then advance the card to genre-select: post the marker 'stage: genre-select' on {card} with the kanban_comment tool (the hermes kanban CLI is REFUSED for dispatcher-spawned workers — t_5a93164a). Without a kanban tool, run bash scripts/automation/advance-stage.sh {card} genre-select --board music and check the exit status: 1 means the marker was NOT written and the card did NOT advance."
 
   - stage: genre-select
     bot: producer
-    prompt: "Run the genre-select stage for kanban task {card} (board music). Resolve the genre to a complete registry entry (music/genres.yaml). Verify the entry exists and every referenced lane exists in music/lanes.yaml. Save the resolved entry + comment. Then advance the card: bash scripts/automation/advance-stage.sh {card} lyrics --board music."
+    prompt: "Run the genre-select stage for kanban task {card} (board music). Resolve the genre to a complete registry entry (music/genres.yaml). Verify the entry exists and every referenced lane exists in music/lanes.yaml. Save the resolved entry + comment. Then advance the card to lyrics: post the marker 'stage: lyrics' on {card} with the kanban_comment tool (the hermes kanban CLI is REFUSED for dispatcher-spawned workers — t_5a93164a). Without a kanban tool, run bash scripts/automation/advance-stage.sh {card} lyrics --board music and check the exit status: 1 means the marker was NOT written and the card did NOT advance."
 
   - stage: lyrics
     bot: writer
-    prompt: "Run the lyrics stage for kanban task {card} (board music). Write ORIGINAL human-authored lyrics (copyrightable — never Suno-generated). Record the authorship claim per music/registry.py conventions. Save the lyric sheet, then run the lyrics gate: python3 music/gates/gate_lyrics_original.py. Comment the result. If the gate PASSES, advance the card: bash scripts/automation/advance-stage.sh {card} generate --board music. If it FAILS, do NOT advance. NOTE: an instrumental genre (music/prompts/<genre>.md says the lyrics box stays empty) skips this stage — advance it with a comment saying the genre is instrumental."
+    prompt: "Run the lyrics stage for kanban task {card} (board music). Write ORIGINAL human-authored lyrics (copyrightable — never Suno-generated). Record the authorship claim per music/registry.py conventions. Save the lyric sheet, then run the lyrics gate: python3 music/gates/gate_lyrics_original.py. Comment the result. If the gate PASSES, advance the card to generate: post the marker 'stage: generate' on {card} with the kanban_comment tool (the hermes kanban CLI is REFUSED for dispatcher-spawned workers — t_5a93164a). Without a kanban tool, run bash scripts/automation/advance-stage.sh {card} generate --board music and check the exit status: 1 means the marker was NOT written and the card did NOT advance. If it FAILS, do NOT advance. NOTE: an instrumental genre (music/prompts/<genre>.md says the lyrics box stays empty) skips this stage — advance it by posting the marker 'stage: generate' with the kanban_comment tool and saying the genre is instrumental."
 
   - stage: generate
     bot: producer
-    prompt: "Run the generate stage for kanban task {card} (board music). FIRST run the quota gate (python3 music/gates/gate_quota.py) — never outrun the 60/month standard-download cap. Then generate 2 tracks via Suno CDP (music/suno-gen.py) on the logged-in Premier session. Export ONLY through Suno Studio (unlimited), never the standard download button. Save tracks + comment. Then advance the card: bash scripts/automation/advance-stage.sh {card} curate --board music."
+    prompt: "Run the generate stage for kanban task {card} (board music). FIRST run the quota gate (python3 music/gates/gate_quota.py) — never outrun the 60/month standard-download cap. Then generate 2 tracks via Suno CDP (music/suno-gen.py) on the logged-in Premier session. Export ONLY through Suno Studio (unlimited), never the standard download button. Save tracks + comment. Then advance the card to curate: post the marker 'stage: curate' on {card} with the kanban_comment tool (the hermes kanban CLI is REFUSED for dispatcher-spawned workers — t_5a93164a). Without a kanban tool, run bash scripts/automation/advance-stage.sh {card} curate --board music and check the exit status: 1 means the marker was NOT written and the card did NOT advance."
 
   - stage: curate
     bot: producer
-    prompt: "Run the curate stage for kanban task {card} (board music). Listen to the generated tracks, pick the winner, record a reject reason for each loser. Save the curation note + comment. Then advance the card: bash scripts/automation/advance-stage.sh {card} stems --board music."
+    prompt: "Run the curate stage for kanban task {card} (board music). Listen to the generated tracks, pick the winner, record a reject reason for each loser. Save the curation note + comment. Then advance the card to stems: post the marker 'stage: stems' on {card} with the kanban_comment tool (the hermes kanban CLI is REFUSED for dispatcher-spawned workers — t_5a93164a). Without a kanban tool, run bash scripts/automation/advance-stage.sh {card} stems --board music and check the exit status: 1 means the marker was NOT written and the card did NOT advance."
 
   - stage: stems
     bot: producer
-    prompt: "Run the stems stage for kanban task {card} (board music). Export stems through Suno Studio (unlimited). Stems are MANDATORY for sync + direct-licensing. Save the stems, then run the stems gate: python3 music/gates/gate_stems_present.py --master <master> --stems-dir <dir>. Comment the result. Then advance the card: bash scripts/automation/advance-stage.sh {card} master --board music."
+    prompt: "Run the stems stage for kanban task {card} (board music). Export stems through Suno Studio (unlimited). Stems are MANDATORY for sync + direct-licensing. Save the stems, then run the stems gate: python3 music/gates/gate_stems_present.py --master <master> --stems-dir <dir>. Comment the result. Then advance the card to master: post the marker 'stage: master' on {card} with the kanban_comment tool (the hermes kanban CLI is REFUSED for dispatcher-spawned workers — t_5a93164a). Without a kanban tool, run bash scripts/automation/advance-stage.sh {card} master --board music and check the exit status: 1 means the marker was NOT written and the card did NOT advance."
 
   - stage: master
     bot: producer
-    prompt: "Run the master stage for kanban task {card} (board music). Loudness-normalize the master (-14 LUFS streaming / -16 sync, +/-1 dB). Save the master, then run the loudness gate: python3 music/gates/gate_loudness.py --master <master> --target streaming. Comment the result. Then advance the card: bash scripts/automation/advance-stage.sh {card} gate --board music."
+    prompt: "Run the master stage for kanban task {card} (board music). Loudness-normalize the master (-14 LUFS streaming / -16 sync, +/-1 dB). Save the master, then run the loudness gate: python3 music/gates/gate_loudness.py --master <master> --target streaming. Comment the result. Then advance the card to gate: post the marker 'stage: gate' on {card} with the kanban_comment tool (the hermes kanban CLI is REFUSED for dispatcher-spawned workers — t_5a93164a). Without a kanban tool, run bash scripts/automation/advance-stage.sh {card} gate --board music and check the exit status: 1 means the marker was NOT written and the card did NOT advance."
 
   - stage: gate
     bot: reviewer-deepseek
-    prompt: "Run the quality-gate stage for kanban task {card} (board music). Independent review on a DIFFERENT model than the producer. Judge the artifact against the music rubric (quality, originality, not template-slop). Record the verdict bound to the artifact hash, then run: python3 music/gates/gate_quality.py. If it fails, comment the specific findings and do NOT advance. You review; you do not redo the work. If it PASSES, advance the card: bash scripts/automation/advance-stage.sh {card} package --board music."
+    prompt: "Run the quality-gate stage for kanban task {card} (board music). Independent review on a DIFFERENT model than the producer. Judge the artifact against the music rubric (quality, originality, not template-slop). Record the verdict bound to the artifact hash, then run: python3 music/gates/gate_quality.py. If it fails, comment the specific findings and do NOT advance. You review; you do not redo the work. If it PASSES, advance the card to package: post the marker 'stage: package' on {card} with the kanban_comment tool (the hermes kanban CLI is REFUSED for dispatcher-spawned workers — t_5a93164a). Without a kanban tool, run bash scripts/automation/advance-stage.sh {card} package --board music and check the exit status: 1 means the marker was NOT written and the card did NOT advance."
 
   - stage: package
     bot: producer
-    prompt: "Run the package stage for kanban task {card} (board music). Build the release package: manifest, metadata, ISRC (ISO 3901), artwork, AI-disclosure flag. Then run: python3 music/gates/gate_release_ready.py. Comment the result. Then advance the card: bash scripts/automation/advance-stage.sh {card} visual --board music."
+    prompt: "Run the package stage for kanban task {card} (board music). Build the release package: manifest, metadata, ISRC (ISO 3901), artwork, AI-disclosure flag. Then run: python3 music/gates/gate_release_ready.py. Comment the result. Then advance the card to visual: post the marker 'stage: visual' on {card} with the kanban_comment tool (the hermes kanban CLI is REFUSED for dispatcher-spawned workers — t_5a93164a). Without a kanban tool, run bash scripts/automation/advance-stage.sh {card} visual --board music and check the exit status: 1 means the marker was NOT written and the card did NOT advance."
 
   - stage: visual
     bot: videobot
-    prompt: "Run the visual stage for kanban task {card} (board music). Render the platform-native video for the genre's video_shape (music/genres.yaml: album-30-60min / mix-60min / loop-10min / lyric-video / single-4min). Then run: python3 music/gates/gate_youtube_authentic.py. Save the MP4 + comment. Then advance the card to the HUMAN GATE: bash scripts/automation/advance-stage.sh {card} human-approval --board music."
+    prompt: "Run the visual stage for kanban task {card} (board music). Render the platform-native video for the genre's video_shape (music/genres.yaml: album-30-60min / mix-60min / loop-10min / lyric-video / single-4min). Then run: python3 music/gates/gate_youtube_authentic.py. Save the MP4 + comment. Then advance the card to the HUMAN GATE: post the marker 'stage: human-approval' on {card} with the kanban_comment tool (the hermes kanban CLI is REFUSED for dispatcher-spawned workers — t_5a93164a). Without a kanban tool, run bash scripts/automation/advance-stage.sh {card} human-approval --board music and check the exit status: 1 means the marker was NOT written and the card did NOT advance."
 
   - stage: publish
     bot: publishbot
-    prompt: "Run the publish stage for kanban task {card} (board music). Upload PRIVATE / draft ONLY — never make public without human approval (review gate). Distribution goes through the distributor bot per the lane. Report the upload ID / draft URL. Then advance the card: bash scripts/automation/advance-stage.sh {card} track --board music."
+    prompt: "Run the publish stage for kanban task {card} (board music). Upload PRIVATE / draft ONLY — never make public without human approval (review gate). Distribution goes through the distributor bot per the lane. Report the upload ID / draft URL. Then advance the card to track: post the marker 'stage: track' on {card} with the kanban_comment tool (the hermes kanban CLI is REFUSED for dispatcher-spawned workers — t_5a93164a). Without a kanban tool, run bash scripts/automation/advance-stage.sh {card} track --board music and check the exit status: 1 means the marker was NOT written and the card did NOT advance."
 
   - stage: track
     bot: analyst
-    prompt: "Run the track stage for kanban task {card} (board music). Pull streams, revenue, and lane ROI. Feed the numbers back to the registry cadence weights. Post the analysis to the kanban task. Then close the card: run hermes kanban --board music complete {card}."
+    prompt: "Run the track stage for kanban task {card} (board music). Pull streams, revenue, and lane ROI. Feed the numbers back to the registry cadence weights. Post the analysis to the kanban task. Then close the card with the kanban_complete tool (the hermes kanban CLI is REFUSED for dispatcher-spawned workers — t_5a93164a), carrying the summary + metadata. Without a kanban tool, run hermes kanban --board music complete {card} and check the exit status."
 
   # Human gates — parked for j_kro. Never auto-dispatched.
   - stage: human-approval
