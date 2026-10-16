@@ -442,9 +442,10 @@ this genre's own reference point from §3.
 
 *History — the contradiction that produced the fix.* The v1 file's own `notes` said
 *"elemental-\* tracks choose per their prompt; chiptune-8bit MUST pass chip_timbre_authenticity;
-**battle tracks MUST pass battle_energy**"*, while the criterion's `scope` string said the
-broader `elemental-*`. The computed consequences that were measured then, for the reviewer's
-benefit:
+**battle tracks MUST pass battle_energy**"*, while the criterion's own `name` said the broader
+`elemental-*` — `Boss/battle energy (elemental-*, epic-orchestral-boss)`. v1 carried no `scope`
+field at all, so nothing read that name. The computed consequences that were measured then, for
+the reviewer's benefit:
 
 ```
 Non-battle scope (loop 3 + packaging 1 + loudness 1 = weight 5, need 35 pts):
