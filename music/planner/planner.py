@@ -166,6 +166,31 @@ def load_blueprint(genre: str) -> dict:
         return yaml.safe_load(fh) or {}
 
 
+def bpm_in_caption(caption: str):
+    """The BPM the genre's own caption states, e.g. "ragga jungle, 168 BPM".
+
+    Every template in music/prompts/ states one. It is the researched tempo for
+    the genre and the only tempo signal available for the 11 genres that have no
+    blueprint yet - without it the draft path fell back to a flat 100, which is
+    right for almost nothing: jungle-dnb came out at 100 against its own stated
+    168, and anime-opening at 100 against its stated 160.
+    """
+    m = re.search(r"(\d{2,3})\s*BPM", caption or "", re.I)
+    return int(m.group(1)) if m else None
+
+
+def bpm_anchor_for(ctx: dict):
+    """One resolution order, used by the draft path, the AI prompt and
+    validation alike, so all three agree on what "the genre's tempo" means.
+
+    Blueprint first: it is hand-researched and may deliberately differ from the
+    caption (chill-lounge is 72 in the blueprint, 75 in the caption - the
+    blueprint is the decision). Caption second. Nothing third: better to say we
+    do not know than to invent a tempo and validate against it.
+    """
+    return ctx["blueprint"].get("bpm_anchor") or ctx.get("template_bpm")
+
+
 def context_for(genre: str) -> dict:
     reg = load_registry()
     if genre not in reg["genres"]:
@@ -174,7 +199,176 @@ def context_for(genre: str) -> dict:
     entry = reg["genres"][genre]
     tmpl = load_template(genre)
     bp = load_blueprint(genre)
-    return {"genre": genre, "registry": entry, "template": tmpl, "blueprint": bp}
+    return {"genre": genre, "registry": entry, "template": tmpl, "blueprint": bp,
+            "template_bpm": bpm_in_caption(tmpl.get("caption") or "")}
+
+
+# ---------------------------------------------------------------------------
+# ad-hoc sound decomposition
+# ---------------------------------------------------------------------------
+# The registry is a curated shortcut, not a boundary. A user can describe any
+# sound freely ("spooky halloween", "dark electro swing", "melancholic piano")
+# and the planner decomposes it into NAMED ELEMENTS from the genre inventories,
+# then composes a spec. The LLM picks elements; it does not invent them.
+
+def load_element_index() -> dict:
+    """Index every registered genre's parameters into a flat element library.
+
+    The inventories in music-theory-for-fusion/references/genre-inventories.md
+    are the research. This flattens them so a free-form sound description can
+    be resolved against real, named elements instead of a closed registry.
+    """
+    reg = load_registry()
+    elements = {}
+    for gkey, gval in reg["genres"].items():
+        if not isinstance(gval, dict):
+            continue
+        fam = gval.get("family") or ""
+        entry = {
+            "genre": gkey,
+            "family": fam,
+            "label": gval.get("label") or gkey.replace("-", " ").title(),
+        }
+        # pull the tempo from the template caption
+        tmpl = load_template(gkey)
+        bpm = bpm_in_caption(tmpl.get("caption") or "")
+        if bpm:
+            entry["bpm"] = bpm
+        if tmpl.get("caption"):
+            entry["caption"] = tmpl["caption"]
+        if tmpl.get("craft"):
+            entry["craft"] = tmpl["craft"]
+        bp = load_blueprint(gkey)
+        for field in ("structure", "voice_notes", "rhyme", "line_length",
+                      "bpm_anchor", "mood_words", "avoid", "theme"):
+            if bp.get(field):
+                entry[field] = bp[field]
+        elements[gkey] = entry
+    return elements
+
+
+def decompose_sound(description: str, index: dict, endpoint: str, model: str) -> dict:
+    """Map a free-form sound description to named elements from the index.
+
+    The LLM is constrained: it can only pick element NAMES that exist in the
+    index, and it must justify each pick with a one-line reason. It cannot
+    invent a tempo, a mode, or an instrument that is not in the research.
+    """
+    # Build the element catalog the LLM chooses from
+    catalog = []
+    for gkey, e in index.items():
+        row = {"genre": gkey, "label": e["label"]}
+        if e.get("bpm"):
+            row["bpm"] = e["bpm"]
+        if e.get("caption"):
+            row["caption"] = e["caption"][:120]
+        if e.get("mood_words"):
+            row["mood_words"] = e["mood_words"]
+        if e.get("voice_notes"):
+            row["voice_notes"] = e["voice_notes"]
+        catalog.append(row)
+
+    system = """You decompose a sound description into musical elements.
+You output ONLY a JSON object. You may only reference element names that appear
+in the CATALOG provided. Do not invent tempi, modes, or instruments that are
+not listed. Each element pick must have a one-line reason.
+
+JSON shape:
+{
+  "sound": "<the original description, normalized>",
+  "elements": [
+    {"name": "<element name from catalog>", "role": "<what it contributes>",
+     "reason": "<why it fits the description>"}
+  ],
+  "bpm": <int or null>,
+  "key": "<e.g. C minor>",
+  "structure": ["<section tag>", ...],
+  "mood_words": ["<word>", ...],
+  "avoid": ["<thing to avoid>", ...],
+  "voice_notes": "<vocal direction or null>",
+  "caption": "<a style caption synthesized from the chosen elements>"
+}"""
+
+    lines = [f"DESCRIPTION: {description}", "", "CATALOG:"]
+    for c in catalog:
+        lines.append(f"  - {c['genre']}: {c['label']}")
+        if c.get("bpm"):
+            lines.append(f"      bpm={c['bpm']}")
+        if c.get("caption"):
+            lines.append(f"      caption: {c['caption']}")
+        if c.get("mood_words"):
+            lines.append(f"      mood: {c['mood_words']}")
+        if c.get("voice_notes"):
+            lines.append(f"      voice: {c['voice_notes']}")
+    user = "\n".join(lines)
+
+    raw = call_llm(system, user, endpoint, model, temperature=0.4, timeout=180)
+    d = extract_json(raw)
+    if not d.get("elements"):
+        sys.exit(f"FATAL: sound decomposition returned no elements:\n{raw[:400]}")
+    return d
+
+
+def compose_spec(sound: dict, index: dict) -> dict:
+    """Build a plan context from decomposed elements.
+
+    This is the same shape context_for() returns, but assembled from free-form
+    picks instead of a registry block. The draft path, the AI prompt and
+    validation all work unchanged because the context shape is identical.
+    """
+    picks = sound.get("elements") or []
+    if not picks:
+        sys.exit("FATAL: no elements to compose from")
+
+    # Merge the contributing genres' parameters
+    caption_parts = []
+    mood = []
+    avoid = []
+    voice = None
+    bpm = sound.get("bpm")
+    seen_genres = set()
+
+    for pick in picks:
+        gkey = pick.get("name")
+        if gkey not in index:
+            continue
+        seen_genres.add(gkey)
+        e = index[gkey]
+        if e.get("caption"):
+            caption_parts.append(e["caption"])
+        if e.get("mood_words"):
+            mood.extend(e["mood_words"])
+        if e.get("avoid"):
+            avoid.extend(e["avoid"])
+        if not voice and e.get("voice_notes"):
+            voice = e["voice_notes"]
+        if not bpm and e.get("bpm"):
+            bpm = e["bpm"]
+
+    # Dedupe while preserving order
+    seen = set()
+    mood = [x for x in mood if not (x in seen or seen.add(x))]
+    seen = set()
+    avoid = [x for x in avoid if not (x in seen or seen.add(x))]
+
+    caption = sound.get("caption") or " ".join(caption_parts)
+    structure = sound.get("structure") or ["Intro", "Verse 1", "Chorus",
+                                            "Verse 2", "Chorus", "Bridge",
+                                            "Chorus", "Outro"]
+
+    return {
+        "genre": sound.get("sound") or "ad-hoc",
+        "registry": {"label": sound.get("sound") or "ad-hoc",
+                     "family": "ad-hoc",
+                     "contributors": sorted(seen_genres)},
+        "template": {"caption": caption, "structure": structure,
+                     "craft": [], "path": None, "detailed": []},
+        "blueprint": {"structure": [{"tag": t, "guidance": ""} for t in structure],
+                      "voice_notes": voice, "mood_words": mood,
+                      "avoid": avoid, "bpm_anchor": bpm},
+        "template_bpm": bpm,
+        "sound_elements": picks,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -315,8 +509,10 @@ def build_user_prompt(brief: str, ctx: dict, language: str, title: str | None,
         parts.append(f"RHYME: {bp['rhyme']}")
     if bp.get("line_length"):
         parts.append(f"LINE LENGTH: {bp['line_length']}")
-    if bp.get("bpm_anchor"):
-        parts.append(f"BPM ANCHOR: {bp['bpm_anchor']}")
+    anchor = bpm_anchor_for(ctx)
+    if anchor:
+        src = "blueprint" if bp.get("bpm_anchor") else "the genre's own caption"
+        parts.append(f"BPM ANCHOR: {anchor} (from {src})")
     if bp.get("mood_words"):
         parts.append(f"MOOD WORDS (use some): {', '.join(map(str, bp['mood_words']))}")
     if bp.get("avoid"):
@@ -393,7 +589,7 @@ def validate(plan: dict, ctx: dict, brief: str, language: str) -> list[str]:
         problems.append(f"section(s) with no lyrics: {', '.join(empty)}")
 
     # bpm anchor
-    anchor = bp.get("bpm_anchor")
+    anchor = bpm_anchor_for(ctx)
     if anchor and isinstance(plan.get("bpm"), (int, float)):
         if abs(plan["bpm"] - anchor) > max(8, anchor * 0.12):
             problems.append(f"bpm {plan['bpm']} is more than 12% off the anchor {anchor}")
@@ -460,14 +656,32 @@ def cmd_plan(args) -> int:
               file=sys.stderr)
         return 2
 
-    ctx = context_for(args.genre)
+    # Ad-hoc path: if the genre is not in the registry, decompose it into
+    # named elements from the genre inventories and compose a spec. The
+    # registry is a curated shortcut, not a boundary.
+    reg = load_registry()
+    if args.genre not in reg["genres"]:
+        if not args.endpoint:
+            print("FAIL: ad-hoc genre requires --endpoint and --model "
+                  "(the LLM decomposes the sound description).",
+                  file=sys.stderr)
+            return 2
+        index = load_element_index()
+        sound = decompose_sound(args.genre, index, args.endpoint, args.model)
+        ctx = compose_spec(sound, index)
+        print(f"ad-hoc sound: {ctx['genre']}")
+        print(f"  contributors: {', '.join(ctx['registry']['contributors'])}")
+        for el in sound.get("elements", []):
+            print(f"  - {el['name']}: {el.get('reason','')}")
+    else:
+        ctx = context_for(args.genre)
     mode = args.lyrics_mode
 
     if mode == "draft":
         plan = {
             "title": args.title or (ctx["blueprint"].get("title_candidates") or ["Untitled"])[0],
             "caption": ctx["template"]["caption"],
-            "bpm": ctx["blueprint"].get("bpm_anchor") or 100,
+            "bpm": bpm_anchor_for(ctx) or 100,
             "key": args.key or "C minor",
             "duration": args.duration or 180,
             "timesignature": "4",

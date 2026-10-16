@@ -1,0 +1,34 @@
+# Perpetual Music Asset Licence (v1.0)
+# Project: AI Content Pipeline - Game Assets Lane
+
+This licence grants a PERPETUAL, WORLDWIDE, NON-EXCLUSIVE licence to use the included audio assets in the following manner:
+
+1. PERMITTED USE
+   - Integration into video games (commercial or non-commercial).
+   - Use in game trailers, promotional videos, and social media marketing for the project.
+   - Streamer Clearance: This licence explicitly permits the use of these assets in live streams (Twitch, YouTube, etc.) and VODs without risk of copyright strikes.
+
+2. DISTRIBUTION
+   - The assets may be distributed as part of a compiled game binary.
+   - The assets MAY NOT be redistributed as standalone audio files, sample packs, or sold as "royalty-free" music on other marketplaces.
+
+3. DERIVATIVE WORKS
+   - You may edit, slice, pitch-shift, or mix these assets to fit your project's needs.
+   - You may not claim sole authorship of the original underlying composition.
+
+4. LIMITATIONS
+   - No Sublicensing: You cannot sell this licence to a third party.
+   - No Use in "AI Training": These assets may not be used to train other generative AI models.
+
+5. GRANT OF RIGHTS
+   - This is a perpetual grant. No recurring royalties are owed to the creator.
+   - The licence is valid for all future platforms and media.
+
+6. AI DISCLOSURE
+   - These assets were generated using AI tools under a commercial-rights grant. 
+   - The licensee is not required to disclose AI origin in the final game credits, though it is permitted.
+
+---
+Licence ID: PERPETUAL-GAME-ASSET-V1
+Date: 2026-10-08
+Issuer: AI Content Pipeline / Music Lane
