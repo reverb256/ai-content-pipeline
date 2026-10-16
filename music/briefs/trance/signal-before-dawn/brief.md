@@ -253,11 +253,13 @@ it (§6). The drift this brief reported is resolved: `values.yaml:76` now holds
 `smoke-chill-lounge` too, with a comment recording that the chart read `briefs: []` while
 the cluster held one entry.
 
-**Correction — the planner cap is 600 s, not 420 s.** When this brief was written,
-`music/planner/planner.py` read `MIN_DURATION_S = 30`, `MAX_DURATION_S = 420`. Commit
-`52ae620` (card `t_25a6499c`) raised the cap for the registry's `loop-10min` shape; the file
-now reads `MIN_DURATION_S = 30` (line 103) and `MAX_DURATION_S = 600` (line 104). The 417 s
-track sits inside both, so no routing verdict changes — the quoted number was stale.
+**Correction — the planner's rail, re-read by card `t_ae1d9243`.** When this brief was written
+`music/planner/planner.py` read `MIN_DURATION_S = 30` (**anchored**), `MAX_DURATION_S = 420`
+(**anchored**). Commit `52ae620` (card `t_25a6499c`) raised the cap for the registry's
+`loop-10min` shape, and card `t_96dfc521` later moved the floor to the shortest shape the
+registry names. The file now reads `MIN_DURATION_S = 16` (`music/planner/planner.py:147`) and
+`MAX_DURATION_S = 600` (`:148`). The 417 s track sits inside both, so no routing verdict
+changes — the quoted number was stale.
 
 ## 8. Blocker for the next stages
 
@@ -325,7 +327,7 @@ Every figure in this brief was re-measured this pass. Results:
 | `PASS gate_quota`, period 2026-10, 0/60, studio 0 | same | reproduced |
 | `PASS gate_lyrics_original`, 9 sections, 84 words, j_kro | same | reproduced |
 | `sha256(lyrics.suno.txt)` = `e667e248…` matches manifest | same hash from `sha256sum` | reproduced |
-| planner cap 420 s, floor 30 s | `planner.py:82-83` (`MIN_DURATION_S=30`, `MAX_DURATION_S=420`) | reproduced |
+| planner cap 420 s, floor 30 s — **anchored** | `planner.py:82-83` (`MIN_DURATION_S=30`, `MAX_DURATION_S=420`) | reproduced |
 | 417 s = 240 bars at 138 BPM | 240 × 1.7391 = 417.4 s | reproduced |
 | no trance plan, no trance audio | `/var/lib/music-plans/` = `final-round`, `smoke-chill-lounge`, `testplan` only; repo-wide search finds the lyrics and brief dirs only | reproduced |
 | live queue = `smoke-chill-lounge` only | ConfigMap `mining/music-pipeline-briefs` key `briefs.json` read back | reproduced |
