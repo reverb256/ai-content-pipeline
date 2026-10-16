@@ -85,7 +85,7 @@
     }
   ],
 
-  "_loop_and_duration_basis": "150 BPM, 4/4 -> one bar = 4*60/150 = 1.600 s exactly. 75 bars = 120.0 s (master loop). 16 bars = 25.6 s and 32 bars = 51.2 s are the in-engine short loops. The loop-10min video is 600.0 s = exactly 5 x 120.0 s, which is why 120.0 s is the chosen master length (a 51.2 s loop would need 11.719 tiles and a 102.4 s loop 5.859 - both leave a broken final seam). 120 s is inside the planner guard rail (planner.py MIN_DURATION_S=30, MAX_DURATION_S=420); 600 s is NOT, which is why the 10-minute artifact is a video, never a single render.",
+  "_loop_and_duration_basis": "150 BPM, 4/4 -> one bar = 4*60/150 = 1.600 s exactly. 75 bars = 120.0 s (master loop). 16 bars = 25.6 s and 32 bars = 51.2 s are the in-engine short loops. The loop-10min video is 600.0 s = exactly 5 x 120.0 s, which is why 120.0 s is the chosen master length (a 51.2 s loop would need 11.719 tiles and a 102.4 s loop 5.859 - both leave a broken final seam). 120 s is inside the planner guard rail (planner.py MIN_DURATION_S=16, MAX_DURATION_S=600); 600 s is NOT, which is why the 10-minute artifact is a video, never a single render. The rail was re-read by card t_ae1d9243 (2026-10-16).",
 
   "_required_artifacts": {
     "game-assets": ["stems >= 4 (drums, bass, keys, ... within +/-0.5 s of the master)", "loop_points.json", "seamless_loop", "metadata (BPM + key)"],
