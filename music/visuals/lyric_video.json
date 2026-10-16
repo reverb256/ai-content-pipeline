@@ -1,0 +1,91 @@
+{
+  "schema": "music/video-shape-artifact v1",
+  "shape": "lyric-video",
+  "template": "music/visuals/lyric_video.mp4",
+  "purpose": "The video_shape template for the `lyric-video` shape. Genres that declare video_shape: lyric-video (activist only, per music/genres.yaml) drive this shape. It is a TEMPLATE, not a release asset: see audio_bed below.",
+  "why_this_file_exists": "Card t_ec378832. `music/genres.yaml` gave `activist` video_shape: lyric-video, and no template existed -- the registry validator never checked video_shape, so the registry named a shape no renderer owned. Rather than repoint activist at `single-4min`, this artifact was rendered, because `single_4min.mp4` is a static placeholder card (measured: 120 sampled frames, 2 distinct 64x64-gray signatures; its only text is the literal string 'Verse 1: Lorem ipsum dolor sit amet' under the heading 'Single-4min'). It is not a lyric video, so claiming it as one would have been false.",
+
+  "renderer": {
+    "path": "music/scripts/render_lyric_video.py",
+    "drive_from": "a track's lyrics.suno.txt + section timing (--sections-file, or bars derived from --bpm and --duration)",
+    "invocation": "/usr/bin/python3 music/scripts/render_lyric_video.py --lyrics music/lyrics/activist/what-runs-beneath/lyrics.suno.txt --out music/visuals/lyric_video.mp4 --crf 30 --grain-hold 3",
+    "interpreter": "/usr/bin/python3 (3.14.7: numpy 2.5.3, PIL 12.3.0). The PATH python on this host lacks both."
+  },
+
+  "source": {
+    "lyric_sheet": "music/lyrics/activist/what-runs-beneath/lyrics.suno.txt",
+    "lyric_sheet_sha256": "0833bfdb58afa3a34cfc5c7e16b35ea98bf4bfa0d0ffb3b76ec485c94c84f2e8",
+    "lyric_sheet_note": "Hash-bound and human-authored (provenance: human-original, j_kro). The renderer reads it and never writes it; the sha256 above matches music/lyrics/activist/what-runs-beneath/manifest.json, so the sheet is unchanged.",
+    "style_spec": "music/visuals/documentary-grain.md",
+    "bpm": 96,
+    "bpm_source": "music/lyrics/blueprints/activist.yaml bpm_anchor + music/prompts/activist.md",
+    "title": "What Runs Beneath"
+  },
+
+  "section_timing": {
+    "derivation": "bars per section from the tag map scaled by largest-remainder to exactly 96 bars at 96 BPM (bar = 2.500s), i.e. exactly 240.0s",
+    "occurrence_sensitive": true,
+    "sections": [
+      {"index": 0, "tag": "Verse 1", "occurrence": 1, "lines": 4, "bars": 18, "start_s": 0.0, "end_s": 45.0},
+      {"index": 1, "tag": "Chorus", "occurrence": 1, "lines": 4, "bars": 9, "start_s": 45.0, "end_s": 67.5},
+      {"index": 2, "tag": "Verse 2", "occurrence": 1, "lines": 4, "bars": 17, "start_s": 67.5, "end_s": 110.0},
+      {"index": 3, "tag": "Chorus", "occurrence": 2, "lines": 4, "bars": 9, "start_s": 110.0, "end_s": 132.5},
+      {"index": 4, "tag": "Bridge", "occurrence": 1, "lines": 2, "bars": 13, "start_s": 132.5, "end_s": 165.0},
+      {"index": 5, "tag": "Verse 3", "occurrence": 1, "lines": 4, "bars": 17, "start_s": 165.0, "end_s": 207.5},
+      {"index": 6, "tag": "Outro", "occurrence": 1, "lines": 4, "bars": 13, "start_s": 207.5, "end_s": 240.0}
+    ],
+    "note": "The sheet repeats [Chorus]; both instances are kept as separate timed sections because the second starts later in time than the first."
+  },
+
+  "style_conformance": {
+    "spec": "music/visuals/documentary-grain.md",
+    "palette": ["#232019 shadow", "#6b6257 dust", "#9c8f7a skin-and-paper"],
+    "accent": "#c2542e (one accent colour per video, used sparingly: the insert hairline and the section label only)",
+    "medium_variation": "the 4:3 archival insert is cut from a DIFFERENT medium than the wall it sits on and the medium changes per section (newsprint / chalk on pavement / protest wood / paper)",
+    "motion": "slow zoom + handheld sway + integer-pixel gate weave + 5 occasional focus hunts (the blur is applied to the world layer only, never to the type)",
+    "type": "Nimbus Mono PS (Courier clone, typewriter), lyrics appear ON the phrase with a per-character reveal, never after it",
+    "chorus_motif": "each chorus line is additionally written by 7 staggered, rotated ghost hands -- the 'crowd of hands writing the same line' the spec asks for",
+    "grain": "6.5%",
+    "grain_unit_interpretation": "documentary-grain.md says 'Grain 6-8%' and NO file in this repo defines the unit (other styles give 2% 'the lightest of all visuals' up to 8-10%). Implemented as PROPORTIONAL modulation (6.5% of each pixel's own value). Measured: an additive field of 6.5% of FULL SCALE flattened the frame to 'no visible scene detail anywhere' and cost 5-7x the bitrate.",
+    "print_artifacts": "static dirt specks + 3 hair scratches (fixed field, free to encode) and a 3% exposure flicker, added because a frame with grain but no print artifacts reads as a digital filter rather than 16mm",
+    "excluded_by_spec": "no glossy kinetic type, no karaoke bounce, no drop shadow, no clickbait thumbnail framing"
+  },
+
+  "audio_bed": {
+    "is_track_master": false,
+    "kind": "96 BPM reference click slate (downbeat accented), 48 kHz mono AAC",
+    "why": "No activist master exists: the generate stage has not run. The shape must still ffprobe at its real duration with a real audio stream, so the bed gives the section timing an audible reference. It is NOT music and must be replaced with the track master before publishing.",
+    "disclosed_in": ["the container 'comment' metadata", "this sidecar", "the card comment on t_ec378832"]
+  },
+
+  "measured": {
+    "probe_command": "ffprobe -v error -show_entries format=duration,size,bit_rate:stream=codec_type,codec_name,width,height,r_frame_rate,nb_frames,sample_rate,channels -of default=noprint_wrappers=1 music/visuals/lyric_video.mp4",
+    "duration_s": 240.000000,
+    "video_stream_duration_s": 240.000000,
+    "audio_stream_duration_s": 240.000000,
+    "truncation_delta_s": 0.0,
+    "video": {"codec": "h264", "width": 1280, "height": 720, "fps": "25/1", "frames": 6000},
+    "audio": {"codec": "aac", "sample_rate": 48000, "channels": 1, "frames": 11251},
+    "size_bytes": 41447357,
+    "bit_rate_bps": 1381578,
+    "sha256": "d841acd1483eb64248fba68e520bac31042f5a4e645a1790ed638c99269d295",
+    "distinct_frame_signatures": "120 of 120 sampled at 2.0s cadence (64x64 gray). For contrast: single_4min.mp4 scores 2. This is a real edit, not a raw dump."
+  },
+
+  "gates": {
+    "youtube_authentic_applies": false,
+    "visual_stage_gate_for_activist": "none",
+    "resolution_command": "/usr/bin/python3 music/registry.py gate-for-stage --stage visual --genre activist",
+    "resolution": "gate: none -- no lane in this genre declares gate: gate_youtube_authentic (lanes: direct-fan, sync-documentary, streaming); when_absent: none, so the visual stage runs no gate for it",
+    "why": "activist publishes no video to a YouTube surface, so gate_youtube_authentic would check a lane the genre does not have. That decision lives in music/lanes.yaml `stage_gates:` (card t_d9983bb9) and is resolved from the genre's own lanes -- it is not hardcoded in the stage prompt."
+  },
+
+  "regression_check": {
+    "path": "music/scripts/check_video_shapes.py",
+    "selftest": "proves the check FAILS on the t_ec378832 incident (a declared video_shape with no artifact)",
+    "catches": "every genre's video_shape must resolve to music/visuals/<shape with '-' -> '_'>.mp4, except the deliberate 'none'. The file name is derived, not tabulated, so the check cannot drift."
+  },
+
+  "rendered_by": "videobot",
+  "card": "t_ec378832"
+}
