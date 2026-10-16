@@ -214,9 +214,11 @@ boundary land on a phrase boundary.
 
 ### Duration decision: 334 s (128 bars)
 
-The lane's guard rail is `MIN_DURATION_S = 30`, `MAX_DURATION_S = 600`
-(`music/planner/planner.py` lines 103-104, re-read 2026-10-16 16:07 CDT; the cap was 420 when this brief was
-written and was raised to 600 for the `loop-10min` shape). The wire format takes an integer
+The lane's guard rail is `MIN_DURATION_S = 16` (`music/planner/planner.py:147`) and
+`MAX_DURATION_S = 600` (`:148`). The cap was 420 when this brief was written and was raised to
+600 for the `loop-10min` shape (**anchored**); the floor moved 30 -> 16 when card `t_96dfc521`
+made it the shortest shape the registry names (re-read 2026-10-16 by card `t_ae1d9243`). The
+wire format takes an integer
 (`SunoGenerateRequest.duration: Optional[int]`), so the plan value is **334**.
 
 The binding check is the family rubric, not taste. `music/rubrics/gamer.json` →
@@ -692,7 +694,7 @@ broken-fetch premium — which is the entire 0.20 gap.
 | 3 | §1 | registry prints "14 genres, 10 lanes" | prints "14 genres, 10 lanes, 1 stage gate rule(s)" plus the `visual` stage-gate line |
 | 4 | §1 | blueprints hold "only activist, chill-lounge, trance" | 7 files, listed |
 | 5 | §3 | pack.py and gate_asset_pack.py are upstream-only, "cannot be built from this tree today" | both in this checkout (52690 B / 2981 B), with the sample pack |
-| 6 | §5 | `MAX_DURATION_S = 420` | 600 (planner.py lines 103-104) |
+| 6 | §5 | `MAX_DURATION_S = 420` (**anchored**) | 600 — the constant is at `planner.py:148` now, not `:103-104` (card `t_ae1d9243`) |
 | 7 | §7 | the deployed translator "names nine" | v0.1.3 names exactly eight and records the fix |
 | 8 | §7 | suno-gen.py:184 is an `origin/main`-only file | it is in this checkout (42652 B) and the wrong string is still at line 184 |
 | 9 | §7 | Engine A runs image v0.1.2 on pod `sunolocal-source-65fcc845d-fd5r6` | image v0.1.3 on pod `sunolocal-source-75d58dbc97-7jfmc` |
