@@ -307,13 +307,15 @@ The 75-bar figure keeps its meaning as the **MASTER's** arrangement: the render 
                    75 bars  120.0 s   ← matches the template's 7-tag sheet
 ```
 
-`music/planner/planner.py` now carries `MIN_DURATION_S = 30` (`:103`) and
-`MAX_DURATION_S = 600` (`:104`) — raised from the 420 this brief first read, so both the
-120 s master and the 600.0 s render length are inside the guard rail (`MIN_DURATION_S <=
-dur <= MAX_DURATION_S`, `:696`). The 420 claim's own line number is gone too: `planner.py`
-line 83 is a blank line now (`check_brief_line_refs.py` flagged that citation, §14 row 5). The
-10-minute artifact is still delivered as a video, but for the tiling reason in this section,
-not because the planner refuses the length.
+`music/planner/planner.py` now carries `MIN_DURATION_S = 16` (`:147`) and
+`MAX_DURATION_S = 600` (`:148`) — the cap was raised from the 420 this brief first read, and the
+floor moved 30 -> 16 when card `t_96dfc521` made it the shortest shape the registry names
+(card `t_ae1d9243` re-read both, 2026-10-16). Both the 120 s master and the 600.0 s render
+length are inside the guard rail (`MIN_DURATION_S <= dur <= MAX_DURATION_S`, `:1003`). The
+rail's own line numbers have moved twice: `:103`/`:104` and line 83 are not the rail any more
+— `check_brief_line_refs.py` flagged the line-83 citation when it stopped opening a block
+(§14 row 5). The 10-minute artifact is still delivered as a video, but for the tiling reason in
+this section, not because the planner refuses the length.
 
 Throughput: cadence 2/wk = **2 pack-grade generations per week**, each needing its own stems,
 loop points, short loops and cover. At `advisory` rung nothing publishes without j_kro, so
@@ -854,7 +856,7 @@ no stage chain was started (this genre already sits at `stage: genre-select`).
 | §1 | composite 7.505 → 7.5; components 10 / 6 / 8 / 6.7 / 9 / 3 | recomputed with `oracle.py`'s weights (line 54): 7.505000 and 7.705000 for the twin | ✓ |
 | §1 | re-run today: `cadence_fit` 3.333, total 7.0 | live `score_genre("elemental-fire")` → `cadence_fit 3.3333`, `trend_signal 3.0`, `total 7.0` | ✓ |
 | §4 | bar 1.600 s; 16/32/75/375 bars = 25.6 / 51.2 / 120.0 / 600.0 s | all exact; 600÷51.2 = 11.71875, ÷89.6 = 6.6964, ÷102.4 = 5.8594, ÷120 = 5.000, ÷200 = 3.000 | ✓ |
-| §4 | 75-bar sheet 9+12+12+12+9+12+9, 120.0 s; `MAX_DURATION_S` 420 | sums exact; `planner.py` line 83 held `MAX_DURATION_S = 420` in the 13:51 tree (`git show 456d525:music/planner/planner.py` line 83) — true then, and the line moved when `52ae620` rewrote that block (§14 row 5) | ✓ |
+| §4 | 75-bar sheet 9+12+12+12+9+12+9, 120.0 s; `MAX_DURATION_S` 420 (**anchored**) | sums exact; `planner.py` line 83 held `MAX_DURATION_S = 420` in the 13:51 tree (`git show 456d525:music/planner/planner.py` line 83) — true then, and the line moved when `52ae620` rewrote that block (§14 row 5) | ✓ |
 | §5 | style field 583/1000 chars; template 4008 B | block measures 583 chars / 583 bytes; template 4008 B | ✓ |
 | §5 | `translate.py:42` bpm=120, `:45` `int(60 + style_weight*120)`; 120 / 156 / 150; `key` at `:49` | read from `origin/main`; all four derived BPMs and the line numbers exact | ✓ |
 | §5 | no `elemental-fire.yaml`; planner falls back to 100 BPM at `planner.py ~470` | `music/lyrics/blueprints/` = activist, chill-lounge, trance; line 470 is exactly the fallback | ✓ |
@@ -943,7 +945,7 @@ the reproducible one.
 | 2 | `registry OK: 14 genres, 10 lanes` | `registry OK: 14 genres, 10 lanes, 1 stage gate rule(s)` + a `stage gate visual` line | CORRECTED (§1) |
 | 3 | `gate_sync_ready` empty-package list (8 track-shaped reasons) | 17 reasons, pack-mode: manifest schema fields, `pack_manifest` counts, `loop_points.json`, clearance, `ai_disclosure.txt`, `LICENCE.txt` | CORRECTED (§3) |
 | 4 | `gate_stems_present`: `only 0 stem(s) …; 4 required` | `only 0 stem(s) in <dir>; 4 required` | CORRECTED (§3) |
-| 5 | `planner.py` `MAX_DURATION_S` = **420**, and the claim was cited at `planner.py` line 83 | `MIN_DURATION_S = 30` (`:103`), `MAX_DURATION_S = 600` (`:104`); line 83 is a blank line now, which `check_brief_line_refs.py` flagged (it held `MAX_DURATION_S = 420` in the 13:51 tree — the line moved when `52ae620` rewrote the block) | CORRECTED (§4; this was the one citation that check failed on in this file) |
+| 5 | `planner.py` `MAX_DURATION_S` = **420** (**anchored**), and the claim was cited at `planner.py` line 83 | `MIN_DURATION_S = 30` (`:103`), `MAX_DURATION_S = 600` (`:104`) — card `t_ae1d9243`: the constants are at `:147`/`:148` now; line 83 is a blank line now, which `check_brief_line_refs.py` flagged (it held `MAX_DURATION_S = 420` in the 13:51 tree — the line moved when `52ae620` rewrote the block) | CORRECTED (§4; this was the one citation that check failed on in this file) |
 | 6 | The planner "falls back to **100 BPM**" with no blueprint | **150**, measured by running `planner.py plan --genre elemental-fire` with no `--bpm`: `bpm_in_caption` reads the template (`:279`), `bpm_anchor_for` chains at `:203–212` | CORRECTED (§5) |
 | 7 | "only `activist`, `chill-lounge`, `trance`" have a lyric blueprint | **7** blueprints (activist, anime-ending, anime-opening, chill-lounge, epic-orchestral-boss, jungle-dnb, trance); still none for elemental-fire | CORRECTED (§5, §8) |
 | 8 | The deployed `translate.py` makes 150 BPM unreachable at 80 % style adherence | The repo mirror still does, but it is NOT the deployed code: the live engine (sunolocal **v0.1.3**) takes an **explicit `bpm`, which wins**. The plan on disk reads `bpm 150` | CORRECTED (§5, §7) |
