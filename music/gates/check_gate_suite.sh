@@ -288,11 +288,27 @@ done
 # `game-assets` lane must never ship (music/rubrics/gamer.json reject_signals:
 # "fade-out or truncated ending on a game-loop claim").
 FADED_LOOP="$F/faded_loop"
-mkdir -p "$FADED_LOOP"
+mkdir -p "$F/faded_loop"
 cp "$F/loop_faded.wav" "$FADED_LOOP/master.wav"
 cat > "$FADED_LOOP/loop_points.json" <<'EOF'
 {"loop_start_s": 5.0, "loop_end_s": 10.0, "seamless": true}
 EOF
+
+# --- the three end-guard fixtures (card t_8297d2c6) ------------------------
+# The 1.0 s fade: level ruler blind (4.7 dB), end guard refuses it.
+# The quiet loop (-45.5 dB, above the -50 dB floor): must still PASS.
+# The both-ends-silent loop: the symmetric hole of the level ruler.
+for name in faded_short quiet silent_ends; do
+  dir="$F/${name}_loop"
+  mkdir -p "$dir"
+  cp "$F/loop_${name}.wav" "$dir/master.wav"
+  cat > "$dir/loop_points.json" <<'EOF'
+{"loop_start_s": 5.0, "loop_end_s": 10.0, "seamless": true}
+EOF
+done
+FADED_SHORT_LOOP="$F/faded_short_loop"
+QUIET_LOOP="$F/quiet_loop"
+SILENT_ENDS_LOOP="$F/silent_ends_loop"
 
 # --- asset packs (generator-built + conforming + broken) -----------
 # Built by music/assets/pack.py for the generator pack: see card t_5ed495eb.
@@ -447,6 +463,53 @@ fail_reason "faded loop tail fails on the LEVEL ruler, not the curvature one" 1 
   "$PY" "$GATES/gate_loop_points.py" \
   --master "$FADED_LOOP/master.wav" \
   --loop-points "$FADED_LOOP/loop_points.json" \
+  --scratch "$SCRATCH/loop_scratch"
+
+# --- the short fade, the hole the level ruler cannot see (t_8297d2c6) ------
+# A 1.0 s fade-out tail is SMOOTH (curvature passes it) and its 1.0 s / 6 dB
+# level delta is only 4.7 dB (the level ruler passes it, by arithmetic: a
+# linear fade of length d >= L reads (L/d)/sqrt(3)). The END guard is the
+# ruler that refuses it: inside its last 1.0 s the first half sits 8.5 dB
+# above the second. The refusal must NAME the ramp — if this case ever exits
+# 0, the false PASS of card t_8297d2c6 has returned.
+fail_reason "a 1.0s fade-out tail fails on the END RAMP, not the level" 1 \
+  "loop end ramps" \
+  "$PY" "$GATES/gate_loop_points.py" \
+  --master "$FADED_SHORT_LOOP/master.wav" \
+  --loop-points "$FADED_SHORT_LOOP/loop_points.json" \
+  --scratch "$SCRATCH/loop_scratch"
+# ... and the same artifact's level measurement must still be UNDER the
+# ceiling, so the suite proves which ruler decided.
+if "$PY" "$GATES/gate_loop_points.py" \
+     --master "$FADED_SHORT_LOOP/master.wav" \
+     --loop-points "$FADED_SHORT_LOOP/loop_points.json" \
+     --scratch "$SCRATCH/loop_scratch" >/tmp/gate_out.$$ 2>&1; then
+  echo "BAD   the 1.0s fade case passed the gate"
+  fails=$((fails+1))
+elif grep -qF "loop level drops" /tmp/gate_out.$$; then
+  echo "BAD   the 1.0s fade was refused by the LEVEL ruler — it is no longer the short-fade case"
+  sed 's/^/        /' /tmp/gate_out.$$
+  fails=$((fails+1))
+else
+  echo "FAILS the 1.0s fade is refused for the END RAMP while its level delta stays under the ceiling"
+fi
+
+# --- the end guard must not punish a quiet (nonzero) ending ---------------
+# -45.5 dB is quiet and it clears the lane's -50 dB floor, so the end guard
+# must leave it alone: quiet is not silence (card t_8297d2c6).
+pass "a quiet but NONZERO loop ending still passes (above the -50 dB floor)" \
+  "$PY" "$GATES/gate_loop_points.py" \
+  --master "$QUIET_LOOP/master.wav" \
+  --loop-points "$QUIET_LOOP/loop_points.json" \
+  --scratch "$SCRATCH/loop_scratch"
+# ... and a loop silent at BOTH ends is refused FOR THE SILENCE: two silent
+# ends match each other, which is exactly the elemental-air master the level
+# ruler accepted (head-1s -59.5 dB, tail-1s -58.7 dB, delta 0.8 dB).
+fail_reason "a loop silent at both ends fails on the silence floor" 1 \
+  "is silence" \
+  "$PY" "$GATES/gate_loop_points.py" \
+  --master "$SILENT_ENDS_LOOP/master.wav" \
+  --loop-points "$SILENT_ENDS_LOOP/loop_points.json" \
   --scratch "$SCRATCH/loop_scratch"
 
 # ------------------------------------------------------------------
