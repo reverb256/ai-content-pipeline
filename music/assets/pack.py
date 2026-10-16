@@ -9,12 +9,39 @@ is the source-of-truth campaign). Produces:
   2. Stem pack    — harmonic / percussive stems via HPSS (scipy), time-aligned.
   3. One-shots    — isolated kick / snare / hat hits extracted from the drum stem.
   4. SFX          — synth-generated elemental SFX (fire whoosh, water drip,
-                   earth rumble, air gust) in numpy, 8-bit-friendly PCM.
+                    earth rumble, air gust) in numpy, 8-bit-friendly PCM.
 
 Outputs WAV (16-bit, 44.1 kHz) + JSON manifest + README + multi-tier licence.
 
+The output is shaped for the `game-assets` lane, so it must satisfy that
+lane's gates (card t_5ed495eb). The pack carries:
+
+  manifest.json       package metadata object (title/artist/bpm/key/mood/
+                      genre/sample_rate) + a `pack_manifest` count block +
+                      per-loop records
+  loop_points.json    one entry per loop, keyed by pack-relative path
+  clearance_doc.pdf   real PDF (%PDF-): who cleared the audio for resale
+  ai_disclosure.txt   the AI role, for marketplace AI tags
+  LICENCE.txt         multi-tier perpetual game-asset licence (§13)
+  README.md           contents, naming, measurement notes
+
+Loop length: bar-aligned at the source tempo, never below the gate's musical
+floor. BARS_PREFERRED bars is the default; the generator shortens it only
+until the loop still fits the source and still clears the floor.
+
+Loop seam: the loop's tail is replaced by the source material that immediately
+PRECEDES the loop start (a short crossfade into it). The wrap therefore joins
+two samples that were adjacent in the source, so the loop is continuous
+without a fade to silence. Every loop records the method used.
+
+Verified with the lane's gates (they EXECUTE the audio):
+  /usr/bin/python3 music/gates/gate_sync_ready.py --package-dir <pack> \
+      --lane game-assets
+  /usr/bin/python3 music/gates/gate_loop_points.py --pack-dir <pack>
+
 Usage:
     python3 music/assets/pack.py <track_wav> [--genre <name>] [--out <dir>]
+                                 [--title T] [--artist A] [--mood M]
 
 No external model API is required — all DSP is local (numpy + scipy). This keeps
 the asset lane fully autonomous and CPU-only (no GPU VRAM consumption).
@@ -26,8 +53,10 @@ import argparse
 import json
 import math
 import os
+import shutil
 import struct
 import sys
+import tempfile
 import wave
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -37,13 +66,26 @@ import numpy as np
 from scipy import signal as sps
 from scipy.io import wavfile
 
+# The musical loop floor lives in ONE place — the gate that enforces it. The
+# generator imports it so a changed floor cannot leave the generator emitting
+# loops the gate rejects (card t_5ed495eb).
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "gates"))
+from gate_loop_points import (  # noqa: E402
+    DEFAULT_CLICK_RATIO_MAX,
+    DEFAULT_WINDOW,
+    MIN_LOOP_SPAN_S,
+    check_loop,
+)
+
 # ──────────────────────────────────────────────────────────
 # Constants
 # ──────────────────────────────────────────────────────────
 DEFAULT_RATE = 44100
 MIN_LOOPS = 5
 MIN_ONESHOTS = 5
-GENRES_FILE = Path(__file__).resolve().parents[2] / "genres.yaml"
+BARS_PREFERRED = 4            # a musically useful loop: 4 bars of 4/4
+CROSSFADE_S = 0.020           # seam crossfade into the pre-roll material
+GENRES_FILE = Path(__file__).resolve().parents[1] / "genres.yaml"
 LICENSE_DIR = Path(__file__).resolve().parent / ".." / "licences"
 
 # ──────────────────────────────────────────────────────────
@@ -192,6 +234,8 @@ class Loop:
     key: str
     seam_db: float  # measured discontinuity at the wrap point
     samples: np.ndarray = field(repr=False)
+    bars: int = BARS_PREFERRED
+    seam_method: str = ""
 
 
 def hpss(x: np.ndarray, sr: int) -> Tuple[np.ndarray, np.ndarray]:
@@ -256,37 +300,100 @@ def measure_click_freeness(x: np.ndarray, sr: int, start: int, end: int) -> floa
     return round(db, 2)
 
 
-def extract_loops(x: np.ndarray, sr: int, bpm: float, key: str, out_dir: Path) -> List[dict]:
-    """Extract >=5 seamless bar-aligned loops, every loop verified click-free."""
-    bar_samples = int(sr * 60 / bpm * 4)
-    n = len(x)
-    if bar_samples > n // 2:
-        # fallback: use a single full-length loop with zero-crossing ends
-        bar_samples = n // 4
-        bpm = round(60 * 4 * sr / n, 2) if n else 120.0
+def choose_loop_bars(sr: int, bpm: float, n: int) -> Tuple[int, int]:
+    """Return (bars, loop length in samples) for the source.
 
-    # generate candidate loop windows at bar boundaries
-    candidates = []
-    for start in range(0, n - bar_samples, bar_samples // 2):
-        end = start + bar_samples
-        if end > n:
-            end = n
-            start = end - bar_samples
-        candidates.append((start, end))
+    Bar-aligned at the source tempo. BARS_PREFERRED bars is the target, but the
+    loop is never shorter than the gate's musical floor MIN_LOOP_SPAN_S and
+    never longer than the source. At a slow tempo one bar clears the floor; at a
+    fast tempo one bar does not (at 184 BPM a bar is 1.30 s), so the count rises
+    until it does. Card t_5ed495eb: the old generator emitted exactly 1 bar.
+    """
+    bar_s = 60.0 / bpm * 4  # one 4/4 bar
+    if bar_s <= 0 or n <= 0 or sr <= 0:
+        return 0, 0
+    floor_bars = max(1, math.ceil(MIN_LOOP_SPAN_S / bar_s))
+    bars = max(BARS_PREFERRED, floor_bars)
+    while bars > floor_bars and bars * bar_s * sr > n:
+        bars -= 1
+    loop_len = int(round(bars * bar_s * sr))
+    if loop_len > n:
+        return 0, 0
+    return bars, loop_len
+
+
+def edge_fade(seg: np.ndarray, sr: int, fade_s: float = 0.010) -> np.ndarray:
+    """Fade both ends of a segment to silence (the fallback seam method)."""
+    out = seg.copy()
+    fade_n = int(min(fade_s * sr, len(out) // 4))
+    if fade_n > 1:
+        fade = np.hanning(2 * fade_n)
+        out[:fade_n] *= fade[:fade_n]
+        out[-fade_n:] *= fade[fade_n:]
+    return out
+
+
+def crossfade_into_preroll(seg: np.ndarray, pre: np.ndarray, sr: int,
+                           cf_samples: int) -> Tuple[np.ndarray, str]:
+    """Seam a loop by crossfading its tail into the material BEFORE its start.
+
+    The last `cf` samples of the loop become a crossfade between the loop's own
+    tail and the source material that immediately precedes the loop start. When
+    the file wraps, the engine plays samples that were adjacent in the source,
+    so the junction is continuous — and unlike a fade to silence there is no
+    amplitude notch at the wrap.
+
+    Returns (samples, method name). Falls back to an edge fade when the source
+    has no usable pre-roll.
+    """
+    out = seg.copy()
+    cf = int(min(cf_samples, len(out) // 4, len(pre)))
+    if cf < 2:
+        return edge_fade(seg, sr), "edge-fade-10ms"
+    w = 0.5 * (1 - np.cos(np.pi * (np.arange(cf) + 1) / cf))  # 0 -> 1
+    tail = out[len(out) - cf:]
+    out[len(out) - cf:] = tail * (1 - w) + pre[len(pre) - cf:] * w
+    return out, f"pre-roll-crossfade-{int(round(cf / sr * 1000))}ms"
+
+
+def extract_loops(x: np.ndarray, sr: int, bpm: float, key: str, out_dir: Path) -> List[dict]:
+    """Extract >=5 seam-safe bar-aligned loops, each one measured.
+
+    Every loop is bar-aligned at the source tempo and at least MIN_LOOP_SPAN_S
+    long. The seam is built by crossfading the tail into the loop's pre-roll
+    material; the method used is recorded per loop.
+    """
+    bars, loop_len = choose_loop_bars(sr, bpm, len(x))
+    n = len(x)
+    if loop_len <= 0:
+        print(f"[pack] ERROR: source is too short for a "
+              f"{MIN_LOOP_SPAN_S:.0f}s bar-aligned loop "
+              f"({n / sr:.3f}s @ {bpm} BPM) — refusing to emit a "
+              f"sub-{MIN_LOOP_SPAN_S:.0f}s loop")
+        return []
+    bar_samples = loop_len // bars
+    cf = int(round(CROSSFADE_S * sr))
+    step = max(loop_len // 2, bar_samples)
 
     loops: List[Loop] = []
-    for start, end in candidates:
-        seg = x[start:end].copy()
-        # apply short raised-cosine fade to kill edge discontinuity
-        fade_n = min(int(sr * 0.01), len(seg) // 4)  # 10ms fade
-        if fade_n > 1:
-            fade = np.hanning(2 * fade_n)
-            fade_in = fade[:fade_n]
-            fade_out = fade[fade_n:]
-            seg[:fade_n] *= fade_in
-            seg[-fade_n:] *= fade_out
-        seam_db = measure_click_freeness(seg, sr, 0, len(seg))
-        loops.append(Loop(start, end, bpm, key, seam_db, seg))
+    for start in range(step, n - loop_len + 1, step):
+        seg = x[start:start + loop_len].copy()
+        pre = x[max(0, start - cf):start]
+        samples, method = crossfade_into_preroll(seg, pre, sr, cf)
+        seam_db = measure_click_freeness(samples, sr, 0, len(samples))
+        loops.append(Loop(start, start + loop_len, bpm, key, seam_db,
+                          samples, bars, method))
+
+    if not loops:
+        # Pre-roll needed for the seam, so a loop cannot start at sample 0.
+        # One interior window still fits when the source is short.
+        start = max(0, min(n - loop_len, step))
+        if start + loop_len <= n:
+            seg = x[start:start + loop_len].copy()
+            samples, method = crossfade_into_preroll(seg, x[:start], sr, cf)
+            seam_db = measure_click_freeness(samples, sr, 0, len(samples))
+            loops.append(Loop(start, start + loop_len, bpm, key, seam_db,
+                              samples, bars, method))
 
     # select >=5 loops with best (lowest magnitude) seam_db
     loops.sort(key=lambda l: abs(l.seam_db))
@@ -297,15 +404,22 @@ def extract_loops(x: np.ndarray, sr: int, bpm: float, key: str, out_dir: Path) -
         fname = f"loop_{i+1:02d}_bpm{int(loop.bpm)}_key-{loop.key.replace(' ','')}.wav"
         path = out_dir / "loops" / fname
         write_wav(str(path), loop.samples, sr)
+        duration = round(len(loop.samples) / sr, 3)
         results.append({
-            "file": str(path.relative_to(out_dir.parent.parent)),  # relative to assets root
+            "path": f"loops/{fname}",          # pack-relative (loop_points key)
+            "file": str(path.relative_to(out_dir.parent.parent)),  # legacy field
             "bpm": loop.bpm,
             "key": loop.key,
+            "bars": loop.bars,
+            "seam_method": loop.seam_method,
             "seam_discontinuity_db": loop.seam_db,
             "click_free": abs(loop.seam_db) > -60.0,  # measured, not grep
             "start_sample": loop.start,
             "end_sample": loop.end,
-            "duration_sec": round(len(loop.samples) / sr, 3),
+            "duration_sec": duration,
+            "loop_start_s": 0.0,               # the loop file is the master
+            "loop_end_s": duration,
+            "seamless": True,
         })
     return results
 
@@ -350,6 +464,7 @@ def extract_stems(x: np.ndarray, sr: int, out_dir: Path) -> List[dict]:
         path = out_dir / "stems" / f"{name}.wav"
         write_wav(str(path), stem, sr)
         results.append({
+            "path": f"stems/{name}.wav",           # pack-relative
             "file": str(path.relative_to(out_dir.parent.parent)),
             "name": name,
             "duration_sec": round(len(stem) / sr, 3),
@@ -471,6 +586,7 @@ def extract_one_shots(x_drum: np.ndarray, sr: int, out_dir: Path) -> List[dict]:
         path = out_dir / "one_shots" / fname
         write_wav(str(path), hit, sr)
         results.append({
+            "path": f"one_shots/{fname}",      # pack-relative
             "file": str(path.relative_to(out_dir.parent.parent)),
             "label": label,
             "duration_sec": round(len(hit) / sr, 3),
@@ -499,6 +615,7 @@ def generate_sfx_pack(out_dir: Path) -> List[dict]:
         path = out_dir / "sfx" / f"{name}.wav"
         write_wav(str(path), samples, sr)
         results.append({
+            "path": f"sfx/{name}.wav",          # pack-relative
             "file": str(path.relative_to(out_dir.parent.parent)),
             "name": name,
             "duration_sec": round(len(samples) / sr, 3),
@@ -569,6 +686,10 @@ class PackManifest:
     bit_depth: int
     genre: str
     created: str
+    title: str = ""
+    artist: str = ""
+    mood: str = ""
+    source_note: str = ""
     loops: List[dict] = field(default_factory=list)
     stems: List[dict] = field(default_factory=list)
     one_shots: List[dict] = field(default_factory=list)
@@ -579,8 +700,10 @@ class PackManifest:
 
     def to_dict(self) -> dict:
         return {
+            "schema": "music/asset-pack/v1",
             "pack_name": self.pack_name,
             "source_track": self.source_track,
+            "source_note": self.source_note,
             "bpm": self.bpm,
             "key": self.key,
             "sample_rate": self.sample_rate,
@@ -588,6 +711,36 @@ class PackManifest:
             "bit_depth": self.bit_depth,
             "genre": self.genre,
             "created": self.created,
+            # The gate's package-level metadata object (gate_sync_ready, pack
+            # mode). sample_rate is stated here because
+            # brain/runbooks/music-game-assets.md requires it, and every audio
+            # file in the pack is checked against it.
+            "metadata": {
+                "title": self.title,
+                "artist": self.artist,
+                "bpm": self.bpm,
+                "key": self.key,
+                "mood": self.mood,
+                "genre": self.genre,
+                "sample_rate": self.sample_rate,
+            },
+            # What the pack claims to contain. gate_sync_ready, pack mode,
+            # counts the files on disk and fails when they disagree.
+            "pack_manifest": {
+                "loops": len(self.loops),
+                "stems": len(self.stems),
+                "one_shots": len(self.one_shots),
+                "sfx": len(self.sfx),
+            },
+            "counts": {
+                "loops": len(self.loops),
+                "stems": len(self.stems),
+                "one_shots": len(self.one_shots),
+                "sfx": len(self.sfx),
+            },
+            "loop_points": "loop_points.json",
+            "clearance_doc": "clearance_doc.pdf",
+            "ai_disclosure": "ai_disclosure.txt",
             "file_naming": self.file_naming,
             "licence": self.licence,
             "licence_url": self.licence_url,
@@ -595,32 +748,29 @@ class PackManifest:
             "stems": self.stems,
             "one_shots": self.one_shots,
             "sfx": self.sfx,
-            "counts": {
-                "loops": len(self.loops),
-                "stems": len(self.stems),
-                "one_shots": len(self.one_shots),
-                "sfx": len(self.sfx),
-            },
         }
 
 
 def write_readme(out_dir: Path, m: PackManifest) -> None:
     readme = f"""# Asset Pack: {m.pack_name}
 
-**Source track:** {m.source_track}
+**Title:** {m.title}
+**Artist:** {m.artist}
+**Genre:** {m.genre}
+**Mood:** {m.mood}
 **BPM:** {m.bpm}
 **Key:** {m.key}
 **Sample rate:** {m.sample_rate} Hz
 **Bit depth:** {m.bit_depth}-bit
-**Genre:** {m.genre}
+**Source track:** {m.source_track}
 **Created:** {m.created}
 
 ## Contents
 
 | Type   | Count | Description |
 |--------|-------|-------------|
-| Loops  | {len(m.loops)}  | Seamless, bar-aligned, click-free (measured seam discontinuity). |
-| Stems  | {len(m.stems)}  | Time-aligned, 12-channel stem pack. |
+| Loops  | {len(m.loops)}  | Bar-aligned seamless loops (measured seam, see below). |
+| Stems  | {len(m.stems)}  | Time-aligned stems of the source track. |
 | One-shots | {len(m.one_shots)}  | Isolated hits: kick, snare, hat, riser, impact. |
 | SFX    | {len(m.sfx)}  | Elemental: fire, water, earth, air. |
 
@@ -628,22 +778,41 @@ def write_readme(out_dir: Path, m: PackManifest) -> None:
 
 {m.file_naming}
 
-## Loop click-free verification (measured)
+## Loops
 
-Every loop's seam discontinuity is measured as the sample delta at the wrap
-point, reported in dBFS. A value below -60 dBFS indicates a click that is
-inaudible under normal monitoring. The manifest JSON records each loop's
-measured `seam_discontinuity_db`.
+Every loop is bar-aligned at {m.bpm} BPM and is at least 2 s long, so it is
+musical in a game engine. Each loop's seam is built by crossfading the loop's
+tail into the source material that immediately precedes the loop start, so the
+wrap is continuous (no click, no fade to silence). `loop_points.json` carries
+one entry per loop; `seam_method` in `manifest.json` records how each seam was
+built.
+
+Measure it — do not trust this file:
+
+```
+python3 music/gates/gate_loop_points.py --pack-dir <this pack>
+```
 
 ## Stems
 
 Stems are derived via Harmonic/Percussive Source Separation (HPSS) using a
-scipy STFT + median-filter pipeline. When the campaign provides 12 Studio
-stems, those take priority over derived stems.
+scipy STFT + median-filter pipeline. When the campaign provides Studio stems,
+those take priority over derived stems.
 
-## Licence
+## Gate the pack before publishing
 
-see {m.licence_url} — multi-tier (personal / commercial / exclusive).
+```
+python3 music/gates/gate_sync_ready.py --package-dir <this pack> --lane game-assets
+python3 music/gates/gate_loop_points.py --pack-dir <this pack>
+```
+
+## Documents in this pack
+
+- `clearance_doc.pdf` — who cleared this audio for resale.
+- `ai_disclosure.txt` — the AI role, for the marketplace AI tag
+  (`brain/runbooks/music-game-assets.md`: itch.io requires `AI-Generated`).
+- `LICENCE.txt` — see {m.licence_url} — multi-tier (personal / commercial /
+  exclusive), with explicit permitted use, distribution and derivative rules.
 """
     (out_dir / "README.md").write_text(readme, encoding="utf-8")
 
@@ -693,14 +862,216 @@ Issuer: AI Content Pipeline / Music Lane
 # Main
 # ──────────────────────────────────────────────────────────
 
+# ──────────────────────────────────────────────────────────
+# Pack documents the game-assets lane requires
+# ──────────────────────────────────────────────────────────
+
+def prune_stale_assets(out_dir: Path, keep: dict) -> List[str]:
+    """Delete audio in a pack category directory that this run did not write.
+
+    manifest.json declares what the pack contains. A leftover file from an
+    earlier run makes that declaration false, and the gate fails on exactly
+    that disagreement (gate_sync_ready, pack mode). The pack directory belongs
+    to the pack, so the generator keeps it consistent with the manifest.
+    """
+    removed: List[str] = []
+    for category, names in keep.items():
+        cdir = out_dir / category
+        if not cdir.is_dir():
+            continue
+        for p in sorted(cdir.iterdir()):
+            if (p.is_file() and p.suffix.lower() in
+                    (".wav", ".aif", ".aiff", ".flac")
+                    and p.name not in names):
+                p.unlink()
+                removed.append(f"{category}/{p.name}")
+    return removed
+
+
+def measure_loops_with_gate(out_dir: Path, loops: List[dict],
+                            scratch: Path) -> List[dict]:
+    """Execute gate_loop_points' own seam measurement on every emitted loop.
+
+    The generator does not grade its own homework: this calls the gate's
+    check_loop (the same code the gate CLI runs) on each loop file.
+    """
+    results = []
+    for i, lp in enumerate(loops):
+        master = out_dir / lp["path"]
+        problems, info = check_loop(
+            master, float(lp["loop_start_s"]), float(lp["loop_end_s"]),
+            bool(lp["seamless"]), DEFAULT_WINDOW, DEFAULT_CLICK_RATIO_MAX,
+            scratch / f"loop_{i:02d}")
+        results.append({"path": lp["path"], "problems": problems, "info": info})
+    return results
+
+
+def write_loop_points(out_dir: Path, pack_name: str, loops: List[dict],
+                      gate_results: List[dict]) -> Path:
+    """Write loop_points.json: one entry per loop, keyed by pack-relative path.
+
+    A single {loop_start_s, loop_end_s} pair cannot describe a multi-loop pack,
+    so the index is a map. `gate_loop_points.py --pack-dir <pack>` reads it.
+    """
+    by_path = {g["path"]: g for g in gate_results}
+    entries = {}
+    for lp in loops:
+        g = by_path.get(lp["path"], {})
+        info = g.get("info") or {}
+        entries[lp["path"]] = {
+            "loop_start_s": lp["loop_start_s"],
+            "loop_end_s": lp["loop_end_s"],
+            "seamless": True,
+            "bars": lp["bars"],
+            "bpm": lp["bpm"],
+            "key": lp["key"],
+            "seam_method": lp["seam_method"],
+            "gate_loop_ratio": (round(info["ratio"], 4)
+                               if info.get("ratio") is not None else None),
+            "gate_ratio_max": DEFAULT_CLICK_RATIO_MAX,
+        }
+    index = {
+        "schema": "music/pack-loop-points/v1",
+        "pack_name": pack_name,
+        "note": ("loop_start_s/loop_end_s are offsets inside each loop file "
+                 "(0 -> its own duration); the loop file IS the master."),
+        "loops": entries,
+    }
+    path = out_dir / "loop_points.json"
+    path.write_text(json.dumps(index, indent=2), encoding="utf-8")
+    return path
+
+
+def write_clearance_pdf(path: Path, lines: List[str]) -> None:
+    """Write a real one-page PDF (%PDF-1.4 with a valid xref table).
+
+    gate_sync_ready reads the file's own header bytes: a text file named .pdf
+    is not a clearance document. Verified with `pdfinfo` (poppler).
+    """
+    def esc(s: str) -> str:
+        return s.replace("\\", r"\\").replace("(", r"\(").replace(")", r"\)")
+
+    body = ["BT", "/F1 10 Tf", "13 TL", "54 780 Td"]
+    for i, line in enumerate(lines):
+        body.append(f"({esc(line)}) Tj")
+        if i != len(lines) - 1:
+            body.append("T*")
+    body.append("ET")
+    stream = "\n".join(body).encode("latin-1", "replace")
+
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] "
+        b"/Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n"
+        + stream + b"\nendstream",
+    ]
+    out = bytearray(b"%PDF-1.4\n")
+    offsets = []
+    for i, obj in enumerate(objects, 1):
+        offsets.append(len(out))
+        out += f"{i} 0 obj\n".encode() + obj + b"\nendobj\n"
+    xref_at = len(out)
+    out += f"xref\n0 {len(objects) + 1}\n".encode()
+    out += b"0000000000 65535 f \n"
+    for off in offsets:
+        out += f"{off:010d} 00000 n \n".encode()
+    out += (f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\n"
+            f"startxref\n{xref_at}\n%%EOF\n").encode()
+    path.write_bytes(bytes(out))
+
+
+def write_ai_disclosure(out_dir: Path, pack_name: str, source_track: str,
+                        genre: str, ai_note: str) -> Path:
+    """Declare the AI role. itch.io requires the AI-Generated tag (§13)."""
+    text = f"""AI disclosure — asset pack "{pack_name}"
+
+Genre: {genre}
+Source track: {source_track}
+
+THE AI ROLE
+{ai_note}
+
+WHAT WAS NOT AI
+The loop, stem, one-shot and SFX extraction in this pack is local signal
+processing (numpy/scipy, music/assets/pack.py). No model generated the pack
+files themselves. No third-party recording, sample library or voice is
+included.
+
+WHY THIS FILE EXISTS
+Marketplaces that accept AI audio require the AI role to be declared. On
+itch.io this pack carries the `AI-Generated` tag. See
+brain/runbooks/music-game-assets.md.
+
+LICENCE
+Multi-tier (personal / commercial / exclusive). See LICENCE.txt and
+music/licences/perpetual_game_asset_v1.txt.
+"""
+    path = out_dir / "ai_disclosure.txt"
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+# ──────────────────────────────────────────────────────────
+# Main
+# ──────────────────────────────────────────────────────────
+
+DEFAULT_AI_NOTE = (
+    "The source track was generated with an AI music model under this "
+    "account's commercial-rights grant, then directed, edited and mastered "
+    "by a human operator. The pack is a derived product of that generated "
+    "audio."
+)
+
+
+def validate_genre(genre: str) -> None:
+    """The genre must be a row in music/genres.yaml (core design rule)."""
+    try:
+        import yaml
+    except ImportError:
+        print("[pack] WARN: PyYAML not available — genre not validated")
+        return
+    if not GENRES_FILE.is_file():
+        print(f"[pack] WARN: {GENRES_FILE} not found — genre not validated")
+        return
+    data = yaml.safe_load(GENRES_FILE.read_text(encoding="utf-8")) or {}
+    genres = data.get("genres") or {}
+    if genre not in genres:
+        print(f"[pack] ERROR: genre '{genre}' is not a row in {GENRES_FILE}\n"
+              f"       known genres: {', '.join(sorted(genres))}",
+              file=sys.stderr)
+        sys.exit(2)
+
+
 def main():
     ap = argparse.ArgumentParser(description="Asset-Pack Generator")
     ap.add_argument("track", help="Path to a finished master WAV")
     ap.add_argument("--genre", default="chill-lounge",
                     help="Genre (must exist in music/genres.yaml)")
+    ap.add_argument("--bpm", type=float, default=None,
+                    help="Source tempo, when known. The generator's estimator "
+                         "is only a fallback; bar alignment follows this value, "
+                         "so state it when the registry fixes a tempo")
+    ap.add_argument("--key", default=None,
+                    help="Source key, when known (else estimated)")
     ap.add_argument("--out", default=None,
-                    help="Output directory for the pack (default: music/packages/<pack_name>)")
+                    help="Output directory for the pack (default: <repo>/packages/<pack_name>)")
     ap.add_argument("--no-sfx", action="store_true", help="Skip SFX generation")
+    ap.add_argument("--title", default=None,
+                    help="Pack title for the manifest metadata object")
+    ap.add_argument("--pack-name", default=None,
+                    help="Manifest pack name (default: <source stem>-asset-pack)")
+    ap.add_argument("--artist", default="Reverb256",
+                    help="Artist/label for the manifest metadata object")
+    ap.add_argument("--mood", default="atmospheric",
+                    help="Mood for the manifest metadata object")
+    ap.add_argument("--source-note", default="",
+                    help="Provenance note for the source track (recorded in "
+                         "the manifest; state any reconstruction honestly)")
+    ap.add_argument("--ai-note", default=DEFAULT_AI_NOTE,
+                    help="The AI role, written into ai_disclosure.txt")
     args = ap.parse_args()
 
     track_path = Path(args.track)
@@ -708,20 +1079,40 @@ def main():
         print(f"ERROR: track not found: {track_path}", file=sys.stderr)
         sys.exit(1)
 
+    validate_genre(args.genre)
+
     x, sr = load_wav(str(track_path))
     print(f"[pack] loaded {track_path.name}: {len(x)/sr:.2f}s @ {sr}Hz, {rms(x):.4f} RMS")
 
-    bpm = estimate_bpm(x, sr)
-    key = estimate_key(x, sr)
-    print(f"[pack] estimated BPM={bpm}, key={key}")
+    bpm = args.bpm if args.bpm else estimate_bpm(x, sr)
+    key = args.key or estimate_key(x, sr)
+    if args.bpm and args.bpm <= 0:
+        print(f"[pack] ERROR: --bpm must be positive (got {args.bpm})",
+              file=sys.stderr)
+        sys.exit(2)
+    print(f"[pack] BPM={bpm}{' (stated)' if args.bpm else ' (estimated)'}, "
+          f"key={key}{' (stated)' if args.key else ' (estimated)'}")
 
-    pack_name = f"{track_path.stem}-asset-pack"
+    bars, loop_len = choose_loop_bars(sr, bpm, len(x))
+    if loop_len <= 0:
+        print(f"[pack] ERROR: no bar-aligned loop of at least "
+              f"{MIN_LOOP_SPAN_S:.0f}s fits a {len(x)/sr:.2f}s source at "
+              f"{bpm} BPM", file=sys.stderr)
+        sys.exit(1)
+    print(f"[pack] loops: {bars} bars of 4/4 = {loop_len/sr:.3f}s "
+          f"(floor {MIN_LOOP_SPAN_S:.0f}s)")
+
+    pack_name = args.pack_name or f"{track_path.stem}-asset-pack"
     out_dir = Path(args.out) if args.out else Path(__file__).resolve().parents[2] / "packages" / pack_name
     out_dir.mkdir(parents=True, exist_ok=True)
 
     print("[pack] extracting loops ...")
     loops = extract_loops(x, sr, bpm, key, out_dir)
     print(f"[pack] extracted {len(loops)} loops")
+    if not loops:
+        print("[pack] ERROR: no loop could be cut — refusing to emit a pack "
+              "with zero loops", file=sys.stderr)
+        sys.exit(1)
 
     print("[pack] extracting stems (HPSS) ...")
     stems = extract_stems(x, sr, out_dir)
@@ -747,12 +1138,81 @@ def main():
         sfx = generate_sfx_pack(out_dir)
         print(f"[pack] generated {len(sfx)} SFX")
 
+    # A pack must contain exactly what the manifest declares: drop anything an
+    # earlier run left behind in the category directories.
+    removed = prune_stale_assets(out_dir, {
+        "loops": {Path(l["path"]).name for l in loops},
+        "stems": {Path(s["path"]).name for s in stems},
+        "one_shots": {Path(o["path"]).name for o in one_shots},
+        "sfx": {Path(s["path"]).name for s in sfx},
+    })
+    for name in removed:
+        print(f"[pack] pruned stale asset (not in this run's manifest): {name}")
+
     # licence
     lic_path = ensure_licence()
     # copy licence text into the pack dir
     pack_lic = out_dir / "LICENCE.txt"
     pack_lic.write_text(Path(lic_path).read_text(encoding="utf-8"), encoding="utf-8")
     print(f"[pack] licence: {lic_path} -> {pack_lic}")
+
+    # --- the gate's own seam measurement, run on every emitted loop -----
+    print("[pack] measuring every loop seam with gate_loop_points ...")
+    gate_scratch = Path(tempfile.mkdtemp(prefix="pack-gate-"))
+    try:
+        gate_results = measure_loops_with_gate(out_dir, loops, gate_scratch)
+    finally:
+        shutil.rmtree(gate_scratch, ignore_errors=True)
+    for g in gate_results:
+        info = g["info"]
+        ratio = (f"{info['ratio']:.2f}x"
+                 if info.get("ratio") is not None else "n/a")
+        status = "PASS" if not g["problems"] else "FAIL"
+        print(f"  {status}  {g['path']}: seam ratio {ratio} "
+              f"(max {DEFAULT_CLICK_RATIO_MAX}x), "
+              f"span {info['span']:.3f}s")
+        for p in g["problems"]:
+            print(f"        - {p}")
+
+    # --- the documents the game-assets lane requires --------------------
+    lp_path = write_loop_points(out_dir, pack_name, loops, gate_results)
+    print(f"[pack] loop_points: {lp_path}")
+
+    title = args.title or pack_name.replace("-", " ").title()
+    clearance_lines = [
+        f"CLEARANCE STATEMENT - {title}",
+        "",
+        f"Pack: {pack_name}",
+        f"Genre: {args.genre}",
+        f"Artist: {args.artist}",
+        f"Source track: {track_path.resolve()}",
+        f"BPM {bpm} / Key {key} / {sr} Hz",
+        "",
+        "RIGHTS",
+        "The source audio was generated with an AI music model under this",
+        "account's commercial-rights grant. The pipeline holds the rights",
+        "needed to license this audio and its derived assets.",
+        "No third-party recording, sample library, or voice is included.",
+        "",
+        "AI ROLE",
+        "AI-generated source audio; human-directed. Derived assets are local",
+        "DSP output. See ai_disclosure.txt.",
+        "",
+        "LICENCE",
+        "Distributed under PERPETUAL-GAME-ASSET-V1 (multi-tier: personal /",
+        "commercial / exclusive). See LICENCE.txt.",
+        "",
+        "Issuer: AI Content Pipeline / Music Lane",
+    ]
+    if args.source_note:
+        clearance_lines += ["", "SOURCE NOTE", args.source_note]
+    pdf_path = out_dir / "clearance_doc.pdf"
+    write_clearance_pdf(pdf_path, clearance_lines)
+    print(f"[pack] clearance: {pdf_path}")
+
+    disc_path = write_ai_disclosure(out_dir, pack_name, str(track_path.resolve()),
+                                    args.genre, args.ai_note)
+    print(f"[pack] disclosure: {disc_path}")
 
     # manifest
     from datetime import datetime, timezone
@@ -766,6 +1226,10 @@ def main():
         bit_depth=16,
         genre=args.genre,
         created=datetime.now(timezone.utc).isoformat(),
+        title=title,
+        artist=args.artist,
+        mood=args.mood,
+        source_note=args.source_note,
         loops=loops,
         stems=stems,
         one_shots=one_shots,
@@ -780,26 +1244,43 @@ def main():
     write_readme(out_dir, m)
     print(f"[pack] readme: {out_dir / 'README.md'}")
 
-    # Print verification summary (the click-freeness measurement gate)
-    print("\n=== LOOP SEAM CLICK-FREE MEASUREMENT ===")
-    for loop in loops:
-        status = "PASS" if loop["click_free"] else "FAIL"
-        print(f"  {status}  {Path(loop['file']).name}: seam={loop['seam_discontinuity_db']} dBFS")
-    all_pass = all(l["click_free"] for l in loops)
-    print(f"\nAll {len(loops)} loops click-free: {all_pass}")
+    # --- acceptance -----------------------------------------------------
+    # The gate's measurement decides, not the generator's own claim.
+    print("\n=== LOOP SEAM (measured by gate_loop_points) ===")
+    gate_ok = True
+    for g in gate_results:
+        info = g["info"]
+        ratio = (f"{info['ratio']:.2f}x"
+                 if info.get("ratio") is not None else "n/a")
+        ok = not g["problems"]
+        gate_ok = gate_ok and ok
+        print(f"  {'PASS' if ok else 'FAIL'}  {Path(g['path']).name}: "
+              f"span={info['span']:.3f}s seam={ratio}")
 
     print("\n=== ACCEPTANCE CHECK ===")
     req_loops = len(loops) >= MIN_LOOPS
     req_1shots = len(one_shots) >= MIN_ONESHOTS
-    req_stems = len(stems) > 0
+    req_stems = len(stems) >= 4
     req_licence = Path(lic_path).exists()
-    print(f"  >=5 loops:        {req_loops} ({len(loops)})")
-    print(f"  stems present:    {req_stems} ({len(stems)})")
-    print(f"  >=5 one-shots:    {req_1shots} ({len(one_shots)})")
-    print(f"  licence present:  {req_licence}")
-    print(f"  all loops click-free: {all_pass}")
-    ok = req_loops and req_1shots and req_stems and req_licence and all_pass
+    req_long = all(l["duration_sec"] >= MIN_LOOP_SPAN_S for l in loops)
+    print(f"  >=5 loops:            {req_loops} ({len(loops)})")
+    print(f"  every loop >= "
+          f"{MIN_LOOP_SPAN_S:.0f}s:      {req_long} "
+          f"({[l['duration_sec'] for l in loops]})")
+    print(f"  stems present:        {req_stems} ({len(stems)})")
+    print(f"  >=5 one-shots:        {req_1shots} ({len(one_shots)})")
+    print(f"  licence present:      {req_licence}")
+    print(f"  loop gate passed:     {gate_ok}")
+    print(f"  loop_points.json:     {(out_dir / 'loop_points.json').is_file()}")
+    print(f"  clearance_doc.pdf:    {(out_dir / 'clearance_doc.pdf').is_file()}")
+    print(f"  ai_disclosure.txt:    {(out_dir / 'ai_disclosure.txt').is_file()}")
+    ok = (req_loops and req_1shots and req_stems and req_licence and req_long
+          and gate_ok)
     print(f"\nRESULT: {'ACCEPTED' if ok else 'REJECTED'}")
+    print(f"\nNow gate the pack:\n"
+          f"  python3 music/gates/gate_sync_ready.py --package-dir {out_dir} "
+          f"--lane game-assets\n"
+          f"  python3 music/gates/gate_loop_points.py --pack-dir {out_dir}")
     sys.exit(0 if ok else 1)
 
 

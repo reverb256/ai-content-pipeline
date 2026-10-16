@@ -17,9 +17,9 @@ Architecture: `brain/playbooks/music-lane-architecture.md`
 | `gate_stems_present.py` | ffprobes every stem: >= 4 stems, non-zero bytes, durations within +/-0.5 s of the master | 0 / 1 / 2 |
 | `gate_loudness.py` | Runs `ffmpeg -af volumedetect`; -14 LUFS streaming / -16 sync, +/-1 dB. Fails honestly on a loud master | 0 / 1 / 2 |
 | `gate_quality.py` | Verifies the review record: verdict present, reviewer model DIFFERENT from producer model, sha256-bound to the master | 0 / 1 / 2 |
-| `gate_sync_ready.py` | ffprobes stems + master + instrumental; instrumental must differ from the master; manifest metadata; real PDF clearance doc; AI disclosure | 0 / 1 / 2 |
+| `gate_sync_ready.py` | Two shapes (card t_5ed495eb). `--mode track` (default for `sync`/`direct-license`): ffprobes stems + master + instrumental; instrumental must differ from the master; manifest metadata; real PDF clearance doc; AI disclosure. `--mode pack` (default for `--lane game-assets`): ffprobes EVERY audio file, `pack_manifest` counts vs the files on disk, `metadata` + a stated sample rate checked against each file, stems mutually time-aligned, per-loop loop points (span >= 2 s), every loop's seam measured, clearance + disclosure + licence | 0 / 1 / 2 |
 | `gate_release_ready.py` | ffprobes the master, PIL-verifies the artwork, ISO 3901 ISRC syntax, manifest metadata + ai_disclosure | 0 / 1 / 2 |
-| `gate_loop_points.py` | Renders the loop windows and measures junction curvature (second difference): a click at the wrap spikes the ratio. Seamless <= 3.0x | 0 / 1 / 2 |
+| `gate_loop_points.py` | Renders the loop windows and measures junction curvature (second difference): a click at the wrap spikes the ratio. Seamless <= 3.0x. Single mode: `--master` + `--loop-points`. Pack mode: `--pack-dir <pack>` verifies EVERY loop in the pack's `loop_points.json`, one ratio per loop | 0 / 1 / 2 |
 | `gate_youtube_authentic.py` | Samples + hashes frames: shot diversity (not a raw dump), Jaccard similarity vs prior uploads, disclosure | 0 / 1 / 2 |
 | `gate_human_approval.py` | j_kro's gate — never auto-passes. Requires a dated, sha256-bound approval record naming a human approver | 0 / 1 / 2 |
 
@@ -37,7 +37,12 @@ bash music/gates/check_gate_suite.sh
 The suite builds its own fixtures (synthesized audio via
 ffmpeg, rendered visuals via ffmpeg) in
 `$GATE_SCRATCH` (default `/tmp/music-gate-fixtures`), so
-it is reproducible from a clean checkout.
+it is reproducible from a clean checkout. The asset-pack
+fixtures include one pack built by the REAL generator
+(`music/assets/pack.py`, which needs numpy + scipy) — the
+suite refuses to run (exit 2) when a fixture builder fails
+or those imports are missing, so a check can never pass
+against a fixture that was never written.
 
 Individual gates:
 
@@ -49,8 +54,12 @@ python3 music/gates/gate_loudness.py \
     --master master.wav --target streaming
 python3 music/gates/gate_sync_ready.py \
     --package-dir <pkg> --lane sync
+python3 music/gates/gate_sync_ready.py \
+    --package-dir <pack> --lane game-assets    # pack mode
 python3 music/gates/gate_loop_points.py \
     --master master.wav --loop-points loop_points.json
+python3 music/gates/gate_loop_points.py \
+    --pack-dir <pack>                          # every loop in the pack
 ...
 ```
 
@@ -77,5 +86,9 @@ python3 music/gates/gate_loop_points.py \
 - `check_gate_lyrics_original.sh` — the lyrics gate's
   own matrix (3 genre PASS, Suno fixture FAIL, tamper
   detection, unclaimed-sheet rejection).
-- `check_gate_suite.sh` — the full 10-gate acceptance
-  matrix (this directory's contract).
+- `check_gate_suite.sh` — the full acceptance matrix
+  (this directory's contract). Since card t_5ed495eb it
+  also covers the asset-pack lane: a generator-built pack
+  passes both gates, and a pack that breaks any one
+  requirement (loop span, seam, counts, metadata sample
+  rate, loop points, clearance) fails.
