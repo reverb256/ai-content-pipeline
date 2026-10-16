@@ -405,6 +405,42 @@ def slug_of(track_dir: Path) -> str:
 # not a copy of it.
 # ---------------------------------------------------------------------------
 
+def sung_lines(lines: list[str]) -> list[str]:
+    """The section's lines that are meant to be SUNG, not direction text.
+
+    A parenthetical note is guidance for the composer — "(low male chant
+    murmurs, no drums)" — and a `#` line is provenance. Neither is sung. A note
+    can WRAP: it opens a parenthesis on one line and closes it on the next, so
+    the continuation line does not itself start with "(" — and the previous rule,
+    which rejected a line only when it began AND ended with a parenthesis,
+    counted that continuation as lyric text. Measured 2026-10-16 on the
+    epic-orchestral-boss tag sheet (card t_bc6a0c00): 11 of its 14 direction
+    lines were counted as words, carrying 54 of the sheet's 71 unique words.
+    A draft scaffold therefore cleared the word floor on its craft notes alone.
+
+    The renderer refuses the same sheet with the same rule
+    (`singable_lines()` in music/scripts/acestep_plan.py). One rule, two
+    implementations: music/tests/test_acestep_sheet_guard.py asserts that the two
+    agree line for line on the real sheet, because their drift is what let this
+    through in the first place.
+    """
+    kept: list[str] = []
+    depth = 0
+    for raw in lines:
+        line = raw.strip()
+        if not line:
+            continue
+        if depth:
+            # still inside a direction opened on an earlier line
+            depth = max(depth + line.count("(") - line.count(")"), 0)
+            continue
+        if line.startswith(("#", "(")):
+            depth = max(depth + line.count("(") - line.count(")"), 0)
+            continue
+        kept.append(line)
+    return kept
+
+
 def validate_sheet(sections: list[tuple[str, list[str]]], strict: bool) -> list[str]:
     """Parse-level checks. Returns a list of problems (empty = pass)."""
     problems: list[str] = []
@@ -425,12 +461,19 @@ def validate_sheet(sections: list[tuple[str, list[str]]], strict: bool) -> list[
         nonempty = [ln for ln in lines if ln.strip()]
         if not nonempty:
             problems.append(f"[{tag}] section has no lines")
+        sung = set(sung_lines(lines))
         for ln in nonempty:
             s = ln.strip()
-            if s.startswith("(") and s.endswith(")"):
-                problems.append(f"[{tag}] placeholder guidance left in: '{s[:60]}'")
-            elif s.startswith("#"):
+            if s.startswith("#"):
                 problems.append(f"[{tag}] comment/meta line inside lyric body: '{s[:60]}'")
+            elif s not in sung:
+                # Parentheses mark direction text, and a direction can WRAP onto
+                # the next line. The previous rule rejected a line only when it
+                # began AND ended with a parenthesis, so every continuation line
+                # was read as lyric text (card t_bc6a0c00: 11 lines, 54 of the
+                # sheet's 71 words). `sung` is the same rule the renderer refuses
+                # on, so this gate and that refusal cannot disagree.
+                problems.append(f"[{tag}] placeholder guidance left in: '{s[:60]}'")
     if strict:
         for tag, _ in sections:
             if not is_known_section(tag):
