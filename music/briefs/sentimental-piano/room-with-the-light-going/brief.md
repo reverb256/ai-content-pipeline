@@ -431,6 +431,30 @@ Consequence for this track: the instrumental version is a required deliverable o
 | visual template | 1199 B | 1199 B |
 | instrumental genres | 8 of 14 | `grep -liE 'is instrumental\|leave the .*lyrics box empty' music/prompts/*.md \| wc -l` → 8 |
 
+### 10.8 Regression check added for the D4 class (FAILURE → TEST)
+
+A wrong "the file does not exist" reading has now been recorded twice (`trance`, then
+this brief). The cause is the same both times: a reader checked only the working tree
+and could not distinguish "the repo has no such file" from "this checkout is behind."
+
+New check: `music/scripts/check_stage_scripts.py`. It reads `music/stages.yaml`,
+collects every `.py` / `.sh` path a stage names, and verifies each one exists in the
+checkout. When one is absent, it searches every ref and prints the distinction.
+
+```
+$ /usr/bin/python3 music/scripts/check_stage_scripts.py
+FAIL check_stage_scripts: 1 of 11 referenced path(s) absent from the working tree
+  music/suno-gen.py   (named by: generate)
+    CHECKOUT DIVERGENCE - this repo DOES carry the file, on: origin, origin/main,
+    origin/wip/atlas-backup-20261014
+    Fix: merge those refs into the checked-out branch. Do NOT delete the reference.
+  cited: t_8a715681 (diverged checkout), t_5a93164a (stage advance refused)
+```
+
+The check fails today, on the real defect. It turns green when `origin/main` is
+merged into `main`. Both other branches were exercised: an all-present stage map
+gives `PASS … rc=0`; a path no ref carries gives `ABSENT … rc=1`.
+
 ## 11. Next stage
 
 Stage `brief` is complete. Next: `genre-select`.
