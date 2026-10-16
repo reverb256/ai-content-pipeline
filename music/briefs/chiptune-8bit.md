@@ -678,13 +678,15 @@ divergence its §12 correction row records has aged, and the blueprint lists it 
 to three files while the directory had grown to six. Re-measured and corrected in place.
 
 - **Superseded revision of this file:** `sha256 12c6e2cf9883379b35988e6715c652e2a0612573511dbd8911baf38b484fadc9` (672 lines / 37365 B).
-- **Blueprint census, re-measured 2026-10-16 15:31 CDT:** 6 of the 14 genres have a lyric
-  blueprint (`activist`, `anime-ending`, `anime-opening`, `chill-lounge`,
-  `epic-orchestral-boss`, `trance`); the other 8 do not. This genre still has none, and none is
-  wanted — §4's decision is unchanged.
+- **Blueprint census:** 7 of the 14 genres have a lyric blueprint (`activist`, `anime-ending`,
+  `anime-opening`, `chill-lounge`, `epic-orchestral-boss`, `jungle-dnb`, `trance`); the other 7 do
+  not. This genre still has none, and none is wanted — §4's decision is unchanged. The
+  2026-10-16 15:31 pass behind this section measured the census at six; what landed since is
+  `music/lyrics/blueprints/jungle-dnb.yaml` (card `t_e6d422ec`).
 - **Clone divergence, re-measured 2026-10-16 15:31 CDT:** the pair §12's correction row records
   holds at `061b5dc` (13:34). At `e40c7f9` (15:31) it reads 0 behind / 61 ahead, because the
   reconciliation merge `ab33ad1` (14:23) cleared the 15-commit upstream deficit. The local tip
   is the part that moves.
 - **Corrected in place:** §4 (the blueprint-list bullet), §7 (the `music/lyrics/` asset listing),
   §12's "Held as written" bullet and §12's corrections row 3.
+- **Superseded by this pass (card `t_e6d422ec`, 2026-10-16):** `sha256 fd4a7a6b8e106b41ee380b0c28dd09882b72d7af20d52653f8c7b287b742da4b` (690 lines / 38897 B) — the census bullet above was restated as a live claim when `music/lyrics/blueprints/jungle-dnb.yaml` landed. No genre finding was reopened.

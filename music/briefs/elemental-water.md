@@ -423,8 +423,8 @@ is queued anywhere.** The three blockers, all measured:
 2. **Tempo.** The **deployed** engine hardcodes it. Read from the running pod:
    `/opt/sunolocal/music/sunolocal/translate.py:42 bpm = 120`, overridden only by
    `bpm = int(60 + req.style_weight * 120)` (line 45). The local planner falls back to
-   `"bpm": ctx["blueprint"].get("bpm_anchor") or 100` (`planner.py:470`), and **only 6 of the 14 genres have a blueprint**
-   (`activist`, `anime-ending`, `anime-opening`, `chill-lounge`, `epic-orchestral-boss`, `trance`). So this genre plans at 100
+   `"bpm": ctx["blueprint"].get("bpm_anchor") or 100` (`planner.py:470`), and **only 7 of the 14 genres have a blueprint**
+   (`activist`, `anime-ending`, `anime-opening`, `chill-lounge`, `epic-orchestral-boss`, `jungle-dnb`, `trance`). So this genre plans at 100
    and translates at 120 — both wrong. **Acceptance for this genre: the plan's `bpm` field must
    read 82.** At 100 BPM a bar is 2.40 s and the 41-bar/120.000 s loop unit in §4 is wrong.
 3. **Key cannot reach the engine.** `translate.py:49` is `key = req.style or "C major"` — the
@@ -662,8 +662,10 @@ Re-measured and corrected in place.
 - **Clone divergence:** the header pair (29 ahead / 15 behind) holds at `fa3163f` (13:48). At
   `e40c7f9` (15:31) the pair reads 0 behind / 61 ahead: the 15-commit upstream deficit was
   cleared by the reconciliation merge `ab33ad1` (14:23), not by anything this lane did.
-- **Blueprint census, re-measured 2026-10-16 15:31 CDT:** 6 of the 14 genres carry a lyric
-  blueprint (`activist`, `anime-ending`, `anime-opening`, `chill-lounge`,
-  `epic-orchestral-boss`, `trance`); the other 8 do not. This genre still has none, so §9
-  blocker 2 — the flat 100 fallback — stands exactly as written. Only the count changed.
+- **Blueprint census:** 7 of the 14 genres carry a lyric blueprint (`activist`, `anime-ending`,
+  `anime-opening`, `chill-lounge`, `epic-orchestral-boss`, `jungle-dnb`, `trance`); the other 7 do
+  not. This genre still has none, so §9 blocker 2 — the flat 100 fallback — stands exactly as
+  written. The 2026-10-16 15:31 pass behind this section measured the census at six; what landed
+  since is `music/lyrics/blueprints/jungle-dnb.yaml` (card `t_e6d422ec`).
 - **Corrected in place:** the header table row 4, §9 blocker 2 and §12's asset listing.
+- **Superseded by this pass (card `t_e6d422ec`, 2026-10-16):** `sha256 6478e55ceee1267a299abf2ff0a95f6d4987ae826ba71e8eb8ff9a3ca27cf52a` (669 lines / 41998 B) — the census counts above and in §6.3 were restated as live claims when `music/lyrics/blueprints/jungle-dnb.yaml` landed. The genre's own blocker is untouched.
