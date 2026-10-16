@@ -34,9 +34,19 @@ stderr), 2 = usage error.
 bash music/gates/check_gate_suite.sh
 ```
 
+This matrix also runs on a schedule (card t_b16b9046): the
+`music-gate-matrix.timer` systemd user unit runs
+`music/scripts/run_gate_matrix.sh` daily at 06:20 on nexus, pins the
+interpreter, prunes + rebuilds `$GATE_SCRATCH`, and reports a non-zero run to
+`performance/music-gate-matrix.log`, the fleet alert feed and the music board.
+The runner's own result is what the weekly music digest reads. Before that unit
+existed nothing ran the matrix at all.
+
 The suite builds its own fixtures (synthesized audio via
 ffmpeg, rendered visuals via ffmpeg) in
-`$GATE_SCRATCH` (default `/tmp/music-gate-fixtures`), so
+`$GATE_SCRATCH` (default `/tmp/music-gate-fixtures`; the scheduled run above
+uses the durable `/home/j_kro/.cache/music-gate-fixtures` and prunes it every
+run), so
 it is reproducible from a clean checkout. The asset-pack
 fixtures include one pack built by the REAL generator
 (`music/assets/pack.py`, which needs numpy + scipy) — the
