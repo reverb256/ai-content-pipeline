@@ -252,8 +252,12 @@ Decisions locked here so later stages do not re-litigate them:
 - **Stems: ≥ 4 files, each within ±0.5 s of the master duration** (ffprobe-measured, not file
   size). Export through Suno Studio, never the standard download button.
 - **Loop points are mandatory** for this lane, and `gate_loop_points` must pass on them. Since
-  `t_b21aeb51` the gate runs **two rulers**: junction curvature ≤ 3.0× and tail/head level delta
-  ≤ 6.0 dB (the level finding is `gate_loop_points.py:310`, quoted verbatim in the FAIL above). A
+  `t_b21aeb51` the gate runs **three rulers**: junction curvature ≤ 3.0×, tail/head level delta
+  ≤ 6.0 dB (the level finding is `gate_loop_points.py:310`, quoted verbatim in the FAIL above),
+  and — since `t_8297d2c6`, lane commit `a664b4e` — an **end guard** that measures the envelope
+  inside the loop's last 1 s (split in half; the second half must not sit more than the same
+  6.0 dB below the first) and refuses a loop whose first or last 1 s is at/below the lane's
+  −50 dB silence floor. A
   document must also declare **`"seamless": true`** (`:241`) and a span ≥ 2 s. Read a pack's index
   with `--pack-dir <pack>`; pass a single-track document with `--loop-points` — the two paths are
   not interchangeable (measured: a pack index passed as `--loop-points` is refused). The two seam
@@ -286,12 +290,13 @@ Two constraints pinch from opposite sides:
 
 - **The registry's video shape is `loop-10min` = 600 s = 220 bars.**
 - **The planner cap is now 600 s — this genre is the reason it moved.** When this brief was
-  written the guard rail was `MAX_DURATION_S = 420` (`music/planner/planner.py`), so 600 s could
-  only be reached through the `sunolocal` API by hand. The cap was raised to the longest shape
-  the registry names, and the code comment records the measurement this genre supplied
-  (`planner.py:98-101`: "t_909069f0 measured the consequence — elemental-earth's documented entry
-  is 220 whole bars at 88 BPM = 600.0 s, the planner refused it"). Live read of the guard rails:
-  `MIN_DURATION_S = 30` (`planner.py:103`), `MAX_DURATION_S = 600` (`planner.py:104`).
+  written the guard rail was `MAX_DURATION_S = 420` (**anchored**) at `music/planner/planner.py`,
+  so 600 s could only be reached through the `sunolocal` API by hand. The cap was raised to the
+  longest shape the registry names, and the code comment records the measurement this genre
+  supplied (`planner.py:98-101`: "t_909069f0 measured the consequence — elemental-earth's
+  documented entry is 220 whole bars at 88 BPM = 600.0 s, the planner refused it"). Live read of
+  the guard rails — card `t_ae1d9243`, 2026-10-16:
+  `MIN_DURATION_S = 16` (`music/planner/planner.py:147`), `MAX_DURATION_S = 600` (`:148`).
 
 So the planner queue **can** express this genre's own video shape now, and it already does: the
 live entry for this genre is `elemental-earth-chamber-loop`, `instrumental`, `duration 600`
@@ -812,10 +817,10 @@ card**: the two live follow-ups that touch the genre already exist (§11).
 - **Repo state at this pass:** HEAD `c296db6` (2026-10-16 15:56:54 CDT), divergence
   **72 ahead / 0 behind** `origin/main` (`ba28f55`). The 72-commit publish gap is the lane's
   standing pattern (local `main` only). Every path the brief stage recorded as missing —
-  `music/suno-gen.py` (42652 B), `music/sunolocal/`, `music/assets/pack.py` (52690 B),
+  `music/suno-gen.py` (50030 B), `music/sunolocal/`, `music/assets/pack.py`,
   `packages/welcome-asset-pack` — is now in the worktree.
 - **The dangling-reference bullet is closed.** `brain/playbooks/music-lane-architecture.md`
-  (34328 B) and `brain/research/music-monetization-2026.md` (11067 B) both exist in this worktree
+  and `brain/research/music-monetization-2026.md` (11067 B) both exist in this worktree
   now (card `t_b0a4db92`, done). The architecture playbook documents `music-lane-architecture.md`
   §5/§13 as a rubric source, so the section numbers this brief quotes from it are checkable at
   last — but a full re-read of that playbook is not this pass's job and is not claimed here.
@@ -838,7 +843,7 @@ included), 6 tag-sheet sections in the order quoted, and the instrumental marker
 `prompts/elemental-earth.md:15` with **8 of 14** templates carrying it — all four `loop-10min`
 genres among them (`video_shape` re-read for all four elementals). Visual style 1088 B. Bar math
 exact: 88 BPM → bar 2.727273 s, 420 s = 154.000 bars, 480 s = 176.000, 600 s = 220.000, 4 bars =
-10.909 s, 5 bars = 13.636 s. `planner.py:82-83` `MIN_DURATION_S = 30` / `MAX_DURATION_S = 420`;
+10.909 s, 5 bars = 13.636 s. `planner.py:82-83` `MIN_DURATION_S = 30` / `MAX_DURATION_S = 420` — **anchored** (§14 is that pass's record);
 `planner.py:528` `--lyrics-mode choices=["draft","ai"]`, no `--instrumental`. `packages/welcome-asset-pack`
 extracted from `origin/main` (`83cd0ce`) → `gate_sync_ready --lane game-assets` **FAIL, the same 12
 findings verbatim**; 5 loops / 12 stems / 8 one-shots / 6 SFX; `gate_loop_points` on the 1.3 s loop
@@ -969,8 +974,8 @@ genre's only open one.
 | 1 | header | card `t_55e37b88`, score 7.5, supersession `0e9bf0de…` | surviving card `t_8fa97d4e`, true score **7.0** (live re-score), superseded blob `036395fe…` recorded |
 | 2 | §1 | registry transcript short of the stage-gate rule | live transcript + `gate-for-stage` resolution for this genre |
 | 3 | §3 | `gate_sync_ready` FAIL, 12 findings, lane "not passable" | **PASS `mode: pack`** (`t_5ed495eb` closed); pack loops **5.201270 s** not 1.3 s; 7 one-shots not 8 |
-| 4 | §3 | seam PASS on a 51.605 s stem (curvature only) | the gate now has **two** rulers; that stem FAILs the level ruler at 34.2 dB, `--pack-dir` PASSes all 5 loops |
-| 5 | §4 | planner refuses > 420 s, so the queue cannot express `loop-10min` | cap is **600 s** (`planner.py:103-104`), raised because of this genre's own measurement; the entry exists |
+| 4 | §3 | seam PASS on a 51.605 s stem (curvature only) | the gate now has **three** rulers; that stem FAILs the level ruler at 34.2 dB, `--pack-dir` PASSes all 5 loops |
+| 5 | §4 | planner refuses > 420 s, so the queue cannot express `loop-10min` | cap is **600 s** (`planner.py:147-148` — card `t_ae1d9243`; the constant moved from `:103-104`), raised because of this genre's own measurement; the entry exists |
 | 6 | §5, §7a | anchor reachable only via `styleWeight 0.2334`; `key` = the caption | engine **v0.1.3**: explicit `bpm`/`keyscale` win; variants A–G re-measured in-pod |
 | 7 | §7b | briefs ConfigMap = 1 entry; no `--lyrics-mode instrumental`; payload 38 keys | 11 entries including this genre; `instrumental` is a mode; payload 39 keys; earth plan exists, marker 0 B (rc=0) |
 | 8 | §7c | D1–D5 open or filed | all five **closed**, each with the card/commit that closed it |
@@ -1025,3 +1030,91 @@ Hotspot note for the orchestrator: `music/briefs/*.md` is being edited by many c
 (this pass touched `music/briefs/elemental-earth.md` only; `t_1a5b018b` also plans to touch
 `elemental-water.md` and `elemental-air/above-the-weather/brief.md`).
 
+---
+
+## 17. Supersession record — the pack-key pass (card `t_4906bc6e`, 2026-10-16 17:57 CDT)
+
+§13's "Repo state at this pass" bullet stated the generator's size as a LIVE figure (52690 B).
+Card `t_4906bc6e` — the pack's key is measured or explicitly unknown, never fabricated — grew the
+generator, and `check_brief_figures` recomputes a size claim, so the bullet now carries none: a
+live file's size ages (§14). §19 records the next pass on that same file (card `t_5f814f2f`). The
+14:50 `ls -l` transcript in the same section is left alone: it records what the file measured at
+that instant, and history is not a live claim.
+
+Superseded revision of this file: `sha256
+e26c416b407862d63c52d94e743c462df3647862d2ad615dfeb6945ae74f3776` (1031 lines / 67737 B).
+
+## 18. Declared scoring scope — machine-checked against the live rubric (card `t_00ac4f10`, 2026-10-16)
+
+`music/scripts/check_brief_rubric_scope.py` reads the `rubric_scope` block below and
+compares it, field by field, to this genre's scope COMPUTED from `music/rubrics/gamer.json`
+by the panel's own resolver (`music/rubrics/panel.py`: `applicable_criteria()`,
+`applicable_signals()`). It FAILs when the criterion set, the weights, the weight sum, the
+applicable reject signals or the rubric version disagree with the live file. The block is a
+claim about NOW; the prose above keeps this family's pre-fix record (gamer v1: five
+criteria, Σw 11, scope only inside a criterion NAME) and the check never reads prose, so
+that record keeps passing.
+
+Regenerate the block after any rubric edit — one command, no hand-edit:
+
+    /usr/bin/python3 music/scripts/check_brief_rubric_scope.py --print-truth elemental-earth
+
+```json
+{
+  "rubric_scope": {
+    "genre": "elemental-earth",
+    "family": "gamer",
+    "rubric_version": 2,
+    "pass_threshold": 7.0,
+    "criteria": [
+      "elemental_atmosphere",
+      "loop_safety",
+      "asset_packaging",
+      "loudness_target"
+    ],
+    "weights": {
+      "elemental_atmosphere": 3,
+      "loop_safety": 3,
+      "asset_packaging": 1,
+      "loudness_target": 1
+    },
+    "weight_sum": 8,
+    "reject_signals": [
+      "elemental_fight_material",
+      "loop_fade_or_truncation",
+      "clipped_master",
+      "no_stated_tempo_key"
+    ],
+    "reject_signals_unnamed": 0
+  }
+}
+```
+
+---
+
+## 19. Supersession record — the pack manifest-path pass (card `t_5f814f2f`, 2026-10-16 18:25 CDT)
+
+`music/assets/pack.py` changed again. The generator resolved a pack asset's manifest `file` field
+against `music/` while the field itself is relative to the PACK TREE ROOT (`out_dir.parent.parent`
+— the repository root for every pack the lane writes), so the lookup never resolved and a silent
+`.exists()` guard hid the miss. Measured on the committed pack, 2026-10-16 (nexus):
+
+    music/packages/welcome-asset-pack/stems/02_drums.wav   -> exists=False   # the base the reader used
+    packages/welcome-asset-pack/stems/02_drums.wav         -> exists=True    # the base the writer used
+
+`file` now has ONE definition: `manifest_file()` writes it, `resolve_manifest_file()` inverts it
+and RAISES on a miss, and the one-shots are cut from the declared stem (`declared_drum_bus()`)
+instead of a second `hpss()` computed in `main()`. Measured effect on one 30 s master, before and
+after: the only bus-derived one-shot (a kick) moved by at most 4 int16 LSB, 0.012% of full scale;
+the four synthesised one-shots are byte-identical.
+
+The `music/assets/pack.py` size figures §13 and §17 carried are DROPPED, not restated: the file is
+live, so any size ages (§14). Regression check: `music/scripts/check_pack_manifest_paths.py`
+(1 control + 10 failure shapes, and an out-of-tree build of the real generator), wired into
+`scripts/automation/weekly-review.sh`.
+
+Superseded revision of this file: `sha256
+8ec7a9ac79c2ae615925e1674116772d84a0e8aae15b01bb901f2af27d607e12` (1090 lines / 69994 B) — the
+content this pass started from. The commit that lands these hunks replaces the blob carried by
+`ad6cfbe` (the rubric-scope pass, card `t_00ac4f10`), whose §18 is untouched: the diff is this
+§19, one dropped figure in §13, and the §17 restatement above.

@@ -103,7 +103,7 @@
       "status": "CLOSED (card t_8a715681)",
       "what": "The generate-stage script was absent from THIS checkout, though not from the repo",
       "was": "music/stages.yaml generate stage -> 'music/suno-gen.py'; present on origin/main, absent from the worktree.",
-      "now": "music/suno-gen.py exists in the worktree (42652 bytes) and on HEAD; check_stage_scripts.py PASSes 11 of 11."
+      "now": "music/suno-gen.py exists in the worktree (50030 bytes) and on HEAD; check_stage_scripts.py PASSes 11 of 11."
     },
     {
       "id": "D5",
@@ -127,7 +127,7 @@
     }
   ],
 
-  "_duration_basis": "72 BPM, 4/4 -> one bar = 4*60/72 = 3.333333 s. 54 bars = 180.0 s, inside the planner guard rail (planner.py MIN_DURATION_S=30, MAX_DURATION_S=420). Measured on the delivered artifact: ffprobe duration 180.000000 s.",
+  "_duration_basis": "72 BPM, 4/4 -> one bar = 4*60/72 = 3.333333 s. 54 bars = 180.0 s, inside the planner guard rail (planner.py MIN_DURATION_S=16, MAX_DURATION_S=600). Measured on the delivered artifact: ffprobe duration 180.000000 s. The rail was re-read by card t_ae1d9243 (2026-10-16).",
   "_lyrics": "none - instrumental genre by design (music/prompts/sentimental-piano.md)",
   "_resolves_cards": [
     "t_9f7d6889 (score 8.9, done) - wrote this brief",

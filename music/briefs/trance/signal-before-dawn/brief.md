@@ -6,7 +6,9 @@ Brief written: 2026-10-16 (music-producer, run 4) · re-measured 2026-10-16 by t
 Track slug: signal-before-dawn
 
 Superseded digest: this file was sha256 `59992a334a44d63a4e2791e222330bd342c8087e580444255d82d310f6a2532b`
-(14 677 B) when the oracle ruling named it. The revision below supersedes that copy.
+(14 677 B) when the oracle ruling named it. The revision below supersedes that copy, and the
+figure pass of card `t_6dd13d76` (2026-10-16T17:21-05:00 CDT) supersedes
+`sha256 cb9a11c10edac5303b830da725acbef882c1ce08db7ec93604a3408c772e616b` (408 lines / 23449 B).
 
 The scorer's ruling (oracle, 2026-10-16, `music/oracle.py` @ `b2d11f7`): the NEWEST scoring
 run owns the genre. This card (`t_a7a7d998`) is that run, and its true score is **7.8** —
@@ -110,9 +112,11 @@ identical to `manifest.json`. The authorship claim is bound to the text on disk.
 
 Audio: none. No trance audio exists. As of 2026-10-16 a trance PLAN does, and the render
 rail refused it (§8):
-- `/var/lib/music-plans/trance-signal-before-dawn.json` — 2434 B, written 2026-10-16 14:10.
-  Its marker `/var/lib/music-plans/trance-signal-before-dawn.rendered` holds only the word
-  `refused` (8 B, written 14:18).
+- `/var/lib/music-plans/trance-signal-before-dawn.json` — 2511 B, re-planned 2026-10-16 16:57.
+  (The 14:10 reading this section first recorded was 2434 B; the rail re-plans the track on
+  every pass.) Its refusal marker is now
+  `/var/lib/music-plans/trance-signal-before-dawn.refused` (written 2026-10-16 17:15) — the
+  `.rendered` marker recorded at 14:18 is not on disk (re-read 17:21).
 - No `.flac`, `.wav` or `.mp3` for trance exists under `/var/lib/music-plans/` or in the
   repo. The only master file on that volume is `elemental-fire-emberfall.flac`
   (11 421 612 B); `/var/lib/music-plans/loops/` holds its loop pair.
@@ -166,7 +170,7 @@ Re-measured live 2026-10-16 15:53:54 CDT:
 | remote `main` (the real one) | `ba28f55` (`git ls-remote origin main`) |
 | local `main` | `1a450e0` — 69 commits ahead of `origin/main`, 0 behind |
 | `origin/main` an ancestor of `main`? | YES (`git merge-base --is-ancestor`) |
-| `music/suno-gen.py` in the working tree | present, 42 652 B |
+| `music/suno-gen.py` in the working tree | present, 50 030 B |
 | `music/sunolocal/` in the working tree | present (`adapters/`, `checks/`, `GATES.md`) |
 | `check_stage_scripts.py` | **PASS** — `11 referenced script path(s) all present` |
 
@@ -249,11 +253,13 @@ it (§6). The drift this brief reported is resolved: `values.yaml:76` now holds
 `smoke-chill-lounge` too, with a comment recording that the chart read `briefs: []` while
 the cluster held one entry.
 
-**Correction — the planner cap is 600 s, not 420 s.** When this brief was written,
-`music/planner/planner.py` read `MIN_DURATION_S = 30`, `MAX_DURATION_S = 420`. Commit
-`52ae620` (card `t_25a6499c`) raised the cap for the registry's `loop-10min` shape; the file
-now reads `MIN_DURATION_S = 30` (line 103) and `MAX_DURATION_S = 600` (line 104). The 417 s
-track sits inside both, so no routing verdict changes — the quoted number was stale.
+**Correction — the planner's rail, re-read by card `t_ae1d9243`.** When this brief was written
+`music/planner/planner.py` read `MIN_DURATION_S = 30` (**anchored**), `MAX_DURATION_S = 420`
+(**anchored**). Commit `52ae620` (card `t_25a6499c`) raised the cap for the registry's
+`loop-10min` shape, and card `t_96dfc521` later moved the floor to the shortest shape the
+registry names. The file now reads `MIN_DURATION_S = 16` (`music/planner/planner.py:147`) and
+`MAX_DURATION_S = 600` (`:148`). The 417 s track sits inside both, so no routing verdict
+changes — the quoted number was stale.
 
 ## 8. Blocker for the next stages
 
@@ -321,7 +327,7 @@ Every figure in this brief was re-measured this pass. Results:
 | `PASS gate_quota`, period 2026-10, 0/60, studio 0 | same | reproduced |
 | `PASS gate_lyrics_original`, 9 sections, 84 words, j_kro | same | reproduced |
 | `sha256(lyrics.suno.txt)` = `e667e248…` matches manifest | same hash from `sha256sum` | reproduced |
-| planner cap 420 s, floor 30 s | `planner.py:82-83` (`MIN_DURATION_S=30`, `MAX_DURATION_S=420`) | reproduced |
+| planner cap 420 s, floor 30 s — **anchored** | `planner.py:82-83` (`MIN_DURATION_S=30`, `MAX_DURATION_S=420`) | reproduced |
 | 417 s = 240 bars at 138 BPM | 240 × 1.7391 = 417.4 s | reproduced |
 | no trance plan, no trance audio | `/var/lib/music-plans/` = `final-round`, `smoke-chill-lounge`, `testplan` only; repo-wide search finds the lyrics and brief dirs only | reproduced |
 | live queue = `smoke-chill-lounge` only | ConfigMap `mining/music-pipeline-briefs` key `briefs.json` read back | reproduced |
@@ -375,7 +381,7 @@ Every checkable figure in this brief was re-measured against live state this pas
 | divergence `main` 19 ahead / 15 behind, merge base `e278f61` | `main` @ `1a450e0` = 69 ahead / 0 behind `ba28f55`; `origin/main` is an ancestor | **STALE — the merge landed** |
 | live queue = `smoke-chill-lounge` only | 11 entries; `trance-signal-before-dawn` among them | **STALE — the queue grew** |
 | `values.yaml` reads `briefs: []` | 11 entries; trance at line 110 | **STALE — the GitOps card landed** |
-| no trance plan | plan exists (2434 B), marker `refused` | **STALE — the queue ran** |
+| no trance plan | plan exists (2511 B, re-planned 16:57), `refused` marker | **STALE — the queue ran** |
 | planner cap 420 s | `MIN_DURATION_S = 30` (l.103), `MAX_DURATION_S = 600` (l.104) | **STALE — `52ae620` raised it** |
 
 Corrections applied in place, this revision: the header (surviving card, true score 7.8,
@@ -406,3 +412,47 @@ Open items this pass did NOT close, each carrying a card:
 - `t_e69368ff` — NEW this pass: `planner.py` has no `--lyrics-file`, so nothing can put the
   human-authored sheet into the plan. This is §8's next real step and the only blocker on the
   track that had no card.
+
+## 12. Declared scoring scope — machine-checked against the live rubric (card `t_00ac4f10`, 2026-10-16)
+
+`music/scripts/check_brief_rubric_scope.py` reads the `rubric_scope` block below and
+compares it, field by field, to this genre's scope COMPUTED from `music/rubrics/edm.json`
+by the panel's own resolver (`music/rubrics/panel.py`: `applicable_criteria()`,
+`applicable_signals()`). `edm.json` declares `applies_to` on every criterion, so both of
+its genres are covered: a criterion added, dropped or re-weighted in that file fails this
+brief instead of going unnoticed. The block is a claim about NOW, and the check never reads
+prose.
+
+Regenerate the block after any rubric edit — one command, no hand-edit:
+
+    /usr/bin/python3 music/scripts/check_brief_rubric_scope.py --print-truth trance
+
+```json
+{
+  "rubric_scope": {
+    "genre": "trance",
+    "family": "edm",
+    "rubric_version": 1,
+    "pass_threshold": 7.0,
+    "criteria": [
+      "tempo_pocket",
+      "dance_structure",
+      "genre_engine",
+      "low_end_discipline",
+      "loudness_target",
+      "arrangement_development"
+    ],
+    "weights": {
+      "tempo_pocket": 3,
+      "dance_structure": 2,
+      "genre_engine": 3,
+      "low_end_discipline": 2,
+      "loudness_target": 1,
+      "arrangement_development": 1
+    },
+    "weight_sum": 12,
+    "reject_signals": [],
+    "reject_signals_unnamed": 5
+  }
+}
+```

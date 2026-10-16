@@ -236,7 +236,7 @@ is on disk (42652 B, mtime 2026-10-16T14:23) and its history is `origin/main`'s 
 `git rev-list --count origin/main..HEAD` = **66** at 15:52 CDT (the tree is shared by concurrent
 workers, so the ahead count moves). Read live from the working tree:
 
-- `music/suno-gen.py:141 is_instrumental_template(genre)` — the decision that lets the rail
+- `music/suno-gen.py:265 is_instrumental_template(genre)` — the decision that lets the rail
   accept a track with no human lyric sheet. Its own docstring names the 8 instrumental
   templates: **chill-lounge, sentimental-piano, commentary-beds, elemental-fire/water/earth/air,
   chiptune-8bit, epic-orchestral-boss**, and it keys on the template's `## Lyrics guidance`
@@ -269,22 +269,32 @@ workers, so the ahead count moves). Read live from the working tree:
 **Two rail walls found while this kit rendered** (card `t_640cc2a1` — cited so the stages after
 this one do not rediscover them):
 
-1. **The planner's floor refused the 16 s sting.** `music/planner/planner.py:103`
-   `MIN_DURATION_S = 30` (ceiling `MAX_DURATION_S = 600`), so the sting plans with
-   `VALIDATION FAILED (1): duration 16s outside 30-600s` and that pod exits 1. The engine has no
-   such floor: the 16 s render completed and measures 16.000000 s (§8). Carded `t_96dfc521`. The
-   entry keeps its spec length — do not raise the sting to 30 s to dodge the planner.
+1. **The planner's floor refused the 16 s sting.** The wall as card `t_640cc2a1` found it; the
+   planner's own refusal in that run, verbatim:
+
+   ```text
+   VALIDATION FAILED (1): duration 16s outside 30-600s
+   ```
+
+   The rail then read `MIN_DURATION_S = 30` (**anchored**) at `music/planner/planner.py:103`,
+   ceiling `MAX_DURATION_S = 600`. The engine has no such floor: the 16 s render completed and
+   measures 16.000000 s (§8). Carded `t_96dfc521`. The entry keeps its spec length — do not
+   raise the sting to 30 s to dodge the planner.
    **FIXED by card `t_96dfc521`**: the floor is 16 s now — the shortest shape the registry
    actually names — and a duration outside the rail writes no plan at all, so the render rail
    cannot read one (see `music/tests/test_planner.py` §6).
-2. **The planner reads the FIRST style field, and this template carries two.**
-   `music/planner/planner.py:135` takes the first `## Style field` fenced block;
-   `music/prompts/commentary-beds.md` declares INTRO STING (line 7) before LOOPABLE TALK BED
-   (line 13). So BOTH kit plans carry the sting caption, byte-identical — measured in this pass
-   on `/var/lib/music-plans/commentary-beds-lo-fi-jazz-sting.json` and
-   `...-bed.json`: the two `caption` values are the same string. The 32 s artifact is therefore
-   the sting at 32 s, not the anti-melody bed that §2 defines. Carded `t_3497b627` (fix +
-   re-plan + re-render). Do not ship the current 32 s render as the talk bed.
+   Re-read by card `t_ae1d9243`: `MIN_DURATION_S = 16` (`music/planner/planner.py:147`),
+   `MAX_DURATION_S = 600` (`:148`).
+2. **The planner used to read the FIRST style field; this template carries two.**
+   `music/planner/planner.py:169` (`parse_style_fields`) parses EVERY `## Style field` block and
+   `music/planner/planner.py:188` (`resolve_style_caption`) resolves the one the QUEUE ENTRY
+   names — there is no fallback to the first block. `music/prompts/commentary-beds.md` still
+   declares INTRO STING (line 7) before LOOPABLE TALK BED (line 13), and before the fix BOTH
+   kit plans carried the sting caption, byte-identical. **FIXED by card `t_3497b627`** (fix +
+   re-plan): re-measured 2026-10-16 by card `t_6dd13d76`, the two plans on disk now carry
+   DIFFERENT captions — `caption` 420 characters for the sting plan, 422 for the bed plan — so
+   the sting's caption is no longer the bed's. The 32 s artifact on disk is still the sting at
+   32 s, not the anti-melody bed §2 defines: re-render before shipping it as the talk bed.
 
 Live route into audio (in-cluster, not the kanban stage machine): ConfigMap
 `music-pipeline-briefs` → CronJob `music-pipeline` (plans via `planner.py` →
@@ -369,10 +379,10 @@ carry weight 3 each) → `package` (`gate_sync_ready` per lane, `loop_points.jso
 - Autonomy: `music/autonomy.yaml` (both lanes `advisory`)
 - Stage contract: `music/stages.yaml` (`brief` → `producer`; advance calls added in `9c2d2d3`)
 - Generation-path truth read from the working tree in this pass: `music/suno-gen.py`
-  (`is_instrumental_template`, 42652 B) and the live plans in `/var/lib/music-plans/`
+  (`is_instrumental_template`, 50030 B) and the live plans in `/var/lib/music-plans/`
   (`"bpm": 120`, `"key": "C minor"`, `"instrumental": true`)
 - **Dangling reference — corrected in this pass.** Both documents exist on this machine and are
-  tracked in `HEAD`: `brain/playbooks/music-lane-architecture.md` (34328 B, mtime
+  tracked in `HEAD`: `brain/playbooks/music-lane-architecture.md` (mtime
   2026-10-16T15:31) and `brain/research/music-monetization-2026.md` (11067 B, mtime
   2026-10-16T13:59). `find /home/j_kro -name 'music-lane-architecture.md'` now returns that
   path. Both are still **absent from `origin/main`** (`git cat-file -e
@@ -450,7 +460,7 @@ decision — threshold 5.0 → produce either way.
    object carrying `title`, `artist`, `bpm`, `key`, `mood`, `genre`, and enforces
    `license_tiers` on the direct-license lane). Transcript replaced with the measured output.
 4. **§7** — three claims were false on disk. `music/suno-gen.py` **is** in this checkout
-   (42652 B) and the divergence is closed (`git rev-list --count HEAD..origin/main` = 0, it read
+   (50030 B) and the divergence is closed (`git rev-list --count HEAD..origin/main` = 0, it read
    15 when the brief was written). The two instrumental-render gaps are closed by `t_25a6499c`.
    The queue's `briefs:` list no longer reads `[]` — it carries 11 entries, two of them this
    genre's. The two rail walls the kit's render exposed (`t_96dfc521` duration floor,
@@ -510,6 +520,10 @@ Repo-wide `check_brief_figures` still FAILs on **other** briefs (`elemental-wate
 **Supersession record.** Superseded blob
 `7db8ea568da53bd1983bb53737680223dc72d4f862421900e299c481aeea1398` (320 lines / 19360 B, commit
 `63440da`); this pass's revision is committed on `main` and its digest is re-readable with
-`sha256sum music/briefs/commentary-beds.md`. The chain resumes at the stage after `brief` —
+`sha256sum music/briefs/commentary-beds.md`. The figure pass of card `t_6dd13d76`
+(2026-10-16T17:21-05:00 CDT) supersedes
+`sha256 695a48c6de68ab892ca9e3bafd2edde8eef2fc97d19589a9d63850d1aca2e064` (515 lines / 32830 B):
+the two-rail-walls entry was restated — the style-field wall is FIXED by `t_3497b627` and both
+kit plans were re-measured. The chain resumes at the stage after `brief` —
 `genre-select`, whose resolution §1–§3 already carry. The re-emitted card's body marker
 (`stage: brief`) is the defect card `t_6599927d` owns, not a reason to re-run the brief stage.

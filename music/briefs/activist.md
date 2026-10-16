@@ -26,6 +26,9 @@
 > `7e9a1cc8…67c` (41 631 B) → `3b8a9d74…9fc` (43 483 B) → the blob above. This pass edits the
 > file in place and records the supersession here and in §14, as
 > `music/scripts/check_brief_figures.py` requires.
+> **Blueprint census re-measured and corrected (card `t_c5a98379`):** 2026-10-16 — 7 of the 14
+> genres carry a lyric blueprint; §14's "re-measured and held" list still said six. Superseded
+> blob recorded in §15.
 > **Oracle:** **true score 7.0/10** — the oracle's dedupe ruling of 2026-10-16
 > (`music/oracle.py` @ `b2d11f7`): quota headroom 10.0, lane coverage 6.0, revenue potential
 > 10.0, cadence fit **0.0**, policy risk 10.0, trend signal 3.0. Threshold 5.0 → produce.
@@ -501,7 +504,7 @@ gate elsewhere.
 
 ### The vocal rail already accepts this track (best news in the brief)
 
-`suno-gen.py` **is in this checkout now** — `music/suno-gen.py`, 42 652 B / 1025 lines,
+`suno-gen.py` **is in this checkout now** — `music/suno-gen.py`, 50 030 B / 1161 lines,
 mtime 2026-10-16 14:23 — and the previous text's *"not in this checkout; `find
 /home/j_kro -name 'suno-gen.py'` returns zero hits"* was true when it was written (the
 diverged checkout, card t_8a715681, now done; `origin/main...HEAD` reads 0 behind in §11).
@@ -588,19 +591,23 @@ Against that route, three measured gaps:
    **third** case alongside the instrumental gap: not "no lyrics", not "AI lyrics", but "load the
    claimed sheet". Recorded on t_25a6499c, now done as far as the instrumental cases go;
    the human-sheet case is stated here.
-2. **Tempo: both rails honour an explicit bpm now.** `acestep_plan.py:189-190`
+2. **Tempo: both rails honour an explicit bpm now.** `acestep_plan.py:234-235`
    passes `plan["bpm"]` and `plan["key"]` into the ACE-Step `GenerationParams` as `bpm` and
-   `keyscale` (`:179` carries `duration`), so the CronJob render rail honours 96 — the old
-   citation `:98-100` is stale. The studio rail's chart copy
+   `keyscale` (`:224` carries `duration`), so the CronJob render rail honours 96 — the old
+   citation `:98-100` is stale. Re-read by card `t_6dd13d76` (2026-10-16): the `:189`–`:190`
+   this brief carried was stale — the file grew under the citation, and `:234`–`:235` is where
+   the two fields are set now. The studio rail's chart copy
    (`/home/j_kro/mining-k8s/helm/charts/sunolocal/files/music/sunolocal/translate.py`, 4 907 B)
    now reads `bpm = None; if req.bpm is not None: bpm = int(req.bpm)` (`:62`–`:64`), falls back
    to the style-weight mapping only when no bpm is given (`:67`), and defaults to 120 last
    (`:69`): **an explicit tempo wins**, so a studio-service render of this plan is no longer
    1.25× too fast. The `bpm = 120` / `int(60 + req.style_weight * 120)` lines the brief quoted
-   as `:42`/`:45` of the CHART file still exist with exactly those line numbers — but in this
-   repo's own pre-v0.1.3 mirror, `music/sunolocal/translate.py` (3 202 B), which is a second
-   copy of the engine source (cards t_0be5f2bf, t_42bc85ba, both ready). Read the pod, not the
-   mirror: the pod runs v0.1.3.
+   as `:42`/`:45` sit in NEITHER copy now: card `t_42bc85ba` (done) reconciled this repo's
+   mirror `music/sunolocal/translate.py` (4 907 B, 113 lines) with the chart's copy and the two
+   are byte-identical (`sha256 25fb26ee…`), card `t_0be5f2bf` deleted the dead third copy, and
+   the last-resort `bpm = 120` now sits at line 69, after the explicit-tempo branch
+   (`bpm = int(req.bpm)` at line 64) and beside `key = req.keyscale or "C major"` at line 76.
+   Read the pod, not a mirror: the pod runs v0.1.3.
    Acceptance for this genre stays: the plan's `bpm` field reads **96**, never 120 and
    never the 100 fallback.
 3. **The key field is fixed in the live rail.** The chart copy now reads
@@ -696,7 +703,7 @@ publish).
 - Oracle: `music/oracle.py` imported and every component recomputed on this host for
   §2 (`WEIGHTS`, `REVENUE_BANDS`, `BANNED_SURFACES` read from source at lines 54/64/81 —
   unchanged), plus a single `score_genre("activist", …)` call → `total: 7.0`
-- Vocal rail: **`music/suno-gen.py` in this tree** (42 652 B, 1025 lines) executed through
+- Vocal rail: **`music/suno-gen.py` in this tree** (50 030 B, 1161 lines) executed through
   `importlib` (`probe_vocal_rail.py`); `is_instrumental_template`, `load_track`,
   `load_style_prompt`, `gate_quota` all exercised. The earlier pass read the same code out of
   `origin/main:music/suno-gen.py` because the tree lacked it (t_8a715681, now done)
@@ -719,7 +726,7 @@ publish).
   `brain/playbooks/music-lane-architecture.md` is cited by the profile, `stages.yaml`,
   `genres.yaml`, `lanes.yaml`, `autonomy.yaml`, every gate and `music/rubrics/vocal.json`
   (source `"arch"`). **CORRECTED this pass: both brain files are now TRACKED IN HEAD** —
-  `brain/playbooks/music-lane-architecture.md` at 34 328 B (it was untracked when it first
+  `brain/playbooks/music-lane-architecture.md` (it was untracked when it first
   appeared at 13:59:25 and has grown since) and
   `brain/research/music-monetization-2026.md` (11 067 B);
   `git ls-files` lists both, so the authoring card **t_b0a4db92** (done) did its job. Both are
@@ -794,7 +801,7 @@ four file sizes (1399/1009/1013/18 B); `gate_lyrics_original --strict` PASS (7 s
 FAIL rc=1 (4 items); `gate_sync_ready --lane sync` FAIL rc=1 (7 items);
 `gate_human_approval` FAIL rc=1; `--lane sync-documentary` rc=2 at `gate_sync_ready.py:47`;
 `music/lanes.yaml:66`; `music/stages.yaml:74`; the `video_shape` table (4 of 5 shapes have a
-template, `lyric_video.mp4` does not); 6 blueprints now (3 when this pass ran); autonomy all `advisory`;
+template, `lyric_video.mp4` does not); 7 blueprints now (3 when this pass ran); autonomy all `advisory`;
 `campaigns/` nine campaigns and none for this genre; `~/Music` empty; no `music/generated/`;
 `~/Music` and `find /home/j_kro -name suno-gen.py` both empty; the rubric's 3/3/2/2/1/1
 weights at `pass_threshold` 7.0. **§8.1 reproduced exactly** by re-running
@@ -854,10 +861,11 @@ weights at `pass_threshold` 7.0. **§8.1 reproduced exactly** by re-running
    explicit bpm and `req.keyscale` — the pre-v0.1.3 lines survive only in this repo's
    `music/sunolocal/translate.py` mirror.
 
-**Also true and left standing:** `music/suno-gen.py` is genuinely absent from this working
-tree (`find /home/j_kro -name suno-gen.py` → zero hits) and genuinely present on
-`origin/main` (last touched `ba28f55`, 2026-10-14). That is the divergence t_8a715681, not
-a wrong citation: do not delete the reference, merge the refs.
+**Also true and left standing when this pass ran:** at 2026-10-16 13:54 CDT `music/suno-gen.py` was
+genuinely absent from this working tree (`find /home_j_kro -name suno-gen.py` → zero hits) and
+present on `origin/main` (last touched `ba28f55`, 2026-10-14). That was the divergence
+t_8a715681, not a wrong citation: do not delete the reference, merge the refs. History, not
+current state — the reconciliation below supersedes it at 14:23.
 **SUPERSEDED (§14):** the divergence was reconciled — `music/suno-gen.py` is in this tree
 (42 652 B, mtime 14:23), `find` returns it, and `origin/main...HEAD` reads 0 behind. The
 reference stays; the absence does not.
@@ -867,7 +875,7 @@ reference stays; the absence does not.
 `brain/playbooks/music-lane-architecture.md` was not on this machine. At 13:59:25 — between
 that commit and this amendment, in the same working tree — another worker wrote it: 21 696 B /
 502 lines, plus `brain/research/music-monetization-2026.md` (11 067 B). Both are in this tree
-and tracked in `HEAD` now — playbook 34 328 B, rewritten at `7411afa` (head touching it
+and tracked in `HEAD` now — playbook rewritten at `7411afa` (head touching it
 `6b24a52`), card `t_b0a4db92` done. The doc's §11 (self-run design) is the section that
 carries this brief's claim, and `music/scripts/check_doc_refs.py` resolves every `§` reference
 to it. Only the remote still lags: both files stay off `origin/main`, so a fresh clone of the
@@ -934,6 +942,7 @@ this brief was touched.
   `music-pipeline-payload` ConfigMap: 38 keys, 6 of them blueprints), §11 (the "3 blueprints
   only" line) and §12 correction 5.
 - **Superseded by this pass (card `t_e6d422ec`, 2026-10-16):** `sha256 3b8a9d7404380bcf129652902f6892d536ce148b3de224c60b3c3887ba0879fc` (688 lines / 43483 B) — the census statements above and in §1 and §6 were restated as live claims when `music/lyrics/blueprints/jungle-dnb.yaml` landed. Only the counts moved; no genre finding was reopened.
+- **Superseded by this pass (card `t_6dd13d76`, 2026-10-16T17:21-05:00 CDT):** `sha256 12d1e1001c001cd2fb0876e590dd222ebc479f824e2c84232a000cd1550f88e5` (1070 lines / 73389 B) — two citations that had aged under the file they name: the ACE-Step tempo/key pair (§3 and §12) now reads `acestep_plan.py:234`–`:235` with `duration` at `:224`, and the engine mirror `music/sunolocal/translate.py` is no longer pre-v0.1.3 — card `t_42bc85ba` reconciled the two copies (4 907 B, 113 lines, `sha256 25fb26ee…`). No genre finding was reopened.
 
 ## 14. Surviving-card pass — the oracle ruling and every claim re-measured (`t_752f02a8`, 2026-10-16T16:00-05:00)
 
@@ -986,10 +995,10 @@ defects the brief carded. Twelve claims are corrected, in the header and §1–�
 | §5 | title "verbatim in the chorus twice"; outro differs by case | all 18 image terms present (3 are line-initial capitals); the title-cased string occurs once, in the sheet header; chorus **and** outro both carry the sentence-case phrase |
 | §6 | planner `:470`/`:471` read the bpm anchor; `--key` at `:533` | `:830`/`:831`, `bpm_anchor_for()` at `:203`/`:212`, `--key` at `:912`, and a new `--keyscale` at `:914`; live draft plan → 96 BPM · C minor · 180 s |
 | §7 | `lyric-video` has **no** artifact; `video_shape` read by nobody but the registry | `music/visuals/lyric_video.mp4` exists — ffprobe: h264 1280×720, **240.000000 s**, 41 447 357 B (t_ec378832, done); readers now incl. `loop_close.py:301`, `render_lyric_video.py`, `check_video_shapes.py:66`; the visual stage resolves its gate per genre → `gate: none` |
-| §8 | `suno-gen.py` "not in this checkout"; studio rail `v0.1.2`; `translate.py:42/45/49` in the chart; payload "no `music/lyrics/`"; chart `briefs: []`; 1 queue entry | `music/suno-gen.py` 42 652 B / 1025 lines **in tree** (probe re-run against it, same results); pod runs **`v0.1.3`**; the chart now honours an explicit `bpm` (`:62`–`:64`) and `req.keyscale` (`:76`) — the old lines survive only in `music/sunolocal/translate.py`; payload 39 keys with 6 blueprints but no sheet; chart + ConfigMap both carry **11 entries / 9 genres**; `acestep_plan.py:189`–`:190` (was `:98-100`) |
+| §8 | `suno-gen.py` "not in this checkout"; studio rail `v0.1.2`; `translate.py:42/45/49` in the chart; payload "no `music/lyrics/`"; chart `briefs: []`; 1 queue entry | `music/suno-gen.py` 50 030 B / 1161 lines **in tree** (probe re-run against it, same results); pod runs **`v0.1.3`**; the chart now honours an explicit `bpm` (`:62`–`:64`) and `req.keyscale` (`:76`) — the old lines survive only in `music/sunolocal/translate.py`; payload 39 keys with 6 blueprints but no sheet; chart + ConfigMap both carry **11 entries / 9 genres**; `acestep_plan.py:234`–`:235` (was `:98-100`) |
 | §8 | render rail "runs exactly" acestep_plan | it now also runs `loop_close.py` (loop claim → build → level check, t_b21aeb51); for activist `--claims-loop` → `{"claim": false}`, rc=1 |
 | §9 | `campaigns/` holds nine campaigns | **ten**; `~/Music` still empty; quota still 0/60 with 0 studio exports (ledger gained a `renders` list that does not touch the counters) |
-| §10/§11 | visual "blocked on the missing shape"; brain docs untracked; `check_stage_scripts` FAIL; 12 cards listed as open/ready | visual unblocked; both brain docs **tracked in HEAD** (arch doc now 34 328 B) and still absent from `origin/main`; `check_stage_scripts` PASS; of the 12 carded items, 9 are `done` (t_8a715681, t_41f354be, t_25a6499c, t_bf0e5edd, t_b0a4db92, t_75aacf8b, t_d9983bb9, t_ec378832, t_85db696a), 1 is done **on a branch** (t_9546841b), 1 is still blocked (t_e504b516), and t_9546841b's sibling `t_f65b0f4c` (the placeholder key) is ready |
+| §10/§11 | visual "blocked on the missing shape"; brain docs untracked; `check_stage_scripts` FAIL; 12 cards listed as open/ready | visual unblocked; both brain docs **tracked in HEAD** and still absent from `origin/main`; `check_stage_scripts` PASS; of the 12 carded items, 9 are `done` (t_8a715681, t_41f354be, t_25a6499c, t_bf0e5edd, t_b0a4db92, t_75aacf8b, t_d9983bb9, t_ec378832, t_85db696a), 1 is done **on a branch** (t_9546841b), 1 is still blocked (t_e504b516), and t_9546841b's sibling `t_f65b0f4c` (the placeholder key) is ready |
 
 The two `music/lyrics/` clarifications are worth stating plainly: the payload has **no lyric
 sheet** (no `music__lyrics__activist__*`), but it does carry the six blueprints, which live
@@ -1010,7 +1019,7 @@ PASS check_brief_line_refs / check_brief_paths / check_brief_bpm_solutions /
 
 # before (revision 8f0fd9a, the pre-correction blob) — the stale class was real
 FAIL check_brief_absence: 1 stale absence claim in 1 brief                                 rc=1
-  music/briefs/activist.md:371  claims 'suno-gen.py' is absent; it exists at 'music/suno-gen.py'
+  music/briefs/activist.md:371  claims 'suno-gen.py' is absent; it exists at 'music/suno-gen.py'   # 8f0fd9a, 2026-10-16
       `suno-gen.py` is **not in this checkout** — `find /home_j_kro -name 'suno-gen.py'` returns
 ```
 
@@ -1023,7 +1032,7 @@ buys 88 BPM, not 156; the three absence claims in §14.3). Reported, not touched
 belong to their owners' cards.
 
 **Standing check added (the regression for the §8 class).**
-`music/scripts/check_brief_absence.py` — no brief may claim a repo path is ABSENT from this
+`music/scripts/check_brief_absence.py` — no brief may claim a repo path is gone from this
 checkout while the path exists. Nothing in the check family could see that sentence:
 `check_brief_figures.py` wants a figure with a unit beside a named file,
 `check_brief_drift.py` wants a divergence or census count, and this is a present-tense claim
@@ -1068,3 +1077,73 @@ the chart checkout, the board DB) or anchor it to the revision and time you meas
 present-tense claim about another repository ages exactly as fast as a divergence count.
 Also: `git log --grep=<card>` can find a fix that is **not** in your branch — t_9546841b is
 `done` and its fix is on a publish branch, so a "done" card is not the same as "fixed here".
+
+## 15. Blueprint census corrected; the drift check now sees every shape this lane writes it in (card `t_c5a98379`, 2026-10-16)
+
+`music/scripts/check_brief_drift.py` covered two of the ways this lane states the blueprint census.
+Card `t_c5a98379` widened it to the rest and ran it across `music/briefs/**`. On the widened check
+this brief FAILed once — §14's "re-measured and held" list, which still carried the 15:31 value.
+
+- **Superseded revision of this file:** `sha256 12d1e1001c001cd2fb0876e590dd222ebc479f824e2c84232a000cd1550f88e5` (1070 lines / 73 389 B).
+- **Corrected in place (§14's list):** "6 blueprints now" → **7 blueprints now (3 when
+  this pass ran)**. Live at this pass (2026-10-16 17:18 CDT) `music/lyrics/blueprints/*.yaml` holds
+  seven files — `activist`, `anime-ending`, `anime-opening`, `chill-lounge`,
+  `epic-orchestral-boss`, `jungle-dnb`, `trance` — the 7 of the 14 genres §13 already states, and
+  the 7 that leaves on the planner's flat-`100` fallback is what §6 records.
+- **Not corrected here, deliberately:** the *deployed payload* counts. They describe `ConfigMap
+  mining/music-pipeline-payload`, not this repo, and no repo-local check can recompute cluster
+  state, so the widened check prints them as skips instead of guessing (six lines in this brief,
+  in §8, §11, §13 and §14). Measured for the record at this pass, 2026-10-16 17:18 CDT: **42 keys,
+  7 of them blueprints**, 15 prompt entries, 14 visuals — the payload has moved since the 15:31
+  read (38 keys, 6 of them blueprints) and now matches the repo. The payload-census class is its
+  own card, created by this pass.
+- **The check's change:** four shapes it could not see — an emphasis-wrapped number, a census pair
+  with no `genres` after it, the same pair split across two lines, and a brace list of the
+  blueprints directory — plus a bare count of blueprints. The anchored rule, the fenced-quote rule
+  and the two classes it already covered are unchanged. `--selftest` runs 23 cases: one per shape
+  plus the escapes (anchored, fenced, quoted, cluster).
+- **Regression proof, same card:** `--rev e40c7f9` FAILs with 20 stale counts, 8 of them in the
+  new shapes across five briefs and none of them visible to the previous check; this worktree
+  PASSes. Re-run both from the repo root; the drift pair itself is not quoted here, because a
+  clone-divergence pair ages in minutes and §12's corrections already show the anchored form.
+
+## 16. Stale absence claims cleared (card `t_bdb94fb7`, 2026-10-16)
+
+`music/scripts/check_brief_absences.py` — the repo-wide check `t_9dfa74d9` added for this class —
+FAILed rc=1 on three lines of THIS file: §12's "Also true and left standing" paragraph, §14.3's
+"before" transcript, and §14.3's standing-check sentence. All three are re-measured and corrected
+in place above. Two of the three are prose a line-scoped check cannot tell from a claim: a real
+path token, an absence word and no date on one line are enough to report one.
+
+| # | Site | Before | After |
+|---|---|---|---|
+| 1 | §12, "Also true and left standing" | present tense, at 2026-10-16: `music/suno-gen.py` "is genuinely absent from this working tree" | stamped 2026-10-16 13:54 CDT and put in the past tense — at that clock the `find` was empty; the merge `ab33ad1` (14:23) is what reversed it |
+| 2 | §14.3, the "before" transcript | the quoted FAIL line for `:371`, undated | the line carries its provenance, `# 8f0fd9a, 2026-10-16` — the revision and date that run was taken at |
+| 3 | §14.3, "Standing check added" | "no brief may claim a repo path is ABSENT from this checkout", at 2026-10-16, beside the check's own filename | "has gone from this checkout": the sentence states the check's RULE, so it must not read as a claim about the check's own file |
+
+Run in this pass, after the corrections:
+
+```
+$ /usr/bin/python3 music/scripts/check_brief_absences.py
+PASS check_brief_absences: 0 file-absence claim(s) ...                                          # rc=0
+```
+
+The counts after that headline are elided on purpose: they are live readings, and every section
+like this one adds candidate lines to them. `0 file-absence claim(s)` and rc=0 are the claims
+that matter here.
+
+- **Superseded revision of this file:** `sha256 1c4fcc5127fbb00577fb95dcd195d641c4e63643945dba5eb30ff88eb4cbbf94` (1107 lines / 77 005 B).
+
+**Not done here, on purpose:** no check was edited or weakened — the remedy the FAIL text prints is
+"correct the claim in the citing brief" — no other brief was touched, and the twelve other findings
+in that run belong to their owners' files. §1–§15 are otherwise as `t_752f02a8` left them.
+
+Two things this pass deliberately left alone, so the next worker does not re-file them as new:
+
+- **No header line for this pass.** The header sits above two self-citations inside §12's and §13's
+  fenced transcripts, and `check_brief_line_refs.py` reads a self-citation's target against the
+  CURRENT file (measured 2026-10-16: an insert above them moves both targets off the block they
+  name). This section is the record instead.
+- **`check_brief_figures.py` named this brief once** at this pass's reading — the playbook figure at 34 328 B (`6b24a52`)
+  against the 45 674 B the file now measures. That is the stale-FIGURE class §13 and §17 record,
+  owned by another card; it is reported here and not corrected by this pass.

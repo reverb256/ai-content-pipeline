@@ -23,6 +23,12 @@
 > `sha256 22a596a42832aae7a36583cf1c2b31871c0779bfb530602cd7a51d772ef14e9c` (44182 B, 691
 > lines, written 13:43). The current digest re-reads with
 > `sha256sum music/briefs/epic-orchestral-boss.md`.
+> **Rubric size re-measured (card `t_6dd13d76`, 2026-10-16T17:21-05:00 CDT):** the family
+> rubric `music/rubrics/gamer.json` reads 12 444 bytes (12 428 characters) on disk now — it
+> grew again after the 12 000-byte rewrite the surviving-card pass recorded. §1 and §13 are
+> corrected in place. Superseded revision of this file:
+> `sha256 7bc9752f68011a6dbeb4ef5a3b9c78828f842d7592c300500a0d2bbd38e472bc` (948 lines /
+> 65354 B).
 > **Repo:** `/home/j_kro/ai-content-pipeline` — the lane repo. Its `main` tip at write time
 > was `d491663`, then `afa242e` (13:38), then `c296db6` (16:00) — this lane commits
 > constantly, so the tip is a timestamp, not an identity. Re-measured 16:00:
@@ -74,7 +80,7 @@ The shell's bare `python3` is the Hermes bundled interpreter and has no PyYAML.
 | Lanes | `game-assets`, `youtube-gaming`, `sync`, `streaming` |
 | Cadence | `1/wk` |
 | Video shape | `single-4min` |
-| Family rubric | `music/rubrics/gamer.json` (12000 bytes), `pass_threshold` 7.0 |
+| Family rubric | `music/rubrics/gamer.json` (12444 bytes), `pass_threshold` 7.0 |
 | Lyric blueprint | `music/lyrics/blueprints/epic-orchestral-boss.yaml` — **PRESENT**, 7073 bytes (§6) |
 | Registry defaults | export `studio`, stems `true`, lyrics `human-original`, release_private `true`, gate_profile `reviewer-deepseek` |
 
@@ -213,7 +219,7 @@ The `Breakdown` is the false ending. The `Outro` is the hard cut.
 
 Duration: **240 s**. Basis: 150 BPM in 4/4 → one bar = 4×60/150 = 1.6000 s;
 240 s = **exactly 150 bars**, and it is the `single-4min` shape. Inside the planner's guard
-rail (`planner.py` `MIN_DURATION_S=30`, `MAX_DURATION_S=420`). For comparison, measured:
+rail (`planner.py` `MIN_DURATION_S=16`, `MAX_DURATION_S=600` — re-read by card `t_ae1d9243`). For comparison, measured:
 300 s = 187.5 bars (fractional), 420 s = 262.5 bars (fractional) — 240 s is the only clean
 choice of the three.
 
@@ -369,8 +375,10 @@ requires (`family`, `theme`, `title_candidates`, `structure`), plus `bpm_anchor:
 `FAIL: no lyric blueprint for '<genre>'`, so the lyrics stage can start. Blueprint census on
 disk at 16:00: **7 of the 14 genres** (`activist`, `anime-ending`, `anime-opening`,
 `chill-lounge`, `epic-orchestral-boss`, `jungle-dnb`, `trance`; `jungle-dnb.yaml` is still
-untracked in the lane tree). `planner.py:load_blueprint`'s docstring still reads
-"(3 of 15 genres do)" — a stale docstring, not a behaviour: the loader reads the directory.
+untracked in the lane tree). `planner.py:load_blueprint`'s docstring read
+"(3 of 15 genres do)" — a stale docstring, not a behaviour: the loader reads the directory. Card
+`t_a54fb00d` corrected that figure to "(7 of 14 genres do)" on 2026-10-16; the deployed payload
+copy of the same function picks the correction up at the next `sync-payload.sh`.
 
 ## 7. Existing assets for this genre
 
@@ -674,7 +682,7 @@ the renderer rather than stated as policy (§7).
   weirdness 40%, style influence 80%, 6 exclude terms, anchor 150 BPM / C minor
 - Visual: `music/visuals/dark-fantasy.md` (1387 B); rendered `dark_fantasy.mp4` probed and
   gate-run, plus the shape-matched `single_4min.mp4` (240.0 s, §5)
-- Rubric: `music/rubrics/gamer.json` (**12000 B**, `version` 2, `pass_threshold` 7.0). The
+- Rubric: `music/rubrics/gamer.json` (**12444 B**, `version` 2, `pass_threshold` 7.0). The
   criteria are data now, each with an `applies_to` scope: "Boss/battle energy
   (elemental-fire, epic-orchestral-boss)" weight 3, "Loop safety for game use (all gamer
   genres)" weight 3, "Asset-pack packaging (stems, BPM/key metadata, naming)" weight 1,
@@ -689,7 +697,7 @@ the renderer rather than stated as policy (§7).
   `gate_lyrics_original`, `gate_youtube_authentic`, `gate_sync_ready`, `gate_release_ready`
   exercised live in this pass. `check_gate_suite.sh` runs the suite; `music/gates/README.md` is
   the index.
-- Planner: `music/planner/planner.py` (`MIN_DURATION_S=30`, `MAX_DURATION_S=420`,
+- Planner: `music/planner/planner.py` (`MIN_DURATION_S=16`, `MAX_DURATION_S=600` — re-read by card `t_ae1d9243`,
   `load_blueprint` — which now finds this genre's blueprint, §6)
 - Lyrics mechanics: `music/lyrics/lyrics.py` (`MIN_UNIQUE_WORDS=25`, `MIN_SECTIONS=2`,
   `KNOWN_SECTIONS` incl. `Choir`, `WORD_TOKEN_RE`, `cmd_scaffold`, `unique_word_count`)
@@ -711,7 +719,7 @@ the renderer rather than stated as policy (§7).
   `origin/main` = `ba28f55`, **0 behind** (`git rev-list --left-right --count
   main...origin/main` → `72  0`). The divergence this entry used to record (22 ahead / 15
   behind, owned by `t_8a715681`) is **closed**: `origin/main` was merged as `ab33ad1`, and
-  `music/suno-gen.py` (42652 B) plus `music/sunolocal/` are now **present in this checkout**.
+  `music/suno-gen.py` (50030 B) plus `music/sunolocal/` are now **present in this checkout**.
   `music/scripts/check_stage_scripts.py` — which used to stay red on exactly that gap — is
   **PASS** (`11 referenced script path(s) all present`).
 - **Checks added by neighbouring passes:** `music/scripts/check_stage_scripts.py` (`7f2ded8`)
@@ -721,7 +729,7 @@ the renderer rather than stated as policy (§7).
   `check_oracle_board.py`, `check_oracle_determinism.py` and `check_gate_lane_surface.py`
   during the same window; all are re-run in §15.
 - **Dangling reference — RESOLVED (`t_b0a4db92`).** `brain/playbooks/music-lane-architecture.md`
-  (34328 B) and `brain/research/music-monetization-2026.md` (11067 B) are now on disk and in
+  and `brain/research/music-monetization-2026.md` (11067 B) are now on disk and in
   the `main` index; they were written 2026-10-08, stranded on `wip/atlas-backup-20261014`, and
   restored by ops mid-audit (`5a01157`). `music/scripts/check_doc_refs.py` re-run in this pass
   reports 24 headings, 32 citing files, 22 section references checked, and
@@ -888,7 +896,7 @@ win a tie. `music/scripts/check_oracle_board.py` reports one open card per genre
 | §13 | divergence `22 15`; `check_stage_scripts` red on `music/suno-gen.py` | `72 0`; `suno-gen.py` present; check **PASS** | corrected |
 | §13 | gate census "10 + 2 + **2** fixture modules" | 10 + 2 + **4** private modules | corrected |
 | §13 | rubric criteria `battle_energy`, … (4 names) | v2 data criteria with `applies_to` scopes | corrected |
-| §13 | `brain/` docs "do not exist on this machine"; carried `t_b0a4db92` | both exist (34328 B / 11067 B) and `check_doc_refs.py` PASSes | resolved |
+| §13 | `brain/` docs "do not exist on this machine"; carried `t_b0a4db92` | both exist and `check_doc_refs.py` PASSes | resolved |
 
 Claims that **reproduced unchanged** and were therefore left alone: the template (4525 B), its
 640-character caption, the 8 tag sheet in order, weirdness 40% / Style Influence 80% / 6 exclude
@@ -946,3 +954,60 @@ hotspot: `/home/j_kro/ai-content-pipeline/music/briefs/` — the 14 briefs under
 written and re-verified by ~8 concurrent `music-producer` workers on 2026-10-16; every write
 needs a path-scoped commit and a lock retry. This file's revisions are all on this genre, and
 this pass adds one path-scoped commit that supersedes `22a596a4…`.
+
+### 15.5 Code-prose census follow-up (card `t_a54fb00d`, 2026-10-16 17:31 CDT)
+
+§6 above recorded `planner.py:load_blueprint`'s docstring `(3 of 15 genres do)` at `3967dea`, and
+called it a stale docstring. Card `t_a54fb00d` corrected the repo's copy to `(7 of 14 genres do)`
+at the 2026-10-16 17:31 CDT reading, live census then 14 registered genres and 7 files in
+`music/lyrics/blueprints/`, and gave the class a check (`music/scripts/check_code_census.py`). No
+figure in THIS file moved — the §6 census sentence is anchored to its own 16:00 reading — and the
+deployed payload copy of the same docstring keeps the old figure until the next `sync-payload.sh`.
+
+- **Superseded by this pass (card `t_a54fb00d`, 2026-10-16):** `sha256 c8fcacf49e949e17b56eaa8692113668b15541de7e89ff2e73f5b3b5ebf48fa7` (954 lines / 65 789 B).
+
+## 16. Declared scoring scope — machine-checked against the live rubric (card `t_00ac4f10`, 2026-10-16)
+
+`music/scripts/check_brief_rubric_scope.py` reads the `rubric_scope` block below and
+compares it, field by field, to this genre's scope COMPUTED from `music/rubrics/gamer.json`
+by the panel's own resolver (`music/rubrics/panel.py`: `applicable_criteria()`,
+`applicable_signals()`). It FAILs when the criterion set, the weights, the weight sum, the
+applicable reject signals or the rubric version disagree with the live file. The block is a
+claim about NOW; the prose above keeps this family's pre-fix record (gamer v1: five
+criteria, Σw 11, scope only inside a criterion NAME) and the check never reads prose, so
+that record keeps passing.
+
+Regenerate the block after any rubric edit — one command, no hand-edit:
+
+    /usr/bin/python3 music/scripts/check_brief_rubric_scope.py --print-truth epic-orchestral-boss
+
+```json
+{
+  "rubric_scope": {
+    "genre": "epic-orchestral-boss",
+    "family": "gamer",
+    "rubric_version": 2,
+    "pass_threshold": 7.0,
+    "criteria": [
+      "battle_energy",
+      "loop_safety",
+      "asset_packaging",
+      "loudness_target"
+    ],
+    "weights": {
+      "battle_energy": 3,
+      "loop_safety": 3,
+      "asset_packaging": 1,
+      "loudness_target": 1
+    },
+    "weight_sum": 8,
+    "reject_signals": [
+      "battle_no_fast_tempo",
+      "loop_fade_or_truncation",
+      "clipped_master",
+      "no_stated_tempo_key"
+    ],
+    "reject_signals_unnamed": 0
+  }
+}
+```
