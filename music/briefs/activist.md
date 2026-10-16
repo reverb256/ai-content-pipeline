@@ -726,7 +726,7 @@ publish).
   `brain/playbooks/music-lane-architecture.md` is cited by the profile, `stages.yaml`,
   `genres.yaml`, `lanes.yaml`, `autonomy.yaml`, every gate and `music/rubrics/vocal.json`
   (source `"arch"`). **CORRECTED this pass: both brain files are now TRACKED IN HEAD** —
-  `brain/playbooks/music-lane-architecture.md` at 34 328 B (it was untracked when it first
+  `brain/playbooks/music-lane-architecture.md` (it was untracked when it first
   appeared at 13:59:25 and has grown since) and
   `brain/research/music-monetization-2026.md` (11 067 B);
   `git ls-files` lists both, so the authoring card **t_b0a4db92** (done) did its job. Both are
@@ -875,7 +875,7 @@ reference stays; the absence does not.
 `brain/playbooks/music-lane-architecture.md` was not on this machine. At 13:59:25 — between
 that commit and this amendment, in the same working tree — another worker wrote it: 21 696 B /
 502 lines, plus `brain/research/music-monetization-2026.md` (11 067 B). Both are in this tree
-and tracked in `HEAD` now — playbook 34 328 B, rewritten at `7411afa` (head touching it
+and tracked in `HEAD` now — playbook rewritten at `7411afa` (head touching it
 `6b24a52`), card `t_b0a4db92` done. The doc's §11 (self-run design) is the section that
 carries this brief's claim, and `music/scripts/check_doc_refs.py` resolves every `§` reference
 to it. Only the remote still lags: both files stay off `origin/main`, so a fresh clone of the
@@ -998,7 +998,7 @@ defects the brief carded. Twelve claims are corrected, in the header and §1–�
 | §8 | `suno-gen.py` "not in this checkout"; studio rail `v0.1.2`; `translate.py:42/45/49` in the chart; payload "no `music/lyrics/`"; chart `briefs: []`; 1 queue entry | `music/suno-gen.py` 42 652 B / 1025 lines **in tree** (probe re-run against it, same results); pod runs **`v0.1.3`**; the chart now honours an explicit `bpm` (`:62`–`:64`) and `req.keyscale` (`:76`) — the old lines survive only in `music/sunolocal/translate.py`; payload 39 keys with 6 blueprints but no sheet; chart + ConfigMap both carry **11 entries / 9 genres**; `acestep_plan.py:234`–`:235` (was `:98-100`) |
 | §8 | render rail "runs exactly" acestep_plan | it now also runs `loop_close.py` (loop claim → build → level check, t_b21aeb51); for activist `--claims-loop` → `{"claim": false}`, rc=1 |
 | §9 | `campaigns/` holds nine campaigns | **ten**; `~/Music` still empty; quota still 0/60 with 0 studio exports (ledger gained a `renders` list that does not touch the counters) |
-| §10/§11 | visual "blocked on the missing shape"; brain docs untracked; `check_stage_scripts` FAIL; 12 cards listed as open/ready | visual unblocked; both brain docs **tracked in HEAD** (arch doc now 34 328 B) and still absent from `origin/main`; `check_stage_scripts` PASS; of the 12 carded items, 9 are `done` (t_8a715681, t_41f354be, t_25a6499c, t_bf0e5edd, t_b0a4db92, t_75aacf8b, t_d9983bb9, t_ec378832, t_85db696a), 1 is done **on a branch** (t_9546841b), 1 is still blocked (t_e504b516), and t_9546841b's sibling `t_f65b0f4c` (the placeholder key) is ready |
+| §10/§11 | visual "blocked on the missing shape"; brain docs untracked; `check_stage_scripts` FAIL; 12 cards listed as open/ready | visual unblocked; both brain docs **tracked in HEAD** and still absent from `origin/main`; `check_stage_scripts` PASS; of the 12 carded items, 9 are `done` (t_8a715681, t_41f354be, t_25a6499c, t_bf0e5edd, t_b0a4db92, t_75aacf8b, t_d9983bb9, t_ec378832, t_85db696a), 1 is done **on a branch** (t_9546841b), 1 is still blocked (t_e504b516), and t_9546841b's sibling `t_f65b0f4c` (the placeholder key) is ready |
 
 The two `music/lyrics/` clarifications are worth stating plainly: the payload has **no lyric
 sheet** (no `music__lyrics__activist__*`), but it does carry the six blueprints, which live
@@ -1144,6 +1144,6 @@ Two things this pass deliberately left alone, so the next worker does not re-fil
   fenced transcripts, and `check_brief_line_refs.py` reads a self-citation's target against the
   CURRENT file (measured 2026-10-16: an insert above them moves both targets off the block they
   name). This section is the record instead.
-- **`check_brief_figures.py` still names this brief once** — the playbook figure at 34 328 B
+- **`check_brief_figures.py` named this brief once** at this pass's reading — the playbook figure at 34 328 B (`6b24a52`)
   against the 45 674 B the file now measures. That is the stale-FIGURE class §13 and §17 record,
   owned by another card; it is reported here and not corrected by this pass.

@@ -742,6 +742,6 @@ Every file below cites this document. Each reference resolves to a heading in th
 | `~/.hermes/profiles/music-producer/SOUL.md` | all | READ FIRST |
 | card `t_a22307e9` | §11 | 11. Self-run design |
 
-**Note on the genre briefs.** Eleven briefs under `music/briefs/` carry a paragraph titled
-"Dangling reference" that states this file does not exist. Those paragraphs are dated
-measurements from before 2026-10-16 14:12. They are stale. Card filed to strip them.
+**On the briefs' `Dangling reference` paragraphs.** Card `t_fa731c5b` stripped them, and
+`music/scripts/check_doc_refs.py` rule 2 fails any citing file that calls this doc absent.
+Cite this file's sections, not its byte size or line count: it is live, so those figures age.

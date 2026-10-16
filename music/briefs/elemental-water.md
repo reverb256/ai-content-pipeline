@@ -824,7 +824,7 @@ genre's three lanes — rather than assuming the YouTube gate (`t_d9983bb9`).
 
 - **Dangling reference — RESOLVED (`t_b0a4db92`, done).** `brain/playbooks/music-lane-architecture.md`
   is cited as "READ FIRST" by this lane's profile, `stages.yaml`, `genres.yaml`, `lanes.yaml`,
-  `autonomy.yaml` and `gates/*`, and it is in this tree and in `HEAD` now (34 328 B, rewritten at
+  `autonomy.yaml` and `gates/*`, and it is in this tree and in `HEAD` now (rewritten at
   `7411afa`, head touching it `6b24a52`). `brain/research/music-monetization-2026.md` (11 067 B)
   is there too. The doc's §2 genre registry carries this genre's row, §3 its lanes and §13 its
   pack lane; `music/scripts/check_doc_refs.py` resolves every `§` reference to a heading. Card

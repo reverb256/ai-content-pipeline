@@ -729,7 +729,7 @@ the renderer rather than stated as policy (§7).
   `check_oracle_board.py`, `check_oracle_determinism.py` and `check_gate_lane_surface.py`
   during the same window; all are re-run in §15.
 - **Dangling reference — RESOLVED (`t_b0a4db92`).** `brain/playbooks/music-lane-architecture.md`
-  (34328 B) and `brain/research/music-monetization-2026.md` (11067 B) are now on disk and in
+  and `brain/research/music-monetization-2026.md` (11067 B) are now on disk and in
   the `main` index; they were written 2026-10-08, stranded on `wip/atlas-backup-20261014`, and
   restored by ops mid-audit (`5a01157`). `music/scripts/check_doc_refs.py` re-run in this pass
   reports 24 headings, 32 citing files, 22 section references checked, and
@@ -896,7 +896,7 @@ win a tie. `music/scripts/check_oracle_board.py` reports one open card per genre
 | §13 | divergence `22 15`; `check_stage_scripts` red on `music/suno-gen.py` | `72 0`; `suno-gen.py` present; check **PASS** | corrected |
 | §13 | gate census "10 + 2 + **2** fixture modules" | 10 + 2 + **4** private modules | corrected |
 | §13 | rubric criteria `battle_energy`, … (4 names) | v2 data criteria with `applies_to` scopes | corrected |
-| §13 | `brain/` docs "do not exist on this machine"; carried `t_b0a4db92` | both exist (34328 B / 11067 B) and `check_doc_refs.py` PASSes | resolved |
+| §13 | `brain/` docs "do not exist on this machine"; carried `t_b0a4db92` | both exist and `check_doc_refs.py` PASSes | resolved |
 
 Claims that **reproduced unchanged** and were therefore left alone: the template (4525 B), its
 640-character caption, the 8 tag sheet in order, weirdness 40% / Style Influence 80% / 6 exclude

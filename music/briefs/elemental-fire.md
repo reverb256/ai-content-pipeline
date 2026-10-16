@@ -802,9 +802,9 @@ function of the lane set, which is identical for all four. Consequences:
   for a request with no explicit bpm)
 - **Dangling reference — RESOLVED (`t_b0a4db92`, `done`):** `brain/playbooks/music-lane-architecture.md`
   is cited as "READ FIRST" by this lane's profile, `stages.yaml`, `genres.yaml`, `lanes.yaml`,
-  `autonomy.yaml` and the gates, and the copy **now exists on this machine** (45 674 B,
-  re-measured 2026-10-16T17:47 CDT — the doc grew with card `t_d6b0cb36`, superseding the
-  16:07 figure), as
+  `autonomy.yaml` and the gates, and the copy **now exists on this machine** (a live doc:
+  re-measured 2026-10-16T17:47 CDT, when it grew with card `t_d6b0cb36`; per its own §14
+  no brief cites its size), as
   does `brain/research/music-monetization-2026.md` (11 067 B). The quoted section numbers
   (§3, §5, §13) are now referenceable — the gates' §13 licence citation above is one of them.
 - Visual probe: three synthetic 600.0 s visuals built and run through the real gate —
@@ -959,7 +959,7 @@ the reproducible one.
 | 18 | Visual probes: 22 / 21 / 170 distinct | Re-ran the real gate on the stored probes: **22 / 21 / 170**, 300/300/290 samples, all PASS; floor line `gate_youtube_authentic.py:146` still holds | REPRODUCED (§10) |
 | 19 | Fixture `element_fire.mp4` = 5.000 s, 1280×720, 14 133 B, FAILs the gate | `ffprobe` 5.000 s / 1280×720 / 14 133 B; gate FAIL with the same 2-signature reason | REPRODUCED (§8, §12) |
 | 20 | Board: 8 elemental cards, 28 oracle cards | **12** elemental (4 genres × 3 waves), **42** oracle for 14 genres — 40 `done` + 2 `running`, one open card per genre (`check_oracle_board.py` PASS). `t_bf0e5edd` done | CORRECTED (§11) |
-| 21 | `brain/playbooks/music-lane-architecture.md` + `brain/research/music-monetization-2026.md` "no copy exists on this machine" | Both exist — `brain/playbooks/music-lane-architecture.md` is 45 674 B (re-measured 2026-10-16T17:47 CDT; it grew with card `t_d6b0cb36`, superseding the 16:07 figure) and `brain/research/music-monetization-2026.md` is 11 067 B; `t_b0a4db92` done, so §13's licence citation is referenceable. Also re-read: `isrc_syntax` `:92`, its docstring's check-digit claim now `:15–17` | CORRECTED (§12; the size re-measured by `t_b75ccb4a`) |
+| 21 | `brain/playbooks/music-lane-architecture.md` + `brain/research/music-monetization-2026.md` "no copy exists on this machine" | Both exist — `brain/playbooks/music-lane-architecture.md` (a live doc: no size cited here, per its §14 — dropped by `t_0fbdfa34`) and `brain/research/music-monetization-2026.md` is 11 067 B; `t_b0a4db92` done, so §13's licence citation is referenceable. Also re-read: `isrc_syntax` `:92`, its docstring's check-digit claim now `:15–17` | CORRECTED (§12; size re-measured by `t_b75ccb4a`, then dropped by `t_0fbdfa34`) |
 | 22 | §13's own dated numbers (15 behind; "two commits"; 56-of-58 figures) | History of that pass, kept as such. The live values are §14's: 0 behind, four commits, and `check_brief_figures.py` now recomputes **119 of 120** lane-wide (the one miss is `elemental-water.md`, carded `t_34f496d7`) | HISTORY (superseded) |
 
 ### Checks run after the edit (all quoted from real runs)
@@ -1199,7 +1199,7 @@ the two claims in this file that cite its size were re-measured in the same edit
 write the previous size as a `B` figure when citing it: `check_brief_figures.py` parses any
 such token against the referent in the sentence and flags the sentence you just corrected.)
 `brain/playbooks/music-lane-architecture.md`'s size was re-measured the same way
-(45 674 B), because `check_brief_figures.py` had it stale here too.
+(a live doc: no size cited now, per its own §14), because `check_brief_figures.py` had it stale here too.
 
 ### Handoff
 

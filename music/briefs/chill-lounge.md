@@ -280,7 +280,7 @@ fetch returns five or more snippets. `check_oracle_determinism.py` PASS rc=0;
    block is now the live text, and the paragraph below it states what that line means for this
    genre.
 3. **§9 — the references are no longer dangling on disk.** Both files exist on this machine now:
-   `brain/playbooks/music-lane-architecture.md` (34328 B, 596 lines, mtime 2026-10-16T15:31) and
+   `brain/playbooks/music-lane-architecture.md` (mtime 2026-10-16T15:31) and
    `brain/research/music-monetization-2026.md` (11067 B, 199 lines, mtime 2026-10-16T13:59). Both
    are tracked in `HEAD`. Both are **absent from `origin/main`** (`git cat-file -e
    origin/main:brain/...` → `fatal: path ... exists on disk, but not in 'origin/main'`), so the

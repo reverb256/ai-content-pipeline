@@ -986,7 +986,7 @@ still does not decide: j_kro owns the release title.
   `check_prompt_style_counts.py`, `check_stage_scripts.py` (FAILs only on `music/suno-gen.py`,
   the divergence t_8a715681 owns — not this brief) — the jungle-dnb brief is clean in all of them
 - **Dangling reference — RESOLVED (`t_b0a4db92`, done).** `brain/playbooks/music-lane-architecture.md`
-  is in this repo and in `HEAD` (34 328 B, rewritten at `7411afa`, head touching it `6b24a52`),
+  is in this repo and in `HEAD` (rewritten at `7411afa`, head touching it `6b24a52`),
   so the section numbers quoted from it elsewhere in this lane **are** verifiable:
   `music/scripts/check_doc_refs.py` → `OK: every section reference resolves to a heading in the
   doc`. The doc's §2 genre registry carries this genre's row, and its §14 citation map lists the
@@ -1295,7 +1295,7 @@ at 16:16, 8 of 122, seven of them briefs still carrying `brain/playbooks/music-l
 recorded size while card `t_fa731c5b` fixed them; that 8-of-122 reading was taken with an
 UNCOMMITTED working-tree edit by that card holding the playbook at a size it never landed with
 (the card reverted it before committing — editing the doc invalidates the byte size many briefs
-record — so the committed doc reads 34 328 B, `sha256
+record — so the committed doc read, at `b2a1220`, 34 328 B, `sha256
 1658b9126574a66be01791b8d28a07a3e8efe0b6ca6cf6ec2b20da63f9f2c1da`); at 16:20, 2 of 122, the same class shrinking live. **No finding is this
 file's in any of the three readings**, and this pass changed no figure — the differences are other
 people's writes landing under a shared tree.
@@ -1366,7 +1366,7 @@ counts (0 behind / 9 ahead of `origin/main` at `bacf245`, 14 genres, 7 blueprint
 
 Two checks FAIL, and neither finding is this file's (each was re-measured before and after this
 pass, same readings): `check_brief_figures` **7 of 125** at 2026-10-16 17:40 CDT — six other
-briefs cite `brain/playbooks/music-lane-architecture.md` at 34 328 B while an UNCOMMITTED sibling
+briefs cite `brain/playbooks/music-lane-architecture.md` at its `6b24a52` size of 34 328 B while an UNCOMMITTED sibling
 edit holds that file at 45 674 B, the class §17 already records; `check_brief_line_refs` **4 of
 127** at that same reading — `elemental-air/above-the-weather/brief.md` and `elemental-earth.md`
 cite `planner.py` ranges that the 1157 to 1371 line growth moved. `music/tests/`: `test_planner`

@@ -374,7 +374,7 @@ carry weight 3 each) → `package` (`gate_sync_ready` per lane, `loop_points.jso
   (`is_instrumental_template`, 42652 B) and the live plans in `/var/lib/music-plans/`
   (`"bpm": 120`, `"key": "C minor"`, `"instrumental": true`)
 - **Dangling reference — corrected in this pass.** Both documents exist on this machine and are
-  tracked in `HEAD`: `brain/playbooks/music-lane-architecture.md` (34328 B, mtime
+  tracked in `HEAD`: `brain/playbooks/music-lane-architecture.md` (mtime
   2026-10-16T15:31) and `brain/research/music-monetization-2026.md` (11067 B, mtime
   2026-10-16T13:59). `find /home/j_kro -name 'music-lane-architecture.md'` now returns that
   path. Both are still **absent from `origin/main`** (`git cat-file -e

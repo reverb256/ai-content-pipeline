@@ -401,7 +401,7 @@ Open items for `genre-select` / `lyrics` / `generate` (state re-measured 2026-10
 - **Dangling reference — RESOLVED.** *(Corrected in the surviving-card pass.)*
   `brain/playbooks/music-lane-architecture.md` is cited as "READ FIRST" by this lane's profile,
   `stages.yaml`, `genres.yaml`, `lanes.yaml`, `autonomy.yaml`, `gates/README.md` and
-  `gates/*.py`. Live now it **exists**: 34 328 B, tracked in HEAD, rewritten at `7411afa` (head touching
+  `gates/*.py`. Live now it **exists**, tracked in HEAD, rewritten at `7411afa` (head touching
   it `6b24a52`).
   `brain/research/music-monetization-2026.md` exists too (11067 B), as does `brain/RULINGS.md`
   (4118 B). All three are absent from `origin/main` — they are committed locally only. So the

@@ -641,7 +641,7 @@ ruling that made this card the owner of the genre.
   (`/home/j_kro/.hermes/tools/ffmpeg-9.0.1-linux-x64/bin/ffprobe` — ffmpeg is not on PATH)
 - **Dangling reference — RESOLVED 2026-10-16 (§14).** `brain/playbooks/music-lane-architecture.md`
   was reported absent when this list was written; it is in this tree and in `HEAD` now —
-  34 328 B, rewritten at `7411afa` (head touching it `6b24a52`, card `t_b0a4db92` done). The
+  rewritten at `7411afa` (head touching it `6b24a52`, card `t_b0a4db92` done). The
   genre block in §2 and the gate table in §5 carry this brief's claims, and
   `music/scripts/check_doc_refs.py` resolves every `§` reference to a heading.
 
@@ -821,7 +821,7 @@ NOT re-run.** The surviving chain resumes at the stage after brief — `genre-se
 | 13 | §8.2 | payload sync FAILs; `SRC` names a tree with no `music/`; chart wrapper ahead of the repo's | `check-payload-sync.sh` → **PASS**; `SRC` default is the lane checkout; chart wrapper 354 lines, identical to the repo's |
 | 14 | §8.3 | suite green | still green — `OK: every gate passed its good artifact and failed its broken one` |
 | 15 | §8.5, §12 | residue 6 `ready` + 3 `running` | **37 done / 7 running / 3 ready**; `check_oracle_board` PASS rc=0, one open card per open genre |
-| 16 | §11 | `brain/playbooks/music-lane-architecture.md` reported absent | exists in this tree and in `HEAD`, 34 328 B, rewritten at `7411afa` (head touching it `6b24a52`) |
+| 16 | §11 | `brain/playbooks/music-lane-architecture.md` reported absent | exists in this tree and in `HEAD`, rewritten at `7411afa` (head touching it `6b24a52`) |
 | 17 | §3.4, §9 | `gate_youtube_authentic` fails the shipped template | unchanged: `only 4 distinct frame signature(s) across 600.0s (10 required) — this is a raw dump`, plus the missing-disclosure reason |
 
 Held as written (re-measured, unchanged): the genre block and the five `defaults:` keys; the
