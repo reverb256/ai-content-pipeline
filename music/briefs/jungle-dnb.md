@@ -484,13 +484,15 @@ def bpm_in_caption(caption: str):
 ```
 
 **That fence is a superseded revision, and it is the DEPLOYED copy's own wording.** Its two census
-figures are `3 of 15 genres` and `11` genres with no blueprint, and the payload still carried both
-at the 2026-10-16 17:31:54 CDT read above. Card `t_a54fb00d` corrected the repo's copy in the same
+figures are `3 of 15 genres` and `11` genres with no blueprint, and the payload carried both
+at the 2026-10-16 17:31:54 CDT read above — that reading is the one this sentence records, and it
+is now itself superseded. Card `t_a54fb00d` corrected the repo's copy in the same
 commit that wrote this note — `load_blueprint` now reads `(7 of 14 genres do)` and `bpm_in_caption`
 `the 7 genres that have no blueprint yet` — against a live census of **14** registered genres and
-**7** files in `music/lyrics/blueprints/`. The payload picks the correction up at the next
-`sync-payload.sh`, so the fence stays as the deployed revision and the two copies differ by this
-one docstring until then.
+**7** files in `music/lyrics/blueprints/`. The payload picked the correction up at the next
+`sync-payload.sh`: re-read at 2026-10-16 18:55 CDT, the deployed `planner.py` (key
+`music__planner__planner.py`) reads `(7 of 14 genres do)` at line 329, so the two copies agree and
+this note's fence is a historical artifact only.
 
 The jungle caption opens `ragga jungle, 168 BPM, chopped and resequenced Amen break …`, so
 `template_bpm = 168`, and with no blueprint present `bpm_anchor_for()` returns **168**. The
@@ -1428,7 +1430,38 @@ Regenerate the block after any rubric edit — one command, no hand-edit:
     },
     "weight_sum": 12,
     "reject_signals": [],
-    "reject_signals_unnamed": 5
-  }
-}
-```
+      "reject_signals_unnamed": 5
+      }
+    }
+    ```
+
+    ## 21. The payload-census class — the skipped site re-measured (card `t_34f5e94a`, 2026-10-16 18:55 CDT)
+
+    `check_brief_drift.py`'s S7 prints the census claims that name the deployed payload as SKIPs
+    rather than guessing at them, because the payload is cluster state and no repo-local check can
+    recompute it. The one SKIP site in this brief is not a licence to leave the line alone: this pass
+    re-read the live ConfigMap and corrected it.
+
+    **Live census, `kubectl -n mining get configmap music-pipeline-payload -o json` at 2026-10-16
+    18:55 CDT (this host, nexus):** **43 keys** — 7 blueprints, 15 prompt entries, 14 visuals,
+    `genres.yaml`, `planner.py`, `acestep_plan.py`, `loop_close.py`, `backfill_render.py`,
+    `check_render_landed.py`, `render_state.py`. The 17:18 CDT reading was 42 keys / 7 blueprints;
+    the 15:31 reading was 38 / 6.
+
+    **Convention (card `t_34f5e94a` §3).** A payload claim carries the clock time it was taken at, in
+    the ANCHORED form the census classes already use — `check_brief_drift.py` skips a stamped line,
+    and a payload line is skipped anyway, so the two rules coincide for this class. The payload is
+    re-synced from the repo, so an unstamped payload number reads as a claim about now and is stale
+    by the next `sync-payload.sh`. This pass uses the stamped form everywhere it writes one.
+
+    **Site corrected, in this brief:**
+
+    | § | Was | Is |
+    |---|---|---|
+    | §18 | "the payload still carried both at the 2026-10-16 17:31:54 CDT read above … the fence stays as the deployed revision and the two copies differ by this one docstring until then" | the 17:31 reading is the one this sentence records and is itself superseded; re-read at 18:55 CDT, the deployed `planner.py` reads `(7 of 14 genres do)` at line 329, so the two copies agree and the fence is a historical artifact only |
+
+    The payload's own docstring was verified as part of this pass, not assumed: dumped the
+    `music__planner__planner.py` key to `scratch/planner_deployed.py` and read line 329 from it.
+    `check_brief_drift.py` was **not** widened to read the cluster — it stays runnable with no cluster
+    access, and the payload line remains a SKIP. No genre finding was reopened; only the one
+    supersession sentence moved.

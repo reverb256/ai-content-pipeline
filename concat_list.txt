@@ -1,3 +1,0 @@
-file '/tmp/music-gate-fixtures/pscene_0.mp4'
-file '/tmp/music-gate-fixtures/pscene_1.mp4'
-file '/tmp/music-gate-fixtures/pscene_2.mp4'

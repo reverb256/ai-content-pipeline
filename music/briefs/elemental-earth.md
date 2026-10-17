@@ -21,11 +21,20 @@
 > **Revision:** the superseded blob is
 > `sha256 036395fe8bf403840e1b0b84096c46e474fd55c354125cab21c4e42587eb1ea0` (705 lines /
 > 44176 B, commit `c296db6`); this pass supersedes it. Earlier recorded supersessions: §14
-> (`0e9bf0de…`, 537 lines / 30576 B), §15 (`b3a31d2a…`, 679 lines / 41686 B, then `55e049c8…`,
-> 703 lines / 43754 B).
+>  (`0e9bf0de…`, 537 lines / 30576 B), §15 (`b3a31d2a…`, 679 lines / 41686 B, then `55e049c8…`,
+>  703 lines / 43754 B). Superseded by the loop-tiling brief pass (card `t_00d3dbbd`, 2026-10-16):
+>  `sha256 8daf9fdd7274621a1de45c5edc8656eeb2aee27a7e19145f2f25c7a6788cb724` (1120 lines /
+>  72058 B).
 > **Verification passes:** §14 (`t_c92f566d`, 13:53 CDT), §15 (`t_0f7aed63` + `t_e6d422ec`,
-> 15:31 CDT), §16 (`t_8fa97d4e`, this pass — every checkable claim re-measured). The genre
-> decision is unchanged: **produce**.
+  15:31 CDT), §16 (`t_8fa97d4e`, this pass — every checkable claim re-measured). The genre
+  decision is unchanged: **produce**.
+> **Payload-census pass (card `t_34f5e94a`, 2026-10-16 18:55 CDT):** the deployed ConfigMap's
+  38-key / 6-blueprint readings behind §8, §14 and §15 were re-read live at **43 keys / 7
+  blueprints** and corrected in place (§20). §7b's own payload line (line 574) already carries
+  its clock — **18:39 CDT**, a real reading by a sibling pass — so under the convention this
+  class now follows it is left as the historical record it is, not re-stamped to this pass's
+  clock. A stamped payload reading is a fact about that minute; only the unstamped and the
+  wrong-count ones moved. The check itself was not widened to the cluster.
 
 ## 1. Genre resolution (live, not transcribed)
 
@@ -296,7 +305,7 @@ Two constraints pinch from opposite sides:
   supplied (`planner.py:98-101`: "t_909069f0 measured the consequence — elemental-earth's
   documented entry is 220 whole bars at 88 BPM = 600.0 s, the planner refused it"). Live read of
   the guard rails — card `t_ae1d9243`, 2026-10-16:
-  `MIN_DURATION_S = 16` (`music/planner/planner.py:147`), `MAX_DURATION_S = 600` (`:148`).
+  `MIN_DURATION_S = 16` (`music/planner/planner.py:151`), `MAX_DURATION_S = 600` (`:152`).
 
 So the planner queue **can** express this genre's own video shape now, and it already does: the
 live entry for this genre is `elemental-earth-chamber-loop`, `instrumental`, `duration 600`
@@ -310,6 +319,14 @@ it now generates are **5.201270 s** each (4 bars @ 184.57 BPM, measured); the ga
 **2 s**. At 88 BPM a 2 s loop is under one bar (2.73 s), so the real minimum worth shipping is
 **one bar = 2.727 s, or better 4 bars = 10.909 s**. The brief stage recorded the pack's loops as
 1.3 s, which was below the gate floor; they are not any more.
+
+**Superseded on this point by the loop-tiling contract (card `t_b75ccb4a`, enforced by
+`music/scripts/check_loop_tiling.py`):** the delivered loop for this genre is not a pack cutdown
+but the video tile, and at 88 BPM the tile that survives is **44 bars = 120.000 s (5 tiles into the
+600 s shape)**. 4 bars = 10.909 s *does* divide 220 (55×) but it is under the 24 s phrase floor —
+the same defect the fire brief's 4-bar loop was, and this card `t_00d3dbbd` corrects it here.
+The pack's own cutdowns carry no tiling requirement (a game engine repeats whatever length it is
+handed); only the video tile does.
 
 
 Export policy: exports go through Suno Studio (unlimited). The standard-download meter is
@@ -556,8 +573,8 @@ empty**" sentence. The consequence is visible in the queue above — the earth e
 `"instrumental": true` and its plan carries `"lyrics_mode": "instrumental"` (§8).
 
 The payload ConfigMap `music-pipeline-payload` mounts the data the jobs consume. Read back
-2026-10-16 16:05 CDT: **39 keys** — 6 blueprints (activist, anime-ending, anime-opening,
-chill-lounge, epic-orchestral-boss, trance), 15 prompt entries (the 14 genre templates plus
+2026-10-16 18:39 CDT: **43 keys** — 7 blueprints (activist, anime-ending, anime-opening,
+chill-lounge, epic-orchestral-boss, jungle-dnb, trance), 15 prompt entries (the 14 genre templates plus
 `anisong-genre-blocks.yaml`, `elemental-earth.md` among them), 14 visuals, `genres.yaml`,
 `music__planner__planner.py`, `music__scripts__acestep_plan.py` and `music__scripts__loop_close.py`
 (the key `t_b21aeb51` added). It does **not** mount the gates or the asset-pack generator — the
@@ -817,7 +834,7 @@ card**: the two live follow-ups that touch the genre already exist (§11).
 - **Repo state at this pass:** HEAD `c296db6` (2026-10-16 15:56:54 CDT), divergence
   **72 ahead / 0 behind** `origin/main` (`ba28f55`). The 72-commit publish gap is the lane's
   standing pattern (local `main` only). Every path the brief stage recorded as missing —
-  `music/suno-gen.py` (42652 B), `music/sunolocal/`, `music/assets/pack.py`,
+  `music/suno-gen.py` (50030 B), `music/sunolocal/`, `music/assets/pack.py`,
   `packages/welcome-asset-pack` — is now in the worktree.
 - **The dangling-reference bullet is closed.** `brain/playbooks/music-lane-architecture.md`
   and `brain/research/music-monetization-2026.md` (11067 B) both exist in this worktree
@@ -851,7 +868,7 @@ findings verbatim**; 5 loops / 12 stems / 8 one-shots / 6 SFX; `gate_loop_points
 quoted output. Live rail re-read: svc `sunolocal` ClusterIP `10.43.164.190:8123`, image
 `localhost/sunolocal:v0.1.2`, `/health` ok, `/api/v1/models` as quoted, CronJobs `17 */6 * * *` and
 `41 */4 * * *` both unsuspended, briefs ConfigMap still the one `smoke-chill-lounge` entry, payload
-ConfigMap still 14 prompts + 6 blueprints + planner + `acestep_plan.py` and **no** gates (blueprint count re-measured 2026-10-16 15:31 CDT: 38 keys, 6 of them blueprints).
+ConfigMap carries 14 prompts + 7 blueprints + planner + `acestep_plan.py` and **no** gates (re-read 2026-10-16 18:55 CDT: **43 keys, 7 of them blueprints** — the 15:31 reading behind this sentence was 38 keys / 6 blueprints, before `jungle-dnb.yaml` landed; the sentence said "still" then and that part is now wrong).
 `openapi.json`: `/api/v1/generate` has **17 properties and no `bpm`, no `key`** — so `translate.py`
 owns the tempo, which is what makes §7a C matter. `/var/lib/music-plans/` as quoted. No
 `upload_index.json` anywhere in the repo; no `music/lyrics/**` and no pack for this genre.
@@ -932,10 +949,14 @@ also moved, and read the deployed payload back from the cluster.
   brief was written; what landed since is `music/lyrics/blueprints/jungle-dnb.yaml` (card
   `t_e6d422ec`). `elemental-earth` still has none, so §8's "nothing exists for elemental-earth"
   stands.
-- **Deployed payload, re-read 2026-10-16 15:31 CDT from `music-pipeline-payload`:** 38 keys —
-  6 blueprints, 15 prompt entries (the 14 genre templates plus `anisong-genre-blocks.yaml`),
-  14 visuals, `genres.yaml`, the planner and `acestep_plan.py`. Still no gates, still no
-  `music/lyrics/` sheets. §7b and §14 said "three blueprints", which was true when measured.
+- **Deployed payload, re-read 2026-10-16 18:55 CDT from `music-pipeline-payload`:** **43 keys** —
+  7 blueprints (activist, anime-ending, anime-opening, chill-lounge, epic-orchestral-boss,
+  jungle-dnb, trance), 15 prompt entries (the 14 genre templates plus `anisong-genre-blocks.yaml`,
+  `elemental-earth.md` among them), 14 visuals, `genres.yaml`, `music__planner__planner.py`,
+  `music__scripts__acestep_plan.py` and `music__scripts__loop_close.py`. The 15:31 CDT reading
+  behind this bullet was 38 keys / 6 blueprints, before `jungle-dnb.yaml` landed (card
+  `t_e6d422ec`); the payload has been re-synced since, so the two agree. §7b and §14 said "three
+  blueprints", which was true when measured.
 - **Corrected in place:** §7b (the payload's blueprint count), §14 (correction 5's divergence and
   the payload sentence).
 - **Superseded by this pass (card `t_e6d422ec`, 2026-10-16):** `sha256 55e049c8ef45d1af0772847a755838d589417292da83aa094b59b03f3026c9c2` (703 lines / 43754 B) — the census bullet above was restated as a live claim when `music/lyrics/blueprints/jungle-dnb.yaml` landed. No genre finding was reopened.
@@ -1118,3 +1139,25 @@ Superseded revision of this file: `sha256
 content this pass started from. The commit that lands these hunks replaces the blob carried by
 `ad6cfbe` (the rubric-scope pass, card `t_00ac4f10`), whose §18 is untouched: the diff is this
 §19, one dropped figure in §13, and the §17 restatement above.
+
+## 20. Loop-tiling prose correction — the three sibling briefs (card `t_00d3dbbd`, 2026-10-16)
+
+`music/briefs/elemental-fire.md` §16 locked the loop-tiling contract and the per-genre values
+into `music/genres.yaml` (`loop_bars`), `music/scripts/check_loop_tiling.py` (the enforcing
+check) and that brief's own prose. This pass corrects the three sibling briefs that still
+asserted the old lengths in prose — the four-elemental family was re-litigating the same two
+artifacts, which is what this card prevents.
+
+| Site | Was | Is |
+|---|---|---|
+| §4, line 310-312 | "the real minimum worth shipping is one bar = 2.727 s, or better 4 bars = 10.909 s" | the pack's cutdown floor is unchanged, but the **delivered loop** is **44 bars = 120.000 s (5 tiles)**. 4 bars *does* divide 220 (55×) and is still refused — it is under the 24 s phrase floor, the same defect the fire brief's 4-bar loop was |
+| §4, line 291 | "`loop-10min` = 600 s = 220 bars" | unchanged and correct — it is the shape, not the loop |
+
+The pack's own 16-bar and 32-bar cutdowns carry **no tiling requirement**: a game engine
+repeats whatever length it is handed. Only the video tile does. `BARS_PREFERRED = 4` in
+`music/assets/pack.py` was not touched.
+
+**Superseded revision of this file:** `sha256
+8daf9fdd7274621a1de45c5edc8656eeb2aee27a7e19145f2f25c7a6788cb724` (1120 lines / 72058 B) —
+the content this pass started from. The diff is this §20, the header supersession line above,
+and the §4 correction.
