@@ -490,16 +490,72 @@ def selftest() -> int:
             f"# brief\n\n| Prompt template | `music/prompts/p.md` ({f_chars} B, resolves) |\n"
             f"Style: `` `music/prompts/p.md` `` — style block is {b_bytes} chars\n")
 
+        # Aged value: the brief cites the OLD size of a file that has since grown.
+        # This is the shape activist.md:600 had (4 907 B -> 5 814 B at 23f030c, t_2ef2f42b):
+        # the worktree FAILS, and the same claim checked against the revision where it
+        # was true PASSES -- that is the whole point of `--rev`.
+        old_bytes = f_bytes
+        # The same claim, checked against the revision where it was true, must pass.
+        # The brief must EXIST at the old revision, so write it before the seed commit.
+        (repo / "music/briefs/t.md").write_text(
+            f"# brief\n\n| Prompt template | `music/prompts/p.md` ({old_bytes} B, resolves) |\n",
+            encoding="utf-8")
+        git_init(repo)
+        git_commit(repo, "seed")
+        (repo / "music/prompts/p.md").write_text(
+            prompt + "extra line to grow it\nanother line\n", encoding="utf-8")
+        git_commit(repo, "grow")
+        old_rev = git_rev(repo, "HEAD~1")
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc_at_rev = main(["--repo", str(repo), "--rev", old_rev,
+                              "--briefs", "music/briefs/t.md"])
+        out_at_rev = buf.getvalue()
+        # Now the worktree version: the file has grown, so the same brief FAILS.
+        rc_aged, out_aged = brief(
+            f"# brief\n\n| Prompt template | `music/prompts/p.md` ({old_bytes} B, resolves) |\n")
+
     mislabels = out_bad.count("UNIT MISLABEL")
-    ok = rc_good == 0 and rc_bad == 1 and mislabels == 2
+    aged_fail = rc_aged == 1 and "NOT REPRODUCIBLE" in out_aged
+    anchored_pass = rc_at_rev == 0
+    ok = (rc_good == 0 and rc_bad == 1 and mislabels == 2
+          and aged_fail and anchored_pass)
     print(f"SELFTEST {'PASS' if ok else 'FAIL'} check_brief_figures: "
           f"correct-claims rc={rc_good} (want 0), flipped-units rc={rc_bad} (want 1), "
-          f"unit mislabels={mislabels} (want 2)")
+          f"unit mislabels={mislabels} (want 2), "
+          f"aged-value rc={rc_aged} (want 1), anchored-at-rev rc={rc_at_rev} (want 0)")
     line = "  (caught) " + "\n  (caught) ".join(
         ln.strip() for ln in out_bad.splitlines() if "MISLABEL" in ln)
     if mislabels:
         print(line)
+    if aged_fail:
+        for ln in out_aged.splitlines():
+            if "NOT REPRODUCIBLE" in ln:
+                print("  (caught) " + ln.strip())
+    if not anchored_pass:
+        for ln in out_at_rev.splitlines():
+            if ln.strip():
+                print("  (ANCHORED SHOULD PASS) " + ln.strip())
     return 0 if ok else 1
+
+
+def git_init(repo: Path) -> None:
+    subprocess.run(["git", "-C", str(repo), "init", "-q"], check=True)
+    subprocess.run(["git", "-C", str(repo), "config", "user.email", "t@t"], check=True)
+    subprocess.run(["git", "-C", str(repo), "config", "user.name", "t"], check=True)
+
+
+def git_commit(repo: Path, msg: str) -> None:
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+    r = subprocess.run(["git", "-C", str(repo), "commit", "-q", "-m", msg],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        raise SystemExit(f"git commit failed in {repo}: {r.stderr.strip() or r.stdout.strip()}")
+
+
+def git_rev(repo: Path, ref: str) -> str:
+    return subprocess.run(["git", "-C", str(repo), "rev-parse", ref],
+                          capture_output=True, text=True, check=True).stdout.strip()
 
 
 def main(argv: list[str] | None = None) -> int:
