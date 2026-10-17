@@ -1,0 +1,15 @@
+[Unit]
+Description=AI Content Pipeline — headless CDP Chromium (real reverb256 profile)
+After=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/home/j_kro/Projects/ai-content-pipeline/scripts/browser/start-media-browser.sh
+Restart=on-failure
+RestartSec=5
+Environment=DISPLAY=:0
+Environment=WAYLAND_DISPLAY=wayland-0
+
+[Install]
+WantedBy=default.target

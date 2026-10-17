@@ -1,0 +1,21 @@
+# scripts/scheduler/fleet-route-probe.timer
+# Timer for the fleet routing probe (card t_7d75bafd). Persistent: catches up on
+# missed runs after downtime.
+#
+# Every 3 hours at :40. Chosen so the fleet's routing is verified before each
+# working block of the day (00:40/03:40/06:40/09:40/12:40/15:40/18:40/21:40 CDT)
+# without hammering the free providers: one run makes ~40 one-token calls. :40
+# keeps it clear of the music units (pipeline driver at :00/:30, gate matrix
+# 06:20, policy-watch 07:00, oracle 08:00) and of the model-health daemon's
+# 10-minute ticks.
+
+[Unit]
+Description=Fleet Route Probe every 3 hours (card t_7d75bafd)
+
+[Timer]
+OnCalendar=*-*-* 00,03,06,09,12,15,18,21:40:00
+Persistent=true
+AccuracySec=60s
+
+[Install]
+WantedBy=timers.target

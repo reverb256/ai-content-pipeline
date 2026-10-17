@@ -1,0 +1,14 @@
+# music/scheduler/music-weekly-digest.timer
+# Weekly timer — Monday 06:00 local time.
+# Persistent: catches up on missed runs.
+
+[Unit]
+Description=Music Weekly Digest (Monday 06:00)
+
+[Timer]
+OnCalendar=Mon *-*-* 06:00:00
+Persistent=true
+AccuracySec=60s
+
+[Install]
+WantedBy=timers.target

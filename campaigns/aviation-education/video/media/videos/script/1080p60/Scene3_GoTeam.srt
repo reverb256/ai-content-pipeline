@@ -1,0 +1,24 @@
+1
+00:00:01,500 --> 00:00:03,000
+They are dispatched to the accident scene.
+
+2
+00:00:01,500 --> 00:00:03,500
+The Go Team is on call twenty-four hours a day.
+
+3
+00:00:01,500 --> 00:00:03,500
+They are led by an Investigator-in-Charge — the IIC.
+
+4
+00:00:03,000 --> 00:00:08,000
+Specialists cover every angle: operations, structures, systems, air traffic control, weather, human performance, survival factors, powerplants, metallurgy, and the cockpit and flight data recorders.
+
+5
+00:00:05,616 --> 00:00:07,116
+This is a mobile lab.
+
+6
+00:00:05,616 --> 00:00:07,616
+The Go Team secures the site and starts the factual record.
+

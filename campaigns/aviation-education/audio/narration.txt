@@ -1,0 +1,55 @@
+Every time a plane crashes in the United States, a team shows up before the smoke clears. They do not work for the airline. They do not work for the government the way you think. And what they find changes every flight you will ever take.
+
+Here is the number that should change how you think about flying. Since 1967, the NTSB has investigated more than 154,000 aviation accidents. They have issued more than 15,700 safety recommendations. Eighty-two percent of the closed recommendations were actually implemented.
+
+In 2025 alone, they adopted 1,436 investigative reports. That is eighteen percent more than 2024. They issued 131 new safety recommendations. Fourteen of them were marked urgent.
+
+The point is not that planes crash. The point is that every crash gets dissected publicly, and the findings make the next million flights safer. This is not how most industries work. As one observer put it: "I wish more industries treated their mistakes the same way the aviation industry and our NTSB does."
+
+When an accident happens, the first thing that arrives is called the Go Team.
+
+The Go Team is on call twenty-four hours a day, every day. They are dispatched to the accident scene. They are led by an Investigator-in-Charge — the IIC. Around them, specialists cover every angle: operations, structures, systems, air traffic control, weather, human performance, survival factors, powerplants, metallurgy, and the cockpit and flight data recorders.
+
+This is not a single investigator with a notebook. It is a mobile lab. The Go Team secures the site, documents everything, and starts the factual record before weather, cleanup, or memory erases it.
+
+Here is the part most people do not know. The NTSB does not investigate alone.
+
+They use something called the Party System. Manufacturers, airlines, the FAA, unions, and sometimes the operator become parties to the investigation. These parties provide technical expertise during fact-finding. A Boeing engineer knows Boeing aircraft. An FAA inspector knows the regulations. The party system brings that knowledge into the investigation.
+
+But there are hard limits. Legal or litigation representatives are barred from the party system. Parties do not participate in writing the analysis or the final report. They can submit proposed findings — but the NTSB writes the report.
+
+And the FAA is automatically a party by law. Every investigation. No exceptions.
+
+This structure is the reason the NTSB produces better factual records than a purely in-house investigation would. The experts are in the room during fact-finding. The people who would profit from a soft report are not in the room during analysis.
+
+An NTSB investigation is not fast. It typically takes twelve to twenty-four months from launch to probable cause determination.
+
+It is not strictly linear either. The phases overlap. The classification system runs from Class 1 — major, transport-category accidents — down to Class 4, which has a limited scope and a six-month final report.
+
+Two recent examples.
+
+Alaska Airlines Flight 1282 — the door plug that blew off in January 2024. The investigation launched that month. The final report was adopted in June 2025. That is seventeen months.
+
+The mid-air collision over the Potomac in January 2025 — urgent safety recommendations were issued in March 2025. Two months. When the risk is immediate, the NTSB moves faster than the full investigation timeline.
+
+Everything is public.
+
+The NTSB Aviation Investigation Search database contains civil accidents and selected incidents from 1962 to today. You can query it by date, location, FAR part, and injury level.
+
+This is not a PR database. It is the raw factual record. Anyone can search it. Researchers, journalists, operators, and you can look up what happened and what was found.
+
+Here is the part the media misses.
+
+Aviation media covers every crash. It has almost nothing to say about the flights that go right. That is the asymmetry. You hear about the one that failed. You do not hear about the 99.999 percent that did not.
+
+The real story is the recommendation pipeline. One hundred thirty-one new safety recommendations in 2025. Eighty-two percent of closed recommendations implemented. That is the invisible engine. Every investigation produces findings. The findings become recommendations. The recommendations get adopted by manufacturers, regulators, and operators. The next generation of aircraft and procedures is safer because of it.
+
+And the safety data backs this up. General aviation fatal accident rates have trended down since the FAA started tracking in 2009. Fiscal year 2024 saw the lowest rate on record: 0.68 fatal accidents per 100,000 flight hours. One hundred ninety-five fatal accidents. Three hundred thirty-seven fatalities. Down from 0.83 in fiscal year 2017.
+
+The NTSB is not a crash investigation agency in the way most people think. It is a safety recommendation engine that uses crashes as input.
+
+The Go Team shows up. The Party System brings expert knowledge while keeping legal interests out of the analysis. The investigation takes a year or two. The report is public. The recommendations get adopted. The next million flights are safer.
+
+That is the system. It is not perfect. It is not fast. But it is the reason aviation keeps getting safer — and it is a model that almost no other industry has copied.
+
+If you want to understand how a plane crash investigation actually works — not the headline, the process — subscribe. The next video goes into a real investigation, step by step, using the public NTSB record.

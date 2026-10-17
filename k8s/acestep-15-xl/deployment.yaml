@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: acestep-15-xl
+  namespace: mining
+  labels:
+    app: acestep-15-xl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: acestep-15-xl
+  template:
+    metadata:
+      labels:
+        app: acestep-15-xl
+    spec:
+      tolerations:
+        - key: homelab.io/workstation
+          operator: Equal
+          value: "true"
+          effect: PreferNoSchedule
+      nodeSelector:
+        kubernetes.io/hostname: zephyr
+      runtimeClassName: nvidia
+      containers:
+        - name: acestep
+          image: ghcr.io/ace-step/ace-step-1.5-xl:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 7865
+              name: http
+          resources:
+            limits:
+              nvidia.com/gpu: "1"
+              memory: "20Gi"
+              cpu: "8"
+            requests:
+              memory: "8Gi"
+              cpu: "4"
+          env:
+            - name: PORT
+              value: "7865"
+            - name: HF_HUB_ENABLE_HF_TRANSFER
+              value: "1"
+          volumeMounts:
+            - name: checkpoints
+              mountPath: /app/checkpoints
+            - name: outputs
+              mountPath: /app/outputs
+            - name: logs
+              mountPath: /app/logs
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 7865
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 7865
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+      volumes:
+        - name: checkpoints
+          hostPath:
+            path: /home/j_kro/.cache/acestep/checkpoints
+            type: DirectoryOrCreate
+        - name: outputs
+          hostPath:
+            path: /home/j_kro/.cache/acestep/outputs
+            type: DirectoryOrCreate
+        - name: logs
+          hostPath:
+            path: /home/j_kro/.cache/acestep/logs
+            type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: acestep-15-xl
+  namespace: mining
+  labels:
+    app: acestep-15-xl
+spec:
+  selector:
+    app: acestep-15-xl
+  ports:
+    - port: 7865
+      targetPort: 7865
+      name: http
+  type: ClusterIP
