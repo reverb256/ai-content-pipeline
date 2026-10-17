@@ -504,7 +504,7 @@ gate elsewhere.
 
 ### The vocal rail already accepts this track (best news in the brief)
 
-`suno-gen.py` **is in this checkout now** — `music/suno-gen.py`, 50 030 B / 1161 lines,
+`suno-gen.py` **is in this checkout now** — `music/suno-gen.py`, 42 652 B / 1025 lines,
 mtime 2026-10-16 14:23 — and the previous text's *"not in this checkout; `find
 /home/j_kro -name 'suno-gen.py'` returns zero hits"* was true when it was written (the
 diverged checkout, card t_8a715681, now done; `origin/main...HEAD` reads 0 behind in §11).
@@ -581,16 +581,16 @@ Against that route, three measured gaps:
    is refused outright for this genre, with rc=2 and *"`activist` is not an instrumental
    genre"* (`planner.py:805`). Harder than either: the
    render payload (`ConfigMap mining/music-pipeline-payload`, mounted at `/payload`)
-     carries `music/genres.yaml`, the seven blueprints, `music/planner/planner.py`, the 15
-       prompt templates, the 14 visual style docs, `music/scripts/acestep_plan.py` and
-       `music/scripts/loop_close.py` — **43 keys, re-counted this pass at 18:55 CDT** — and **no lyric SHEET**
-       (no `music/lyrics/activist/...`; and no `music/suno-gen.py`). CORRECTED: the earlier text
-       said "no `music/lyrics/` at all", which is now wrong — the seven blueprints are themselves
-         payload keys under `music__lyrics__blueprints__*.yaml`. What the pod lacks is the claimed
-         sheet. This is a
-     **third** case alongside the instrumental gap: not "no lyrics", not "AI lyrics", but "load the
-     claimed sheet". Recorded on t_25a6499c, now done as far as the instrumental cases go;
-     the human-sheet case is stated here.
+   carries `music/genres.yaml`, the six blueprints, `music/planner/planner.py`, the 14
+   prompt templates, the 14 visual style docs, `music/scripts/acestep_plan.py` and
+   `music/scripts/loop_close.py` — **39 keys, re-counted this pass** — and **no lyric SHEET**
+   (no `music/lyrics/activist/...`; and no `music/suno-gen.py`). CORRECTED: the earlier text
+   said "no `music/lyrics/` at all", which is now wrong — the six blueprints are themselves
+   payload keys under `music__lyrics__blueprints__*.yaml`. What the pod lacks is the claimed
+   sheet. This is a
+   **third** case alongside the instrumental gap: not "no lyrics", not "AI lyrics", but "load the
+   claimed sheet". Recorded on t_25a6499c, now done as far as the instrumental cases go;
+   the human-sheet case is stated here.
 2. **Tempo: both rails honour an explicit bpm now.** `acestep_plan.py:234-235`
    passes `plan["bpm"]` and `plan["key"]` into the ACE-Step `GenerationParams` as `bpm` and
    `keyscale` (`:224` carries `duration`), so the CronJob render rail honours 96 — the old
@@ -703,7 +703,7 @@ publish).
 - Oracle: `music/oracle.py` imported and every component recomputed on this host for
   §2 (`WEIGHTS`, `REVENUE_BANDS`, `BANNED_SURFACES` read from source at lines 54/64/81 —
   unchanged), plus a single `score_genre("activist", …)` call → `total: 7.0`
-- Vocal rail: **`music/suno-gen.py` in this tree** (50 030 B, 1161 lines) executed through
+- Vocal rail: **`music/suno-gen.py` in this tree** (42 652 B, 1025 lines) executed through
   `importlib` (`probe_vocal_rail.py`); `is_instrumental_template`, `load_track`,
   `load_style_prompt`, `gate_quota` all exercised. The earlier pass read the same code out of
   `origin/main:music/suno-gen.py` because the tree lacked it (t_8a715681, now done)
@@ -715,7 +715,7 @@ publish).
   populated `briefs:` block. Live cluster reads (2026-10-16, `kubectl -n mining`): CronJobs
   `music-pipeline` + `music-pipeline-render` (the render rail now also runs `loop_close.py`),
   ConfigMaps `music-pipeline-briefs` (**11 entries / 9 genres**) + `music-pipeline-payload`
-  (**43 keys** at 18:55 CDT: genres.yaml, 7 blueprints, 14 templates, 14 visuals, planner.py,
+  (**39 keys**: genres.yaml, 6 blueprints, 14 templates, 14 visuals, planner.py,
   acestep_plan.py, loop_close.py — and still no lyric SHEET), Deployment `sunolocal-source`
   (`localhost/sunolocal:**v0.1.3**`) + `comfyui-zephyr`
 - Rulings: `brain/RULINGS.md` read again in full this pass (the protest-lyric ruling is
@@ -939,7 +939,7 @@ this brief was touched.
   stamped with the revision it was measured at, because such a count ages in minutes.
 - **Corrected in place:** §1 (the census sentence and its file list), §6 (the 100-fallback
   census), §8 (the deployed payload's blueprint count, re-read from the live
-  `music-pipeline-payload` ConfigMap: **43 keys, 7 of them blueprints** at 18:55 CDT), §11 (the "3 blueprints
+  `music-pipeline-payload` ConfigMap: 38 keys, 6 of them blueprints), §11 (the "3 blueprints
   only" line) and §12 correction 5.
 - **Superseded by this pass (card `t_e6d422ec`, 2026-10-16):** `sha256 3b8a9d7404380bcf129652902f6892d536ce148b3de224c60b3c3887ba0879fc` (688 lines / 43483 B) — the census statements above and in §1 and §6 were restated as live claims when `music/lyrics/blueprints/jungle-dnb.yaml` landed. Only the counts moved; no genre finding was reopened.
 - **Superseded by this pass (card `t_6dd13d76`, 2026-10-16T17:21-05:00 CDT):** `sha256 12d1e1001c001cd2fb0876e590dd222ebc479f824e2c84232a000cd1550f88e5` (1070 lines / 73389 B) — two citations that had aged under the file they name: the ACE-Step tempo/key pair (§3 and §12) now reads `acestep_plan.py:234`–`:235` with `duration` at `:224`, and the engine mirror `music/sunolocal/translate.py` is no longer pre-v0.1.3 — card `t_42bc85ba` reconciled the two copies (4 907 B, 113 lines, `sha256 25fb26ee…`). No genre finding was reopened.
@@ -994,14 +994,14 @@ defects the brief carded. Twelve claims are corrected, in the header and §1–�
 | §3 | `gate_loudness` ruler defect, card t_9546841b | still the ruler in `main` (`volumedetect`, file untouched since 2026-10-09); the fix `e783a96` is on `origin/publish/audio-lane-2026-10-16`, **not** an ancestor of `8f0fd9a` — measured with `git merge-base --is-ancestor` |
 | §5 | title "verbatim in the chorus twice"; outro differs by case | all 18 image terms present (3 are line-initial capitals); the title-cased string occurs once, in the sheet header; chorus **and** outro both carry the sentence-case phrase |
 | §6 | planner `:470`/`:471` read the bpm anchor; `--key` at `:533` | `:830`/`:831`, `bpm_anchor_for()` at `:203`/`:212`, `--key` at `:912`, and a new `--keyscale` at `:914`; live draft plan → 96 BPM · C minor · 180 s |
-|| §7 | `lyric-video` has **no** artifact; `video_shape` read by nobody but the registry | `music/visuals/lyric_video.mp4` exists — ffprobe: h264 1280×720, **240.000000 s**, 41 447 357 B (t_ec378832, done); readers now incl. `loop_close.py:301`, `render_lyric_video.py`, `check_video_shapes.py:66`; the visual stage resolves its gate per genre → `gate: none` |
-|| §8 | `suno-gen.py` "not in this checkout"; studio rail `v0.1.2`; `translate.py:42/45/49` in the chart; payload "no `music/lyrics/`"; chart `briefs: []`; 1 queue entry | `music/suno-gen.py` 50 030 B / 1161 lines **in tree** (probe re-run against it, same results); pod runs **`v0.1.3`**; the chart now honours an explicit `bpm` (`:62`–`:64`) and `req.keyscale` (`:76`) — the old lines survive only in `music/sunolocal/translate.py`; payload **43 keys with 7 blueprints** but no sheet (re-read 18:55 CDT); chart + ConfigMap both carry **11 entries / 9 genres**; `acestep_plan.py:234`–`:235` (was `:98-100`) |
+| §7 | `lyric-video` has **no** artifact; `video_shape` read by nobody but the registry | `music/visuals/lyric_video.mp4` exists — ffprobe: h264 1280×720, **240.000000 s**, 41 447 357 B (t_ec378832, done); readers now incl. `loop_close.py:301`, `render_lyric_video.py`, `check_video_shapes.py:66`; the visual stage resolves its gate per genre → `gate: none` |
+| §8 | `suno-gen.py` "not in this checkout"; studio rail `v0.1.2`; `translate.py:42/45/49` in the chart; payload "no `music/lyrics/`"; chart `briefs: []`; 1 queue entry | `music/suno-gen.py` 42 652 B / 1025 lines **in tree** (probe re-run against it, same results); pod runs **`v0.1.3`**; the chart now honours an explicit `bpm` (`:62`–`:64`) and `req.keyscale` (`:76`) — the old lines survive only in `music/sunolocal/translate.py`; payload 39 keys with 6 blueprints but no sheet; chart + ConfigMap both carry **11 entries / 9 genres**; `acestep_plan.py:234`–`:235` (was `:98-100`) |
 | §8 | render rail "runs exactly" acestep_plan | it now also runs `loop_close.py` (loop claim → build → level check, t_b21aeb51); for activist `--claims-loop` → `{"claim": false}`, rc=1 |
 | §9 | `campaigns/` holds nine campaigns | **ten**; `~/Music` still empty; quota still 0/60 with 0 studio exports (ledger gained a `renders` list that does not touch the counters) |
 | §10/§11 | visual "blocked on the missing shape"; brain docs untracked; `check_stage_scripts` FAIL; 12 cards listed as open/ready | visual unblocked; both brain docs **tracked in HEAD** and still absent from `origin/main`; `check_stage_scripts` PASS; of the 12 carded items, 9 are `done` (t_8a715681, t_41f354be, t_25a6499c, t_bf0e5edd, t_b0a4db92, t_75aacf8b, t_d9983bb9, t_ec378832, t_85db696a), 1 is done **on a branch** (t_9546841b), 1 is still blocked (t_e504b516), and t_9546841b's sibling `t_f65b0f4c` (the placeholder key) is ready |
 
 The two `music/lyrics/` clarifications are worth stating plainly: the payload has **no lyric
-sheet** (no `music__lyrics__activist__*`), but it does carry the seven blueprints, which live
+sheet** (no `music__lyrics__activist__*`), but it does carry the six blueprints, which live
 under `music/lyrics/blueprints/` — so the old phrasing "no `music/lyrics/` at all" was wrong
 even though its conclusion (the claimed sheet is not in the pod) still holds.
 
@@ -1147,45 +1147,3 @@ Two things this pass deliberately left alone, so the next worker does not re-fil
 - **`check_brief_figures.py` named this brief once** at this pass's reading — the playbook figure at 34 328 B (`6b24a52`)
   against the 45 674 B the file now measures. That is the stale-FIGURE class §13 and §17 record,
   owned by another card; it is reported here and not corrected by this pass.
-
-## 21. The payload-census class — the skipped sites re-measured (card `t_34f5e94a`, 2026-10-16)
-
-`check_brief_drift.py`'s S7 prints the census claims that name the deployed payload as SKIPs rather
-than guessing at them, because the payload is cluster state and no repo-local check can recompute
-it. Those skips are not a licence to leave the lines alone: this pass re-read the live ConfigMap and
-corrected every site the SKIP block named.
-
-**Live census, `kubectl -n mining get configmap music-pipeline-payload -o json` at 2026-10-16
-18:55 CDT (this host, nexus):** **43 keys** — 7 blueprints (`music__lyrics__blueprints__activist.yaml`,
-`anime-ending.yaml`, `anime-opening.yaml`, `chill-lounge.yaml`, `epic-orchestral-boss.yaml`,
-`jungle-dnb.yaml`, `trance.yaml`), 15 prompt entries (the 14 genre templates plus
-`anisong-genre-blocks.yaml`), 14 visuals, `music__genres.yaml`, `music__planner__planner.py`,
-`music__scripts__acestep_plan.py`, `music__scripts__loop_close.py`, `music__scripts__backfill_render.py`,
-`music__scripts__check_render_landed.py`, `music__scripts__render_state.py`. The 17:18 CDT reading
-behind this card's body was 42 keys / 7 blueprints; the 15:31 reading was 38 / 6. The payload has
-been re-synced since `jungle-dnb.yaml` landed, so the repo census and the payload agree at last.
-
-**Convention decided and recorded here (card `t_34f5e94a` §3).** A payload claim carries the clock
-time it was taken at, in the same form the census classes already use — the ANCHORED rule
-(`check_brief_drift.py` skips a stamped line, and a payload line is skipped anyway, so the two
-rules coincide for this class). The payload is re-synced from the repo, so a claim without a stamp
-reads as a claim about now and will be stale by the next `sync-payload.sh`. This pass uses the
-**stamped** form everywhere it writes a payload number; the alternative (a bare number, stamped or
-not, that a reader must chase through `sync-payload.sh` timing) is rejected because it is the
-behaviour that produced the 38/6 lines in the first place.
-
-**Sites corrected, in this brief:**
-
-| § | Was | Is |
-|---|---|---|
-| §8 | "43 keys, re-counted this pass at 18:39 CDT" | 18:55 CDT — the clock this pass actually read the ConfigMap at |
-| §14.2 §8 row | "payload 43 keys with 7 blueprints but no sheet (re-read 18:39 CDT)" | 18:55 CDT |
-| §14.2 §8 row | "the six blueprints" (§14.3 clarification) | **seven** blueprints |
-| §13 | "43 keys, 7 of them blueprints at 18:39 CDT" | 18:55 CDT |
-
-No genre finding was reopened; only the four payload numbers and the one blueprint count moved.
-`check_brief_drift.py` was **not** widened to read the cluster — it stays runnable with no cluster
-access, and the payload lines are still SKIPs (the SKIP count is unchanged at the same 13 sites,
-now all stamped).
-
-- **Superseded revision of this file:** `sha256 1c4fcc5127fbb00577fb95dcd195d641c4e63643945dba5eb30ff88eb4cbbf94` (1107 lines / 77 005 B).

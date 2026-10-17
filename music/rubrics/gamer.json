@@ -1,0 +1,112 @@
+{
+  "family": "gamer",
+  "version": 2,
+  "genres": ["elemental-fire", "elemental-water", "elemental-earth", "elemental-air", "chiptune-8bit", "epic-orchestral-boss"],
+  "score_scale": "Each criterion scored 1-10. Overall = weighted mean over the criteria APPLICABLE TO THIS GENRE. A criterion's scope is DATA ('applies_to'); a criterion without the field is common to every genre in the family. pass_threshold applies to the geometric-median aggregate across the panel.",
+  "pass_threshold": 7.0,
+  "criteria": [
+    {
+      "id": "chip_timbre_authenticity",
+      "name": "Chiptune: authentic chip timbres, not 'chiptune-ish synth' (chiptune-8bit only)",
+      "applies_to": ["chiptune-8bit"],
+      "weight": 3,
+      "type": "measured",
+      "anchor": "NES Ricoh 2A03: EXACTLY five voices — 2 pulse, 1 triangle, 1 noise, 1 DPCM; no reverb on the chip, no filter; duty cycles 12.5%/25%/50% (25% = reedy classic lead; 50% = hollow square); triangle = bass (no volume control, octave lower); noise = percussion via envelope; fast frame-rate arpeggios (~60 Hz swaps) fake chords from monophony; volume is 16 steps, not fades; echo (one quiet re-triggered note) not reverb (NESdev APU wiki; musicproductionwiki chiptune; chiptune-8bit prompt craft notes). A stacked chord that rings as a chord is a hardware-impossible defect. Smooth analog pads, reverb tails, realistic instruments = OUT of genre.",
+      "evidence": "pct_energy_above_8khz (noise percussion + pulse brightness read high; lush filtered pads read differently), the style prompt's timbre claims, crest_factor_db. Unverifiable specifics (duty cycle) must be marked unverifiable, not guessed.",
+      "guide": "10 = prompt claims the exact 5-voice palette + no-reverb + arp-bass pattern AND numbers consistent. 7 = palette claimed, one element unverifiable. 4 = 'retro synth' claim without the voice budget or with reverb/pads allowed. 1 = modern synth production with a chiptune label."
+    },
+    {
+      "id": "battle_energy",
+      "name": "Boss/battle energy (elemental-fire, epic-orchestral-boss)",
+      "applies_to": ["elemental-fire", "epic-orchestral-boss"],
+      "weight": 3,
+      "type": "craft",
+      "anchor": "Boss battle: fast tempos 130-200 BPM (typical 140-180; OoT boss 180; KH-style ~170); ostinatos and percussion are the anchors; chromaticism in chords and melody; heavy syncopation; timpani + snare militaristic layers; multi-phase feel with key changes/choir entries (Matthew Chilelli boss-battle analysis; tunee boss-battle guide: BPM range 130-200; videogamemusicshrine OoT boss analysis: 6/4, atonal/chromatic, ostinato anchors). The family's other three elementals are EXPLORATION themes at 82-92 BPM and are scored by elemental_atmosphere instead (gaming-music exploration pocket 70-100 BPM, tunee / mubert).",
+      "evidence": "bpm + bpm_candidates (boss claims need a fast candidate), rms_1s_spread_db (phase evolution), duration_s, the style prompt.",
+      "guide": "10 = fast-tempo candidate + multi-phase dynamics evidence + ostinato/percussion claims. 7 = fast + energy evidence, phases unverifiable. 4 = mid-tempo (~110-130) with a boss claim. 1 = slow ambient track with a battle label."
+    },
+    {
+      "id": "elemental_atmosphere",
+      "name": "Elemental exploration craft: slow-pocket atmosphere, not a fight (elemental-air, elemental-water, elemental-earth)",
+      "applies_to": ["elemental-air", "elemental-water", "elemental-earth"],
+      "weight": 3,
+      "type": "craft",
+      "anchor": "Exploration / open-world / ambient game themes sit in the 70-100 BPM pocket (tunee 'Exploration & Open World' 70-100 BPM against its own Boss Battle 130-170; Mubert: exploration themes 70-90 BPM while action pushes 120-140; RPG practice: exploration 80-100, ambient 55-85). The water-level benchmark is David Wise's 'Aquatic Ambience' (Donkey Kong Country, 1994) — 75 BPM, C minor, genre ambient (Super Mario Wiki) — built from morphing wave-sequenced arps in minor/add9 harmony with percussion as sonar pings, never a kit; the same technique fuels modern exploration scoring. This family's three templates measure 82 BPM (water), 88 BPM (earth), 92 BPM (air), and each names a signature device: air = Csus2 with no third and no resolution (a sus2 'hangs unresolved' as static colour — songcage suspended-chord reference) plus 'no percussion kit, no bass weight'; water = evolving arps + cavernous reverb, 'water does not rush'; earth = open-fifth drone with the third omitted (major/minor undecided) + a slow 80-90 heartbeat pulse. The element is the genre: a fight is the wrong element, and this family's fight pocket is 130-200 BPM.",
+      "evidence": "bpm + bpm_candidates (in-pocket 70-100 read, per band, each candidate with its ac, lag, prominence and band; a half/double that folds into the pocket counts) + bpm_pulse + ac_at_anchor when the genre anchor is passed, rms_1s_spread_db (exploration holds one level; drop/build dynamics read wide), pct_energy_above_8khz (air/water shimmer vs a dark cavern), crest_factor_db, duration_s, the style prompt's device claims. air/water/earth are percussion-free by template: judge the tempo from ac_at_anchor and bpm_candidates, never from the bare bpm, and read bpm_note - the whole-band argmax can sit at the 60 BPM edge and mean nothing. A 'no measurable pulse' verdict makes the tempo pocket unverifiable, not wrong (card t_ed609eb0). Timbre specifics - bass weight, drum kit, reverb depth - are NOT in the measured set: take them from the style claim or mark them unverifiable.",
+      "guide": "10 = BPM in the 70-100 exploration pocket + the element's signature device claimed (air sus2/no-kit, water morphing arp/cavernous reverb, earth open-fifth drone/heartbeat pulse) + a steady level. 7 = in-pocket + one signature device, the rest unverifiable. 4 = in-pocket but the claim is drum-kit or drop-driven, or no element device at all. 1 = 130+ BPM fight material, or modern-synth production wearing an elemental-air/water/earth label."
+    },
+    {
+      "id": "loop_safety",
+      "name": "Loop safety for game use (all gamer genres)",
+      "applies_to": "all",
+      "weight": 3,
+      "type": "measured",
+      "anchor": "Game assets demand seamless loops: loop packs must be seamless + click-free with stated BPM/key (architecture §13); loop point ends on a phrase that leads back to bar 1; no reverb tail across the seam; loopable structure maintains intensity without sounding repetitive (tunee loopable request pattern; game-assets lane: requires stems, loop_point, seamless_loop).",
+      "evidence": "Tail/head RMS compatibility for a loop (last-1s RMS within ~6 dB of first-1s RMS, no fade-to-silence on a loop claim), silences_ge_1s, bar math: duration_s * bpm / 240 should land near a whole bar count.",
+      "guide": "10 = seam-compatible levels AND whole-bar duration at the claimed BPM. 7 = levels compatible, bar math ambiguous. 4 = fade ending or fractional-bar duration. 1 = hard truncation/seam click evidence."
+    },
+    {
+      "id": "asset_packaging",
+      "name": "Asset-pack packaging (stems, BPM/key metadata, naming)",
+      "applies_to": "all",
+      "weight": 1,
+      "type": "craft",
+      "anchor": "Game-asset lane requires: stems, loop_point, seamless_loop, metadata (lanes.yaml game-assets). Asset-pack packaging: loops must state BPM and key, stems time-aligned, clean WAV, consistent naming (architecture §13). Indie devs buy asset packs at $2,500-7,500 for 5-10 tracks.",
+      "evidence": "Package contents and manifest fields when present.",
+      "guide": "10 = stems + BPM/key + loop-point marker present. 7 = master + metadata. 4 = bare master. 1 = nothing."
+    },
+    {
+      "id": "loudness_target",
+      "name": "Master hits the lane loudness target",
+      "applies_to": "all",
+      "weight": 1,
+      "type": "measured",
+      "anchor": "Streaming -14 LUFS; game-asset delivery favours consistent loudness with real dynamics (boss cues need wide dynamic range — 'quiet dread to full assault', tunee).",
+      "evidence": "mean_volume_db vs -14 for streaming-lane tracks.",
+      "guide": "10 = within +/-1 dB. 7 = within +/-3 dB. 4 = 3-6 dB off. 1 = 6+ dB off."
+    }
+  ],
+  "reject_signals": [
+    {
+      "id": "chip_impossible_timbre",
+      "signal": "chiptune claim with reverb/pads/realistic instruments or >2-note chords per channel (hardware-impossible = OUT of genre)",
+      "applies_to": ["chiptune-8bit"]
+    },
+    {
+      "id": "battle_no_fast_tempo",
+      "signal": "boss/battle claim with no fast-tempo candidate (under 130 BPM)",
+      "applies_to": ["elemental-fire", "epic-orchestral-boss"]
+    },
+    {
+      "id": "elemental_fight_material",
+      "signal": "elemental-air, elemental-water or elemental-earth delivered as a fight: drum-kit groove, bass drop, or a 130+ BPM battle claim on an exploration-theme label (= OUT of genre, the element is wrong)",
+      "applies_to": ["elemental-air", "elemental-water", "elemental-earth"]
+    },
+    {
+      "id": "loop_fade_or_truncation",
+      "signal": "fade-out or truncated ending on a game-loop claim"
+    },
+    {
+      "id": "clipped_master",
+      "signal": "clipped master (max_volume_db >= -0.1)"
+    },
+    {
+      "id": "no_stated_tempo_key",
+      "signal": "no stated BPM/key for a game-asset product"
+    }
+  ],
+  "sources": [
+    {"id": "nesdev-apu", "title": "APU - NESdev Wiki (2A03 channel spec)", "url": "https://www.nesdev.org/wiki/APU"},
+    {"id": "nesdev-basics", "title": "APU basics - NESdev Wiki", "url": "https://www.nesdev.org/wiki/APU_basics"},
+    {"id": "mpw-chiptune", "title": "How to Recreate the Chiptune Sound (8-Bit / NES)", "url": "https://musicproductionwiki.com/articles/how-to-recreate-the-chiptune-sound"},
+    {"id": "chilelli-boss", "title": "Writing a Boss Battle Track - Matthew Chilelli", "url": "https://www.matthewchilelli.com/blog-2/2020/7/14/writing-a-boss-battle-track"},
+    {"id": "tunee-boss", "title": "Boss Battle Music Generator guide", "url": "https://www.tunee.ai/music-generator/boss-battle-music"},
+    {"id": "vgms-oot", "title": "Inside The Score: Zelda OoT Boss Battle", "url": "https://videogamemusicshrine.com/inside-the-score-the-legend-of-zelda-ocarina-of-time-boss-battle/"},
+    {"id": "tunee-explore", "title": "Gaming Music Generator - Exploration & Open World 70-100 BPM vs Boss Battle 130-170 BPM", "url": "https://www.tunee.ai/en/music-generator/gaming"},
+    {"id": "mubert-game", "title": "Creating Video Game Music - exploration themes 70-90 BPM, action 120-140 BPM", "url": "https://mubert.com/blog/creating-video-game-music-top-beginner-tips"},
+    {"id": "mariowiki-aquatic", "title": "Aquatic Ambiance - Super Mario Wiki (David Wise, DKC 1994; 75 BPM, C minor, ambient)", "url": "https://www.mariowiki.com/Aquatic_Ambiance"},
+    {"id": "songcage-sus", "title": "Suspended Chords Explained: Sus2 and Sus4 (a sus2 hangs unresolved as static colour)", "url": "https://songcage.com/blog/suspended-chords/"},
+    {"id": "arch", "title": "Music Lane Architecture §5/§13 (local)", "url": "brain/playbooks/music-lane-architecture.md"}
+  ],
+  "notes": "Sub-idiom scope is DATA, not prose: a criterion that carries `applies_to` is scored ONLY for the genres it names; a criterion without the field is common to the whole family (music/rubrics/panel.py applicable_criteria(); music/rubrics/test_panel_math.py enforces the invariants). Three sub-idioms live in this family, each with one craft criterion at weight 3: battle (elemental-fire, epic-orchestral-boss -> battle_energy), chip (chiptune-8bit -> chip_timbre_authenticity), elemental exploration (elemental-air, elemental-water, elemental-earth -> elemental_atmosphere). Every genre therefore scores FOUR criteria, and the applicable weights sum to 8 for every genre: its craft criterion (3) + loop_safety (3) + asset_packaging (1) + loudness_target (1). Loop safety is common to all game-asset delivery. History: before 2026-10-16 the sub-idiom scope existed only inside the criterion NAMES, so panel.py scored all five criteria on every genre — an 82-92 BPM exploration theme took the guide's prescribed 1 on battle_energy, and every elemental-* took 1 on chip_timbre_authenticity, for up to 6 of 11 weighted points lost on two criteria this file's own notes said did not apply (card t_426a82a3, found from the elemental-air brief t_92a09bdc, corroborated by t_c92f566d and the elemental-water brief)."
+}

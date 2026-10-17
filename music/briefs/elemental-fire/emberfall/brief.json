@@ -1,0 +1,105 @@
+{
+  "name": "elemental-fire-emberfall",
+  "genre": "elemental-fire",
+  "brief": "Fire elemental boss battle theme, 150 BPM in D Phrygian. Driving taiko and frame-drum percussion with galloping triplets, aggressive staccato string ostinato in the low register, low brass swells and braams answering the strings, a cracking rhythmic fire-crackle texture layer, and a shredding modal melody on horns. Phrased as a fight through seven sections: tension intro, burning theme, development, molten peak, brief smoldering breakdown, full blaze reprise, and a loop-safe outro whose last bar resolves back into the intro tension bed. Seamless game loop, no fade-out, high energy throughout, cinematic hybrid orchestral.",
+  "title": "Emberfall",
+  "duration": 120,
+  "instrumental": true,
+  "lyricsMode": null,
+  "language": null,
+
+  "_genre_is_instrumental": "prompts/elemental-fire.md, section '## Lyrics guidance': 'Instrumental. Leave the lyrics box empty - that is Suno's instrumental path.' Upstream music/suno-gen.py:141 is_instrumental_template() names elemental-fire among the 8 instrumental templates and keys on that sentence. No lyric sheet exists and none is wanted. lyricsMode is null because neither 'draft' (scaffold, refused by the renderer) nor 'ai' (out of genre, and it would void any authorship claim) applies.",
+
+  "_registry": {
+    "source": "music/genres.yaml lines 86-93 (validated: /usr/bin/python3 music/registry.py validate -> registry OK: 14 genres, 10 lanes, rc=0)",
+    "family": "gamer",
+    "prompt_template": "music/prompts/elemental-fire.md",
+    "visual_style": "music/visuals/element-fire.md",
+    "lanes": ["game-assets", "youtube-gaming", "streaming"],
+    "cadence": "2/wk",
+    "video_shape": "loop-10min",
+    "bpm_anchor": 150,
+    "key": "D Phrygian",
+    "timesignature": "4",
+    "caption_chars": 583,
+    "style_exclusions": "pop vocals, EDM drop, trap, happy major key, ambient drone, lo-fi",
+    "weirdness_pct": 40,
+    "style_influence_pct": 80
+  },
+
+  "_queue": {
+    "note": "CANONICAL FIELDS ONLY for the music-pipeline queue. That schema has no 'instrumental' field and planner.py has no instrumental mode, so queueing this genre there yields a draft scaffold or AI lyrics - both wrong (see _engine_defects D2).",
+    "target": "mining-k8s/helm/charts/music-pipeline/values.yaml -> briefs:",
+    "configmap": "mining/music-pipeline-briefs key briefs.json",
+    "planner_job": "mining/music-pipeline (17 */6 * * *)",
+    "plan_out": "/var/lib/music-plans/elemental-fire-emberfall.json",
+    "render_job": "mining/music-pipeline-render (41 */4 * * *)",
+    "drift": "chart values.yaml briefs: [] is EMPTY (measured 2026-10-16, line 39)"
+  },
+
+  "_route": {
+    "live_engine": "mining/sunolocal (deployment sunolocal-source, image tag v0.1.2)",
+    "why_not_the_planner_queue": "D2 - the planner queue cannot express an instrumental track; its draft scaffold is refused by acestep_plan.py (exit 1, .refused marker).",
+    "call": "POST http://sunolocal.mining.svc.cluster.local:8123/api/v1/generate",
+    "status_of_task": "GET http://sunolocal.mining.svc.cluster.local:8123/api/v1/task/{id}",
+    "renderer": "adapters/ace_comfy.py -> /opt/sunolocal/music/scripts/acestep_plan_direct.py --allow-empty"
+  },
+
+  "_generation_request": {
+    "style": "<583-char caption from music/prompts/elemental-fire.md, with ', instrumental, no vocals' appended>",
+    "instrumental": true,
+    "lyrics": "",
+    "bpm": 150,
+    "key": "D Phrygian",
+    "duration": 120,
+    "title": "Emberfall",
+    "engine": "ace",
+    "customMode": true,
+    "_warning_style_weight": "DO NOT use style_weight to steer tempo on this genre. translate.py:45 maps style_weight 0.80 (the template's stated Style Influence) to 156 BPM, and unset to 120 BPM. Neither is 150. Carry bpm explicitly (t_25a6499c D1)."
+  },
+
+  "_engine_defects": [
+    {
+      "id": "D1",
+      "what": "BPM is not expressible; the 150 BPM genre anchor cannot be honoured",
+      "evidence": "origin/main:music/sunolocal/translate.py:42 sets bpm = 120; :45 sets bpm = int(60 + req.style_weight * 120). Derived: unset -> 120; style_weight 0.80 -> 156; only style_weight 0.75 yields 150, contradicting the template's stated 80 percent adherence. origin/main:music/sunolocal/checks/g3_translate.sh:21 asserts the default plan bpm equals 120.",
+      "impact": "Any elemental-fire render on the current route has the wrong bar length. 150 BPM -> bar 1.600 s. This genre is the fastest in the registry (150; sibling elementals anchor 82/88/92), and its 120.0 s / 75-bar loop structure depends on exactly 1.600 s per bar."
+    },
+    {
+      "id": "D2",
+      "what": "The planner queue cannot express an instrumental track",
+      "evidence": "mining-k8s/helm/charts/music-pipeline/values.yaml brief schema = {name, genre, brief, lyricsMode?, language?, title?, duration?}; planner.py --lyrics-mode accepts only draft or ai. Draft plans are refused by acestep_plan.py (exit 1).",
+      "impact": "8 of 14 genres cannot be queued through music-pipeline. Measured list (/usr/bin/python3, grep -li against 'is instrumental' and 'leave the lyrics box empty' over music/prompts/*.md): chill-lounge, chiptune-8bit, commentary-beds, elemental-air, elemental-earth, elemental-fire, elemental-water, sentimental-piano."
+    },
+    {
+      "id": "D3",
+      "what": "The key field receives the whole style caption",
+      "evidence": "origin/main:music/sunolocal/translate.py:49 sets key from req.style, falling back to C major; acestep_plan.py passes plan key through as the ACE keyscale. Measured caption length for this genre: 583 chars.",
+      "impact": "The engine is handed a 583-character paragraph where a key signature belongs. D Phrygian must be carried explicitly."
+    },
+    {
+      "id": "D4",
+      "what": "No blueprint forces the local planner to fall back to 100 BPM",
+      "evidence": "music/planner/planner.py around line 470 falls back to 100 when the blueprint has no bpm_anchor. music/lyrics/blueprints/ holds only activist.yaml, chill-lounge.yaml, trance.yaml - no elemental-fire.yaml.",
+      "impact": "At 100 BPM a bar is 2.400 s, so the 120.0 s master would be 50 bars and the seven-section structure is wrong. Acceptance: the plan's bpm must read 150."
+    }
+  ],
+
+  "_loop_and_duration_basis": "150 BPM, 4/4 -> one bar = 4*60/150 = 1.600 s exactly. 75 bars = 120.0 s (master loop). 16 bars = 25.6 s and 32 bars = 51.2 s are the in-engine short loops. The loop-10min video is 600.0 s = exactly 5 x 120.0 s, which is why 120.0 s is the chosen master length (a 51.2 s loop would need 11.719 tiles and a 102.4 s loop 5.859 - both leave a broken final seam). 120 s is inside the planner guard rail (planner.py MIN_DURATION_S=16, MAX_DURATION_S=600); 600 s is NOT, which is why the 10-minute artifact is a video, never a single render. The rail was re-read by card t_ae1d9243 (2026-10-16).",
+
+  "_required_artifacts": {
+    "game-assets": ["stems >= 4 (drums, bass, keys, ... within +/-0.5 s of the master)", "loop_points.json", "seamless_loop", "metadata (BPM + key)"],
+    "youtube-gaming": ["600.0 s visual >= 640x360 (gate_youtube_authentic.py:146)", ">= 10 distinct frame signatures", "ai_disclosure.txt"],
+    "streaming": ["master.wav", "artwork 3000x3000", "manifest.json with title/artist/isrc/genre + ai_disclosure", "ai_disclosure.txt", "ISRC"]
+  },
+
+  "_loop_verification_warning": "gate_loop_points now runs BOTH rulers in one call (card t_bab8aa19, lane commit ae05548): the junction-curvature ruler (a click) and the rubric's own tail/head level ruler (1.0 s window, ffmpeg volumedetect mean_volume, FAIL above 6.0 dB - gamer.json loop_safety). Measured 2026-10-16, before that fold, on .../workspaces/t_6f0d261e/loop/faded.wav: a 25.6 s loop with a 1.6 s fade-out tail PASSED with a curvature ratio of 2.21x (ceiling 3.0x), because curvature detects derivative kinks (clicks), not level discontinuities. The same file measures a tail-1s vs head-1s volumedetect delta of 8.8 dB (-21.1 -> -29.9), which the gamer rubric's loop_safety criterion rejects (over 6 dB) - and the gate now refuses it on that measurement. The measurement is level-dependent, so name the render: the full-scale twin .../t_6f0d261e/loop2/B_faded.wav gives the same 2.21x and the same delta 8.9 dB at -3.0 -> -11.9. One gate call now covers both rulers; music/scripts/loop_seam_check.py --master <wav> --loop-points <json> (added by the duplicate pass t_42a01e18; --selftest rebuilds the finding from the repo alone) stays the standalone cross-check. KNOWN RESIDUAL, measured: the level ruler's 1.0 s window and 6 dB ceiling let a fade SHORTER than ~1.15 s through - a 1.0 s fade-to-silence measures a 4.7 dB delta and PASSES, 1.2 s measures 6.3 dB and fails, 1.6 s 8.8 dB; card t_8297d2c6 covers the end-of-loop silence guard. CLOSED 2026-10-16 by that card (lane commit a664b4e): the gate now runs a THIRD ruler - the rubric's own 1.0 s window at the loop end split into two 0.5 s halves, FAIL when the second half is more than the same 6.0 dB below the first (a 1.0 s fade-to-silence reads 8.5 dB there while its tail-head delta stays at 4.7 dB and passed) - plus the lane's -50 dB silence floor as a precondition, because a window that is itself silence is not evidence of level continuity (the elemental-air master is silent at BOTH ends: head-1s -59.5 dB, tail-1s -58.7 dB, delta 0.8 dB, and the level ruler PASSED it). Executed boundary: 0.5 s fade PASS at 4.7 dB, 0.6 s the first refusal at 6.2 dB, 1.0 s FAIL at 8.5 dB. Measured residual: a fade of 0.5 s or less still passes, which is inside the real-material range (the largest half-to-half end ramp over 29 real loops - 4 closed by loop_close.py and 25 written by pack.py from real masters - is 5.3 dB).",
+
+  "_rights": "INSTRUMENTAL -> no human-authored lyrics -> an AI-Generated Output under SOCAN's guidelines, not an AI-Assisted Work. No PRO registration and no publishing-royalty path for this genre; a US Copyright Office registration would have to disclaim the whole composition. Not a blocker for game-assets (licence sale) or youtube-gaming (ad revenue). Source: music/docs/pro-registration.md sections 1 and 3.",
+
+  "_isrc": "No ISRC is proposed here. An ISRC has NO check digit (IFPI International ISRC Agency Bulletin 2015/01 rev 3, ISO 3901:2019) - 12 characters, 2 letters + 3 alphanumeric + 2 digits + 5 digits. music/gates/gate_release_ready.py:92 isrc_syntax() implements exactly that and is correct; its docstring lines 13-15 wrongly claim a check digit. Do not fabricate a 13-character code.",
+
+  "_lyrics": "none - instrumental genre by design (music/prompts/elemental-fire.md)",
+  "_written_by": "music-producer, card t_6f0d261e, 2026-10-16",
+  "_verified_by": "music-producer, duplicate-card pass t_42a01e18, 2026-10-16T13:50 CDT - every checkable figure in music/briefs/elemental-fire.md was re-measured live (brief section 13). One attribution corrected: this file's _loop_verification_warning now names the render it measured. Superseded revision of this file: sha256 ebb875bd2472d0fab0a41766519db7b948bcd03334372fb53245acfe6bcc6013. - UPDATE 2026-10-16, nexus-core, card t_bab8aa19: the level ruler was folded into music/gates/gate_loop_points.py (lane commit ae05548), so _loop_verification_warning and brief section 9 now record the gate as sufficient for both rulers, with the short-fade residual carded as t_8297d2c6. - UPDATE 2026-10-16, music-producer, card t_8297d2c6: the end guard landed (lane commit a664b4e) - gate_loop_points now runs three rulers (curvature, tail/head level, end ramp + silence floor) and the short-fade hole is closed down to a 0.5 s fade."
+}

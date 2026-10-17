@@ -1,0 +1,96 @@
+# Lyric blueprint — epic-orchestral-boss (family: gamer)
+# Data, not code. The writer writes the actual chant sheet from this brief.
+#
+# ADDED 2026-10-16 (card t_78bd4754). Before this file the genre had no lyric
+# blueprint, so three things were broken at once:
+#   * planner.py::bpm_anchor_for() had no anchor to read. It fell back to the
+#     caption (150, so the tempo came out right) but recorded
+#     "_meta": {"blueprint": false} - the plan contradicted its own provenance.
+#   * lyrics.py::cmd_scaffold refuses to scaffold without a blueprint
+#     ("FAIL: no lyric blueprint for '<genre>'"), so the lyrics stage - which
+#     this genre REQUIRES, it is choral - could not start.
+#   * the section form was the template's by accident, not by decision.
+#
+# THIS GENRE IS CHORAL, NOT INSTRUMENTAL. The deployed translate.py comment
+# listed epic-orchestral-boss among the 8 instrumental genres; measured, its
+# template has 0 instrumental markers (8 of 14 templates declare that path).
+# Do not queue it with instrumental: true or lyricsMode: instrumental.
+#
+# Section tags MUST match music/prompts/epic-orchestral-boss.md exactly, order
+# included: planner.py::validate() fails a plan whose [tags] differ from this
+# structure. The template's 8 tags are the three-act trailer form.
+#
+# The chant sheet this blueprints must clear the lyrics gate
+# (music/gates/gate_lyrics_original.py, MIN_UNIQUE_WORDS = 25):
+#   * >= 25 DISTINCT tokens. The tokenizer is re.findall(r"[a-z']+", line.lower()),
+#     so a hyphen SPLITS a word: "for-tis" measures as two tokens "for" + "tis".
+#     Write chant syllables UNHYPHENATED. A five-word chant repeated eight times
+#     fails the floor.
+#   * NO parenthetical-only lines, in any section. A wrapped direction line is
+#     counted the same way (music/lyrics/lyrics.py::sung_lines) and is rejected as
+#     "placeholder guidance left in".
+#   * every one of the 8 sections carries real sung lines - including
+#     [Instrumental], which the arrangement gives to brass but the SHEET cannot
+#     leave empty or direction-only.
+#   * [Choir] is a known section tag (music/lyrics/lyrics.py::KNOWN_SECTIONS), so
+#     the --strict invocation passes this genre's mandated structure.
+genre: epic-orchestral-boss
+family: gamer
+theme: >-
+  The Last Gate. A gate that has not opened in a thousand years opens once. The
+  dread of what is behind it, the escalation of what walks through, and the
+  silence in which the music decides whether the world ends. The choir is not a
+  narrator and not a commentator: it is the weapon, and it fights in the piece.
+voice_notes: >-
+  Choir only — no solo lyrical singing, no lead voice. Latin or pseudo-Latin
+  chant syllables as TEXTURE, in the "fortis, astra, dominus" register:
+  syllabic, syncopated, and DOUBLING the brass theme instead of floating above
+  it. Every chant word is written UNHYPHENATED ("fortis astra", never
+  "for-tis as-tra") because the gate's tokenizer splits at the hyphen. Generic
+  sustained vocal pads are the failure mode of this genre: the choir hits on the
+  downbeats and answers the ostinato.
+rhyme: >-
+  None in the English sense. The chant repeats by sound and by syllable weight:
+  the same phrase returns at a higher intensity, and what changes between
+  sections is dynamics and voicing, not vocabulary. Repetition is the genre's
+  grammar — so the sheet still has to clear 25 distinct tokens across its 8
+  sections on the strength of its own words.
+line_length: "Chant syllables; 1-3 short lines per section, each singable in one breath. Syllabic, not melismatic — one note per syllable."
+bpm_anchor: 150
+mood_words: [gate, iron, thousand, years, dread, threshold, chant, thunder, taiko, ostinato, braam, breath, silence, ancient, vow, break, rise, walk, world, end]
+avoid: >-
+  Pop vocals, English lyrics, a solo lead voice, EDM drop, trap, lo-fi, ambient
+  drone, cheerful major; a fade-out ending (this genre ends on a hit and a short
+  reverb tail — a fade is a defect); choral pads with no hits; a climax that
+  arrives without the false-ending silence in front of it; smoothing away the
+  sudden stop-starts the sync lane cuts on; and instrumental: true, which would
+  strip the choir that defines the genre.
+title_candidates:
+  - "The Last Gate"
+structure:
+  - tag: "Intro"
+    guidance: "Latin: 2 short lines, whispered. Sub-drone, distant metallic echoes, heartbeat pulse. The chant arrives as breath, not as words — one phrase, low, almost inaudible. Plant the phrase that [Chorus] will eventually shout."
+  - tag: "Choir"
+    guidance: "Latin: 2-3 lines, low male chant murmurs over one held chord, no drums. Syllabic and unhyphenated. This is the first full statement of the chant phrase — state it plainly here so every later section can escalate it."
+  - tag: "Build"
+    guidance: "Latin: 2-3 lines. Percussive clock ticks and reverse risers underneath; taiko enters and the staccato string ostinato starts the engine. The chant shortens to fragments — one or two syllables per line, syncopated against the taiko."
+  - tag: "Instrumental"
+    guidance: "The arrangement hands the theme to brass here, but the SHEET must still carry sung lines: an empty or direction-only section is refused by both the gate and the renderer. Write the choir's vocalised syllables — AHH, OHH, or the chant phrase held on one note — with no parentheses-only body."
+  - tag: "Choir"
+    guidance: "Latin: 2-3 lines. The chant doubles the brass theme, medium intensity, syllabic, locked to the ostinato. This is the escalation step: the same words as the first Choir, delivered with more force."
+  - tag: "Breakdown"
+    guidance: "Latin: 1-2 lines, the quietest point of the piece. Near-silence: one sub-boom, a breath, a single string sustain — the false ending. The line is almost spoken. The silence after it is load-bearing: do not fill it."
+  - tag: "Chorus"
+    guidance: "Latin: 2-4 lines, the climax. Full orchestra plus full choir, AHH hits, brass fanfare at maximum, sub impacts on the downbeats. The chant phrase returns at full force and doubles the fanfare — this is the line the world ends or does not end on."
+  - tag: "Outro"
+    guidance: "Latin: 1 line. Sudden breathless cut: one final deep boom, a short reverb tail, silence. End on a hit — no fade, no resolution chord. The last word is the gate closing."
+notes: >-
+  Lane fit: game-assets, youtube-gaming, sync, streaming. Video shape
+  single-4min — this one is a showpiece, not a loop. The craft contract is the
+  template's: 150 BPM in C minor (140-160 is the boss pocket; slower reads as
+  trailer-tease, faster as action-shred), ostinato strings as the nervous
+  system, taiko + timpani battery rather than a drum kit, choir as a weapon that
+  DOUBLES the theme, braams and fifth-heavy stabs, and the three-act trailer
+  form with the false-ending silence before the wall of sound. Lyrics are
+  human-authored — queue the track with lyricsMode draft and let j_kro claim the
+  sheet; AI-written lyrics void the copyright claim this pipeline registers.

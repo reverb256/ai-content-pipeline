@@ -1,0 +1,62 @@
+{
+  "schema": "music/pack-loop-points/v1",
+  "pack_name": "welcome-asset-pack",
+  "note": "loop_start_s/loop_end_s are offsets inside each loop file (0 -> its own duration); the loop file IS the master.",
+  "loops": {
+    "loops/loop_01_bpm184_key-Cmajor.wav": {
+      "loop_start_s": 0.0,
+      "loop_end_s": 5.201,
+      "seamless": true,
+      "bars": 4,
+      "bpm": 184.57,
+      "key": "C major",
+      "seam_method": "pre-roll-crossfade-20ms",
+      "gate_loop_ratio": 0.2828,
+      "gate_ratio_max": 3.0
+    },
+    "loops/loop_02_bpm184_key-Cmajor.wav": {
+      "loop_start_s": 0.0,
+      "loop_end_s": 5.201,
+      "seamless": true,
+      "bars": 4,
+      "bpm": 184.57,
+      "key": "C major",
+      "seam_method": "pre-roll-crossfade-20ms",
+      "gate_loop_ratio": 0.2312,
+      "gate_ratio_max": 3.0
+    },
+    "loops/loop_03_bpm184_key-Cmajor.wav": {
+      "loop_start_s": 0.0,
+      "loop_end_s": 5.201,
+      "seamless": true,
+      "bars": 4,
+      "bpm": 184.57,
+      "key": "C major",
+      "seam_method": "pre-roll-crossfade-20ms",
+      "gate_loop_ratio": 0.0394,
+      "gate_ratio_max": 3.0
+    },
+    "loops/loop_04_bpm184_key-Cmajor.wav": {
+      "loop_start_s": 0.0,
+      "loop_end_s": 5.201,
+      "seamless": true,
+      "bars": 4,
+      "bpm": 184.57,
+      "key": "C major",
+      "seam_method": "pre-roll-crossfade-20ms",
+      "gate_loop_ratio": 0.2045,
+      "gate_ratio_max": 3.0
+    },
+    "loops/loop_05_bpm184_key-Cmajor.wav": {
+      "loop_start_s": 0.0,
+      "loop_end_s": 5.201,
+      "seamless": true,
+      "bars": 4,
+      "bpm": 184.57,
+      "key": "C major",
+      "seam_method": "pre-roll-crossfade-20ms",
+      "gate_loop_ratio": 0.0498,
+      "gate_ratio_max": 3.0
+    }
+  }
+}

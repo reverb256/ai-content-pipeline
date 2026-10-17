@@ -362,8 +362,8 @@ Open items for `genre-select` / `lyrics` / `generate` (state re-measured 2026-10
 2. **CLOSED** — the anisong blueprint exists (4422 B) and the plan now reads `bpm 92`
    (item 1 above).
 3. **CLOSED** — the payload gap was fixed as a class, not one file. `music-pipeline-payload`
-   held no `music/visuals/**` at all; it now holds **43 keys** at 18:55 CDT, including **14
-   `music__visuals__*.md`** templates and 7 lyric blueprints (`music__lyrics__blueprints__*`).
+   held no `music/visuals/**` at all; it now holds **39 keys**, including **14
+   `music__visuals__*.md`** templates and 6 lyric blueprints (`music__lyrics__blueprints__*`).
    *(Still open and unrelated to the payload: `instrumental_version`, licence tiers and the
    clearance document for the `sync` and `direct-license` lanes.)*
 4. **CLOSED** — the oracle board carries one card per genre. *(Corrected in the
@@ -547,10 +547,9 @@ sweep), 2026-10-16 15:54:
    written by comment (the path this card uses) do not depend on it.
 4. Master / stems / package for this track: not built. `music/packages/` is absent. The
    album record is now in this tree (§6), so re-measure the host question before routing it.
-5. The payload carries 7 lyric blueprints — 43 keys re-read at 18:55 CDT, matching the repo's
-   7 (`jungle-dnb.yaml` is in it now). The 6-blueprint reading behind this note was taken at
-   15:49; the payload has been re-synced since (card `t_e6d422ec`), so the two agree and the
-   sync-timing caveat is withdrawn.
+5. The payload carries 6 lyric blueprints; the repo has 7 (`jungle-dnb.yaml`, added 15:49, is
+   not in the payload). Could be sync timing rather than a gap — unverified, so recorded, not
+   filed.
 
 ### Checks run (all live, this pass)
 
@@ -629,31 +628,3 @@ Regenerate the block after any rubric edit — one command, no hand-edit:
   }
 }
 ```
-
-## 13. The payload-census class — the skipped sites re-measured (card `t_34f5e94a`, 2026-10-16 18:55 CDT)
-
-`check_brief_drift.py`'s S7 prints the census claims that name the deployed payload as SKIPs
-rather than guessing at them, because the payload is cluster state and no repo-local check can
-recompute it. Those skips are not a licence to leave the lines alone: this pass re-read the live
-ConfigMap and corrected the two sites the SKIP block named in this brief.
-
-**Live census, `kubectl -n mining get configmap music-pipeline-payload -o json` at 2026-10-16
-18:55 CDT (this host, nexus):** **43 keys** — 7 lyric blueprints (`music__lyrics__blueprints__*`),
-15 prompt entries, 14 visuals, `genres.yaml`, the planner and the three `music__scripts__*.py`.
-The 17:18 CDT reading was 42 keys / 7 blueprints; the 15:31 reading was 38 / 6.
-
-**Convention (card `t_34f5e94a` §3).** A payload claim carries the clock time it was taken at, in
-the ANCHORED form the census classes already use — `check_brief_drift.py` skips a stamped line,
-and a payload line is skipped anyway, so the two rules coincide for this class. The payload is
-re-synced from the repo, so an unstamped payload number reads as a claim about now and is stale
-by the next `sync-payload.sh`. This pass uses the stamped form everywhere it writes one.
-
-**Sites corrected, in this brief:**
-
-| § | Was | Is |
-|---|---|---|
-| §8 item 3 | "43 keys at 18:39 CDT" | 18:55 CDT |
-| §11 item 5 | "43 keys re-read at 18:39 CDT" | 18:55 CDT |
-
-`check_brief_drift.py` was **not** widened to read the cluster — it stays runnable with no cluster
-access, and the payload lines remain SKIPs. No genre finding was reopened; only the two clocks moved.
