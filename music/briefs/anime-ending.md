@@ -358,7 +358,10 @@ Open items for `genre-select` / `lyrics` / `generate` (state re-measured 2026-10
 1. **OPEN — write the Japanese lyric sheet** (10 sections, human authorship, claim recorded
    by `music/lyrics/lyrics.py`). Nothing renders before this exists: the queued plan was
    refused at render for exactly this reason (§7). **This is the gate on this track.**
-   `music/lyrics/anime-ending/` is absent (measured).
+   `music/lyrics/anime-ending/` is no longer absent (measured 2026-10-16 15:56): it holds
+   `reflections/lyrics.suno.txt` (Suno draft, 2 048 B) + `manifest.json` + `title.txt`. What
+   is still OPEN is the human authorship claim itself — the gate is `gate_lyrics_original`,
+   not the directory.
 2. **CLOSED** — the anisong blueprint exists (4422 B) and the plan now reads `bpm 92`
    (item 1 above).
 3. **CLOSED** — the payload gap was fixed as a class, not one file. `music-pipeline-payload`

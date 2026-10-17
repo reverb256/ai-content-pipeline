@@ -95,6 +95,26 @@ R7. BINDING — the predicate must govern the path. A predicate binds to the nea
     ("absent from this checkout: `X`"), is NOT caught. No live brief uses either shape
     (14 briefs, 41 absence predicate(s), measured 2026-10-16).
 
+R8. A LOCAL-REF claim ("absent from local `main`", "not in this branch") is a worktree
+   claim, not a revision one. Measured 2026-10-16 (card t_1081832d): the pre-merge check
+   had no marker for this shape, so `chiptune-8bit.md:703` — "`music/suno-gen.py` is
+   absent from local `main` **and** from all of local `main`'s history" — sat through a
+   repo-wide rc=0 while `git cat-file -e main:music/suno-gen.py` returned present. The
+   fix is that REMOTE_OBJECT_RE names only `origin|upstream|remote|HEAD`, so a local
+   branch name is NOT a remote object: the predicate survives, and the worktree settles
+   the claim the same way it settles any worktree marker. A ref that is genuinely remote
+   (a branch that exists only upstream, or `origin/...`) stays skipped — the same line
+   R7 draws, decided by the predicate's own object.
+
+R9. A DIRECTORY claim ("`music/packages/` is absent") is judged like a file claim. Measured
+   2026-10-16 (card t_1081832d): both checks skipped directory tokens — the pre-merge
+   version here recorded only `is_file()` paths, so a token whose leaf is a directory
+   could never resolve and every directory claim was silently skipped. Three lines of
+   `anime-ending.md` (361, 540, 548) asserted `music/lyrics/anime-ending/` and
+   `music/packages/` absent while both directories held files, and this check returned
+   rc=0. `index_worktree` now records directories alongside files, and a token whose
+   leaf is a directory resolves to that directory.
+
 An object that is REMOTE ("absent from `origin/main`", "not in HEAD") is a revision-scope
 claim, not a worktree claim: a path can be present here and absent upstream, and that is a
 divergence to reconcile, not a stale sentence (card t_8a715681 was exactly that). Remote
@@ -139,7 +159,7 @@ PREDICATE_RES = (
     re.compile(r"\bnot\s+(?:on|in)\s+this\s+machine\b"),
 )
 
-PAST_LEAD_RE = re.compile(r"^(was|were|had|has|have)\b")
+PAST_LEAD_RE = re.compile(r"^(was|were|had|has|have|did)\b")
 
 # R2 — an attributed predicate ("recorded this file ABSENT") is a record of a past statement.
 ATTRIBUTION_RE = re.compile(
@@ -235,25 +255,40 @@ def looks_like_token(tok: str) -> bool:
 
 
 def clean_token(raw: str) -> str:
-    return raw.strip().rstrip(".,;:)`'\"")
+    return raw.strip().rstrip(".,;:)`'\"/")
 
 
-def path_tokens(line: str, rels: set[str], basenames: dict[str, str]
+def path_tokens(line: str, rels: set[str], dirs: set[str], basenames: dict[str, str]
                 ) -> list[tuple[str, str | None, int]]:
     """(text as written, resolved relative path or None, raw offset) for every path-shaped token.
 
-    Unresolved tokens are returned too: R7 binds a predicate to the nearest path NAMED before it,
-    and a path that does not exist still takes the binding (`elemental-earth.md:737` claims
-    `music/mix/master.py` is absent — the only reason the earlier `gate_loudness.py` in the same
-    row is not flagged).
+    A token whose leaf is a DIRECTORY resolves against `dirs` (R9): the pre-merge version
+    only knew files, so `music/packages/` could never resolve and every directory claim
+    was silently skipped. Unresolved tokens are returned too: R7 binds a predicate to the
+    nearest path NAMED before it on the same line, and a path that does not exist still takes
+    the binding (`elemental-earth.md:737` claims `music/mix/master.py` is absent — the only
+    reason the earlier `gate_loudness.py` in the same row is not flagged).
+
+    A backtick span holding a PLACEHOLDER (`<genre>`, `{slug}`, `*`) is a template, not a
+    concrete path: no token may be emitted from inside it. Measured 2026-10-16 (t_1081832d):
+    `activist.md:398` reads "when `music/lyrics/blueprints/<genre>.yaml` is absent" — a
+    generic statement about a per-genre file, not a claim that the directory is absent — and
+    the bare-root pass was extracting `music/lyrics/blueprints` out of the backtick and
+    resolving it against the real directory.
     """
+    placeholder_spans = [(m.start(), m.end()) for m in BACKTICK_RE.finditer(line)
+                         if PLACEHOLDER_RE.search(m.group(1))]
     found: list[tuple[str, str | None, int]] = []
     for pattern, group in ((BACKTICK_RE, 1), (BARE_ROOT_RE, 1)):
         for m in pattern.finditer(line):
             tok = clean_token(m.group(group))
             if not looks_like_token(tok):
                 continue
+            if any(s <= m.start(group) < e for s, e in placeholder_spans):
+                continue
             if tok in rels:
+                found.append((tok, tok, m.start(group)))
+            elif tok in dirs:
                 found.append((tok, tok, m.start(group)))
             elif "/" not in tok and tok in basenames:
                 found.append((tok, basenames[tok], m.start(group)))
@@ -324,7 +359,8 @@ def paragraphs(lines: list[str]):
         yield start, len(lines), "\n".join(block)
 
 
-def scan(text: str, rels: set[str], basenames: dict[str, str], trace: list[str] | None = None
+def scan(text: str, rels: set[str], dirs: set[str], basenames: dict[str, str],
+         trace: list[str] | None = None
          ) -> list[tuple[int, str, str, str, str]]:
     """Return findings: (line_no, token, resolved, matched predicate, scope reason).
 
@@ -362,7 +398,7 @@ def scan(text: str, rels: set[str], basenames: dict[str, str], trace: list[str] 
             flat, norm_index = strip_emphasis(line)
             if not flat:
                 continue
-            toks = path_tokens(line, rels, basenames)
+            toks = path_tokens(line, rels, dirs, basenames)
             if not toks:
                 continue
             raw_to_norm = {raw: n for n, raw in enumerate(norm_index)}
@@ -389,7 +425,15 @@ def scan(text: str, rels: set[str], basenames: dict[str, str], trace: list[str] 
                     if any(s <= m.start() <= e for s, e in quote_intervals):
                         dropped.append(f"{matched!r} quoted (R3)")
                         continue
-                    if REMOTE_OBJECT_RE.search(flat[m.end():m.end() + 60]):
+                    # R7/R8 — an object scoped to a revision is not a worktree claim. The scope is
+                    # the predicate's OWN clause (up to the next `,;`), not the rest of the line:
+                    # measured 2026-10-16 (t_1081832d), `chiptune-8bit.md:703` reads "absent from
+                    # local `main` ... present on `origin/main`", and a 60-char tail search dropped
+                    # it because `origin/main` happened to appear later in the same sentence.
+                    scope_tail = flat[m.end():]
+                    sep = re.search(r"[,;]", scope_tail)
+                    scope_tail = scope_tail[:sep.start()] if sep else scope_tail
+                    if REMOTE_OBJECT_RE.search(scope_tail):
                         dropped.append(f"{matched!r} remote object (R7)")
                         continue
                     survivors.append((m.start(), m.end(), matched))
@@ -470,17 +514,29 @@ def scan(text: str, rels: set[str], basenames: dict[str, str], trace: list[str] 
     return findings
 
 
-def index_worktree(repo: Path) -> tuple[set[str], dict[str, str]]:
-    """(relative file paths, basename -> relative path) for every file under repo."""
+def index_worktree(repo: Path) -> tuple[set[str], set[str], dict[str, str]]:
+    """(relative file paths, relative directory paths, basename -> relative path).
+
+    Directories are indexed alongside files (R9). The pre-merge version recorded only
+    `is_file()` paths, so a token whose leaf is a directory — `music/packages/` — could
+    never resolve and every directory claim was silently skipped: measured 2026-10-16
+    (card t_1081832d), `anime-ending.md:361/540/548` asserted two directories absent while
+    both held files, and both absence checks returned rc=0.
+    """
     rels: set[str] = set()
+    dirs: set[str] = set()
     basenames: dict[str, str] = {}
     for path in repo.rglob("*"):
-        if not path.is_file() or "/.git/" in str(path):
+        if "/.git/" in str(path):
             continue
         rel = path.relative_to(repo).as_posix()
-        rels.add(rel)
-        basenames.setdefault(path.name, rel)
-    return rels, basenames
+        if path.is_dir():
+            dirs.add(rel)
+            basenames.setdefault(path.name, rel)
+        elif path.is_file():
+            rels.add(rel)
+            basenames.setdefault(path.name, rel)
+    return rels, dirs, basenames
 
 
 def load_brief(path: Path, rev: str | None, repo: Path) -> str:
@@ -504,12 +560,15 @@ def selftest() -> int:
     try:
         (tmp / "music/scripts").mkdir(parents=True)
         (tmp / "music/scripts/suno-gen.py").write_text("# present now\n")
+        (tmp / "music/suno-gen.py").write_text("# present now\n")
         (tmp / "music/assets").mkdir(parents=True)
         (tmp / "music/assets/pack.py").write_text("# present now\n")
         (tmp / "music/rubrics").mkdir(parents=True)
         (tmp / "music/rubrics/measure.py").write_text("# present now\n")
+        (tmp / "music/lyrics/anime-ending").mkdir(parents=True)
+        (tmp / "music/packages").mkdir(parents=True)
         (tmp / "music/briefs").mkdir(parents=True, exist_ok=True)
-        rels, basenames = index_worktree(tmp)
+        rels, dirs, basenames = index_worktree(tmp)
 
         cases = [
             ("incident §8 sentence (must fire)", 1,
@@ -556,12 +615,20 @@ def selftest() -> int:
              "| B — Suno CDP | `music/scripts/suno-gen.py` | **NO — the file does not exist in this tree.** |\n"),
             ("genuinely absent path (must not fire)", 0,
              "`music/scripts/never-authored.py` does not exist anywhere on this machine.\n"),
+        ("R8 local-ref claim, ref is the checked-out branch (must fire)", 1,
+             "Rail B: `music/suno-gen.py` is absent from local `main` **and** from all of local\n"
+             "`main`'s history (`git log main -- music/suno-gen.py` → empty), present on `origin/main`\n"
+             "from `ba28f55`; merge-base `e278f61`.\n"),
+            ("R9 directory claim, the object IS the directory (must fire)", 1,
+             "`music/lyrics/anime-ending/` is absent (measured).\n"),
+            ("R9 directory claim, second live shape (must fire)", 1,
+             "Master / stems / package for this track: not built. `music/packages/` is absent. The\n"),
         ]
 
         for name, want, body in cases:
             case = tmp / "music/briefs/case.md"
             case.write_text(body)
-            hits = scan(case.read_text(), rels, basenames)
+            hits = scan(case.read_text(), rels, dirs, basenames)
             got = len(hits)
             mark = "ok" if got == want else "BROKEN"
             if got != want:
@@ -604,13 +671,13 @@ def main(argv: list[str] | None = None) -> int:
         print("check_brief_absence: no briefs found", file=sys.stderr)
         return 2
 
-    rels, basenames = index_worktree(repo)
+    rels, dirs, basenames = index_worktree(repo)
     offenders = []
     markers = 0
     for brief in briefs:
         text = load_brief(brief, args.rev, repo)
         trace: list[str] | None = [] if args.explain else None
-        hits = scan(text, rels, basenames, trace)
+        hits = scan(text, rels, dirs, basenames, trace)
         markers += len(PREDICATE_RES[0].findall(text))
         if trace:
             print(f"# {brief.relative_to(repo).as_posix()}")
