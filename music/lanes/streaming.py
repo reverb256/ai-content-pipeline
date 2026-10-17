@@ -11,7 +11,15 @@ logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger("streaming_lane")
 
 # CONSTANTS
-REPO_ROOT = Path("/home/j_kro/Projects/ai-content-pipeline")
+# Resolve the repo from THIS module's location (music/lanes/streaming.py), never
+# from an absolute path that exists on one host. Card t_23641f1f measured that a
+# hardcoded zephyr path ("/home/j_kro/Projects/ai-content-pipeline") is a symlink to
+# a stale clone with no music/ lane on nexus, so StreamingPackage.__init__ did
+# `mkdir(parents=True)` and grew a phantom package tree OUTSIDE the repo -- invisible
+# to git, to check_publish_lane_tracked.py, and to check_media_corpus_tracked.py.
+# parents[2] is the repo root: lanes -> music -> <repo>. MUSIC_REPO_ROOT overrides
+# for tests; otherwise the module anchors itself to its own checkout.
+REPO_ROOT = Path(os.environ.get("MUSIC_REPO_ROOT", Path(__file__).resolve().parents[2]))
 MUSIC_ROOT = REPO_ROOT / "music"
 PACKAGES_DIR = MUSIC_ROOT / "packages" / "streaming"
 

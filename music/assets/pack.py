@@ -345,10 +345,31 @@ def hpss(x: np.ndarray, sr: int) -> Tuple[np.ndarray, np.ndarray]:
     Z = sps.stft(x, sr, nperseg=nperseg, noverlap=noverlap)[2]
     mag = np.abs(Z)
     # median filters along time (percussive) and freq (harmonic)
-    time_kernel = max(3, int(round(0.8 * sr / hop)))  # ~0.8s window
-    freq_kernel = max(3, int(25))  # ~25 freq bins
-    mag_t = np.apply_along_axis(lambda row: sps.medfilt(row, time_kernel), 1, mag)
-    mag_f = np.apply_along_axis(lambda col: sps.medfilt(col, freq_kernel), 0, mag)
+    #
+    # The time kernel is ~0.8 s of audio, so it is derived from the sample rate
+    # (sr / hop samples per second). `int(round(...))` lands on an EVEN value at
+    # 8000 / 22050 / 24000 / 32000 / 96000 Hz (measured 2026-10-16, numpy 2.5.3 /
+    # scipy), and `scipy.signal.medfilt` REQUIRES an odd kernel — it raises
+    # `ValueError: Each element of kernel_size should be odd.` at the first row.
+    # The kernel is forced odd by construction: the `| 1` is not decoration, it is
+    # the fix (card t_1d4fd01e). The 0.8 s window is preserved; only the parity is.
+    time_kernel = max(3, int(round(0.8 * sr / hop))) | 1  # ~0.8s window, ODD
+    freq_kernel = max(3, int(25)) | 1  # ~25 freq bins, ODD
+    try:
+        mag_t = np.apply_along_axis(lambda row: sps.medfilt(row, time_kernel), 1, mag)
+        mag_f = np.apply_along_axis(lambda col: sps.medfilt(col, freq_kernel), 0, mag)
+    except ValueError as exc:
+        # The kernel is odd by construction (above), so this branch should not
+        # fire — but if it ever does, the stem stage refuses WITH A MESSAGE THAT
+        # NAMES THE RATE AND THE KERNEL instead of dying silently mid-pipeline
+        # (card t_1d4fd01e, acceptance 2). The message is the whole point: a
+        # caller debugging a pack needs `sr` and the two kernel sizes, not a
+        # bare traceback from the first row of the STFT.
+        raise ValueError(
+            f"hpss() stem stage refused at {sr} Hz: time_kernel={time_kernel} "
+            f"(odd={time_kernel % 2 == 1}), freq_kernel={freq_kernel} "
+            f"(odd={freq_kernel % 2 == 1}) — {exc}"
+        ) from exc
     H = mag_f * np.exp(1j * np.angle(Z))
     P = mag_t * np.exp(1j * np.angle(Z))
     _, x_h = sps.istft(H, sr, nperseg=nperseg, noverlap=noverlap)

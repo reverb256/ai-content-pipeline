@@ -70,7 +70,7 @@ pass). Use the absolute path.
 | Lyric sheet | `music/lyrics/anime-opening/becoming/lyrics.suno.txt` — **DRAFT, UNCLAIMED** (2 063 B). Siblings in the same track dir: `manifest.json` (2 424 B, `authorship.status: incomplete`), `title.txt` (9 B, `Becoming`). `gate_lyrics_original` FAILs on 5 findings — the claim is j_kro's, see §10.3 |
 | Registry note | "Anison idiom: 130-180 BPM, IV-V-iii-vi royal road, FINAL CHORUS JUMPS UP ONE KEY (the defining gesture), 90-second TV-edit density, Japanese vocals in Japanese script. Required by the Virtual Reflections album (tracks 7-8). A generation without the key-changed final chorus is OUT of genre - reject it." |
 
-Registry `defaults:` that bind this track (`music/genres.yaml` lines 20–25, the block the key
+Registry `defaults:` that bind this track (`music/genres.yaml` lines 20–24, the block the key
 `defaults:` opens; the brief stage cited lines 19–25 and line 19 is blank —
 `check_brief_line_refs` caught it in this pass):
 export `studio`, stems `true`, lyrics `human-original`, release_private `true`,
@@ -388,7 +388,7 @@ state. Measured, not asserted:
 | Artifact identity | `sha256sum`; `git show ade6e87:…`; `git status --porcelain` | 268 lines / `13120 B`, `sha256 539fae3f…`, disk == `HEAD` == `ade6e87`, tree clean |
 | Registry 14 genres / 10 lanes | `/usr/bin/python3 music/registry.py validate` | OK — identical genre and lane lists, `period 2026-10, standard 0/60`. **t_58072b6c: the transcript has since gained `, 1 stage gate rule(s)` and the `stage gate visual:` line — §1 now carries the live output** |
 | Genre row: family `anisong`, lanes `[streaming, sync, direct-license, youtube-gaming]`, cadence `1/wk`, shape `single-4min` | `music/genres.yaml` read live | exact match, including the quoted registry note character for character (re-checked character for character in this pass — `music/genres.yaml` lines 139–146) |
-| Registry `defaults:` | `music/genres.yaml` lines 20–25 | `export: studio`, `stems: true`, `lyrics: human-original`, `release_private: true`, `gate_profile: reviewer-deepseek` — match. **t_58072b6c: §1 cited 19–25 and line 19 is blank; `check_brief_line_refs` caught it and §1 now cites 20–25** |
+| Registry `defaults:` | `music/genres.yaml` lines 20–24 | `export: studio`, `stems: true`, `lyrics: human-original`, `release_private: true`, `gate_profile: reviewer-deepseek` — match. **t_58072b6c: §1 cited 19–25 and line 19 is blank; `check_brief_line_refs` caught it and §1 now cites 20–24** |
 | Template and visual resolve | `stat` | `music/prompts/anime-opening.md` 6578 B, `music/visuals/anime-opening.md` 2111 B — both present, sizes re-measured identical |
 | Style block is the first `text` fence pair | fence scan | 2 ```` ```text ```` blocks in the template; the first is the style field. **t_58072b6c: re-measured 754 bytes / 752 characters (one 3-byte em dash), and the template header's own `752/1000 chars` claim matches — `check_prompt_style_counts` PASSes** |
 | Blueprint absent | `ls music/lyrics/blueprints/` | `activist.yaml`, `chill-lounge.yaml`, `trance.yaml` only — match **AT 13:36**. **t_58072b6c: FALSE NOW — the genre's own `anime-opening.yaml` (5 765 B) landed at 14:31 and the directory holds 7 blueprints; §1 and §7.4 corrected** |

@@ -87,6 +87,16 @@ Rules (kept deliberately narrow, so the check is signal and not noise)
    rev` bucket. The anchor usually sits on the prose above the fence, not on the quoting line,
    so the same-line test of rule 3 cannot see it. A fence whose introduction carries no anchor
    is still measured line by line — that half is asserted by `--selftest`.
+6. Rule 5 at BLOCK GRAMMAR level (card t_2f9b441c): the anchor is not always in the
+   introducing paragraph. A fence whose BODY carries a checker result line — `PASS check_<name>`,
+   `FAIL check_<name>`, `SELFTEST PASS check_<name>`, or a `# rc=N` exit annotation — is a
+   TRANSCRIPT of a past run, and the indented lines that follow a result line are that checker's
+   OWN PRINTED FINDINGS, not claims the brief makes about the referent today. Citations on those
+   lines are SKIPPED under `quoted at a rev`. The block boundary is the checker-result line plus
+   its continuation: a `$ ` command or a `# rc=N` line ends the block (a new run starts), and a
+   bare `PASS`/`FAIL` without a `check_` name is NOT a result (it is a code sample, still
+   measured). A fence with neither an anchored introduction nor a checker result in its body is
+   measured line by line — that half is asserted by `--selftest`.
 
 SIBLING CHECKS (deliberately not duplicated here)
 ------------------------------------------------
@@ -138,6 +148,13 @@ ANCHORED = re.compile(
 # run. The `path:LINE` inside it is what the run PRINTED, not a pointer a reader is meant to open
 # today — and the anchor sits on the prose above the fence, where rule 3's same-line test cannot
 # see it. Deliberately narrow: the block is skipped only when its introduction carries an anchor.
+# Rule 6, card t_2f9b441c: the anchor is not always in the introduction. A fence whose BODY
+# carries a checker result line is a transcript too, and the indented lines that follow a result
+# line are that checker's own printed findings. A bare `PASS`/`FAIL` with no `check_` name is a
+# code sample, not a result — it stays measured (asserted by `--selftest`).
+_RESULT = re.compile(r"^\s*(?:SELFTEST\s+)?(?:PASS|FAIL)\s+check_\w")
+_CMD = re.compile(r"^\s*\$ ")
+_RC = re.compile(r"^\s*#\s*rc=\d+")
 _FENCE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
 _FENCE_INTRO_GAP = 2        # blank lines tolerated between the introducing prose and the fence
 _FENCE_INTRO_LINES = 6      # lines of introducing prose collected above the fence
@@ -293,6 +310,7 @@ def check_brief(tree: Tree, rel: str) -> tuple[list[str], int, int, list[str]]:
     in_fence = False
     fence_open: tuple[str, int] | None = None    # (marker char, run length) of the open fence
     quoted_at = 0            # 1-based line of the anchored prose that introduces the open fence
+    in_result = False        # inside a checker's printed findings (rule 6)
 
     def src(path: str) -> list[str]:
         if path not in cache:
@@ -306,18 +324,33 @@ def check_brief(tree: Tree, rel: str) -> tuple[list[str], int, int, list[str]]:
                 in_fence, fence_open = True, mark
                 intro_ln, prose = fence_intro(raw, lineno - 1)
                 quoted_at = intro_ln if prose and ANCHORED.search(prose) else 0
+                in_result = False
                 continue
             if fence_open and mark[0] == fence_open[0] and mark[1] >= fence_open[1]:
                 in_fence, fence_open, quoted_at = False, None, 0
+                in_result = False
                 continue
             # a shorter or different marker inside the fence is markdown CONTENT — keep reading
+        if in_fence and (_CMD.match(line) or _RC.match(line)):
+            in_result = False
+            continue
+        if in_fence and _RESULT.match(line):
+            in_result = True
+            # do NOT `continue`: a result line can itself carry a `path:LINE` finding
+            # (`FAIL check_brief_line_refs … music/registry.yaml:2`), and that citation is
+            # the checker's own output too — it falls through to the skip below.
         anchored = bool(ANCHORED.search(line))
         for tok, a, b, syntax in citations(line):
-            if anchored or quoted_at:
+            if anchored or quoted_at or in_result:
                 skipped += 1
                 if anchored:
                     notes.append(f"  {rel}:{lineno}  skipped `{syntax}` — anchored to a revision "
                                  f"or a clock time (a historical fact, not a claim about now)")
+                elif in_result:
+                    notes.append(f"  {rel}:{lineno}  skipped `{syntax}` — quoted at a rev: inside "
+                                 f"a checker's printed findings in a transcript fence (rule 6, "
+                                 f"card t_2f9b441c), not a claim about the file a reader opens "
+                                 f"today")
                 else:
                     notes.append(f"  {rel}:{lineno}  skipped `{syntax}` — quoted at a rev: inside "
                                  f"a fence whose introducing prose (line {quoted_at}) is anchored "
@@ -385,6 +418,35 @@ def selftest() -> int:
                   "```\n"
                   "the checker said music/registry.yaml:2 was empty\n"
                   "```\n")
+    # Card t_2f9b441c: the anchor is not always in the introduction. A fence whose BODY carries a
+    # checker result line is a transcript too — the shape of `music/briefs/jungle-dnb.md` §18,
+    # which quotes `check_code_census.py --rev HEAD` printed findings (the `FAIL check_code_census`
+    # line, its indented `path:LINE` findings, and the `# rc=1` annotation) under an intro that
+    # names no revision. The quoted `music/tests/test_planner.py:62` targets the BLANK line 2 of
+    # the referent, so pre-fix it was FAILed as a claim of the quoting brief's own. Must be SKIPPED.
+    grammar = ("A census pass; the fence's introduction names no revision.\n"
+               "\n"
+               "```text\n"
+               "$ /usr/bin/python3 music/scripts/check_code_census.py --rev HEAD\n"
+               "FAIL check_code_census: 1 stale census claim(s) in revision HEAD\n"
+               "  music/tests/test_planner.py:62  claimed \"3 of 14 genres\"  measured 7\n"
+               "# rc=1\n"
+               "```\n")
+    # The same blank line quoted inside a fence with NO checker result in its body is still
+    # measured: a bare `PASS`/`FAIL` with no `check_` name is a code sample, not a transcript.
+    code_sample = ("A fence that prints a bare result word, no checker name.\n"
+                   "\n"
+                   "```\n"
+                   "PASS: music/registry.yaml:2 is the block to read\n"
+                   "```\n")
+
+    # The same blank line quoted inside a fence with NO checker result in its body is still
+    # measured: a bare `PASS`/`FAIL` with no `check_` name is a code sample, not a transcript.
+    code_sample = ("A fence that prints a bare result word, no checker name.\\n"
+                   "\\n"
+                   "```\\n"
+                   "PASS: music/registry.yaml:2 is the block to read\\n"
+                   "```\\n")
 
     with tempfile.TemporaryDirectory() as td:
         repo = Path(td)
@@ -409,6 +471,13 @@ def selftest() -> int:
         rc_quote, out_quote = brief(quoted)
         rc_bare, out_bare = brief(bare)
         rc_unanchored, out_unanchored = brief(unanchored)
+        # Card t_2f9b441c: a fence whose BODY carries a checker result line is a transcript too,
+        # even when its introduction names no revision. The quoted citation targets the BLANK
+        # line 2 of the referent, so pre-fix it was FAILed as a claim of the quoting brief.
+        rc_grammar, out_grammar = brief(grammar)
+        # The same blank line quoted inside a fence with NO checker result in its body is still
+        # measured: a bare `PASS`/`FAIL` with no `check_` name is a code sample, not a transcript.
+        rc_code, out_code = brief(code_sample)
 
     caught = [ln.strip() for ln in out_bad.splitlines() if "BLANK OPEN" in ln]
     skipped_amb = "ambiguous referent" in out_amb
@@ -418,6 +487,12 @@ def selftest() -> int:
     caught_bare = [ln.strip() for ln in out_bare.splitlines() if "BLANK OPEN" in ln]
     caught_unanchored = [ln.strip() for ln in out_unanchored.splitlines() if "BLANK OPEN" in ln]
     quote_skipped = "quoted at a rev x1" in out_quote and "BLANK OPEN" not in out_quote
+    # Card t_2f9b441c, both halves: the grammar fence's quoted citation is SKIPPED and counted in
+    # its own bucket, while the same blank line quoted inside a fence with NO checker result in
+    # its body is still measured and still FAILs.
+    caught_grammar = [ln.strip() for ln in out_grammar.splitlines() if "BLANK OPEN" in ln]
+    caught_code = [ln.strip() for ln in out_code.splitlines() if "BLANK OPEN" in ln]
+    grammar_skipped = "quoted at a rev x1" in out_grammar and "BLANK OPEN" not in out_grammar
     # Regression, card t_e86c2110 (2026-10-16): the link-gap pattern used to nest a repeat inside a
     # repeat, so a gap that fails to match backtracked exponentially. `music/briefs/elemental-water.md`
     # aligns a trailing comment 23 spaces out inside a fenced transcript, and that made the whole
@@ -436,6 +511,11 @@ def selftest() -> int:
           and rc_quote == 0 and quote_skipped
           and rc_bare == 1 and len(caught_bare) == 1
           and rc_unanchored == 1 and len(caught_unanchored) == 1
+          # Card t_2f9b441c: a fence whose body carries a checker result line is a transcript too,
+          # even when its intro names no revision; a bare `PASS`/`FAIL` with no `check_` name is a
+          # code sample and is still measured.
+          and rc_grammar == 0 and grammar_skipped
+          and rc_code == 1 and len(caught_code) == 1
           and gap_linear)
     print(f"SELFTEST {'PASS' if ok else 'FAIL'} check_brief_line_refs: "
           f"correct-range rc={rc_good} (want 0), off-by-one rc={rc_bad} (want 1), "
@@ -445,6 +525,9 @@ def selftest() -> int:
     print(f"  quoted-at-a-rev (card t_8d6c40ac): fence rc={rc_quote} (want 0, skipped: "
           f"{quote_skipped}), bare same-line rc={rc_bare} (want 1, caught={len(caught_bare)}), "
           f"unanchored fence rc={rc_unanchored} (want 1, caught={len(caught_unanchored)})")
+    print(f"  quoted-at-a-rev grammar (card t_2f9b441c): grammar fence rc={rc_grammar} (want 0, "
+          f"skipped: {grammar_skipped}), bare-result code sample rc={rc_code} (want 1, "
+          f"caught={len(caught_code)})")
     for ln in caught:
         print(f"  (caught) {ln}")
     for ln in caught_bare:

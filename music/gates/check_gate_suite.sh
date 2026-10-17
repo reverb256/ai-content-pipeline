@@ -975,7 +975,14 @@ pass "pack key: no fabricated key below the analyser's window, and --key still w
   "$PY" "$REPO/music/tests/test_pack_key.py"
 
 # ------------------------------------------------------------------
-# 19. the fixture builders write nothing into the repo (card t_7ab98781)
+# 19. the hpss median-filter kernel is odd at all exposed rates (card t_1d4fd01e)
+# ------------------------------------------------------------------
+say "the hpss stem stage succeeds at all sample rates (music/tests/test_pack_hpss.py)"
+pass "hpss kernel parity and 22050 Hz pack acceptance (t_1d4fd01e)" \
+  "$PY" "$REPO/music/tests/test_pack_hpss.py"
+
+# ------------------------------------------------------------------
+# 20. the fixture builders write nothing into the repo (card t_7ab98781)
 # ------------------------------------------------------------------
 # `music/gates/_visual_fixtures.py` wrote its ffmpeg concat demuxer list to the
 # BARE RELATIVE name `concat_list.txt`. This suite cd's to the repo root before
@@ -1009,6 +1016,36 @@ pass "scratch: two runs never share one fixture directory (private default, refu
   "$PY" "$REPO/music/tests/test_gate_scratch_ownership.py"
 
 # ------------------------------------------------------------------
+# ------------------------------------------------------------------
+# 21. the credential verifier's own behaviour (card t_f6541f69)
+# ------------------------------------------------------------------
+# `music/scripts/verify-credentials.sh` landed with a resolver that called
+# `secretspec get "$key" --project nixos-cluster-secrets --profile production`.
+# On the installed secretspec 0.21.0 that is an invalid invocation
+# (`error: unexpected argument '--project' found`), so the resolver returned
+# empty for EVERY key and every row reported "not found in secretspec" -- the
+# wrong cause, and PASS unreachable. A shell script with no test can ship in
+# that state and still look reasonable, which is exactly what happened: the
+# defect was found by hand, by running the delivered script against the real
+# CLI.
+#
+# The positive control already existed (t_7a528617's `positive_control.sh`,
+# run `positive-control.log`) and proved the PASS branches fire against stub
+# secretspec + stub curl in a fake HOME. It was NOT landed in the repo because
+# this suite was being edited concurrently and a test with no scheduled home is
+# inert -- the same reason four cards' checks wired into ~/bin/verify-fleet.sh
+# and never ran. This file ports that harness to the lane's test convention
+# (python, standalone, no pytest) and lands it HERE, so it runs from the daily
+# matrix and therefore cannot rot.
+#
+# The test is hermetic (stubs on PATH, fake HOME, no network) and carries its
+# own NEGATIVE CONTROL: a broken copy of the verifier, with --project re-added
+# or -f/--file dropped, must be RED here. That is the failure -> test rule for
+# the exact defect that produced this card.
+say "the credential verifier's behaviour (music/tests/test_verify_credentials.py)"
+pass "verify-credentials: every credential row fires, the resolver is secretspec 0.21.0-compatible, no value leaks, and a broken resolver is RED (t_f6541f69)" \
+  "$PY" "$REPO/music/tests/test_verify_credentials.py"
+
 rm -f /tmp/gate_out.$$
 if [ "$fails" -eq 0 ]; then
   echo
