@@ -63,7 +63,7 @@ and every gate that imports `music/lyrics/lyrics.py` fail on it (measured in §8
 | Lyric blueprint | none — and none is needed (§4) |
 | Registry note | **absent** — this block has no `notes:` key, unlike chill-lounge/trance/anime-* |
 
-Registry `defaults:` that bind every track (`music/genres.yaml` lines 20–25):
+Registry `defaults:` that bind every track (`music/genres.yaml` lines 28–33):
 export `studio`, stems `true`, lyrics `human-original`, release_private `true`,
 gate_profile `reviewer-deepseek`.
 
@@ -623,7 +623,7 @@ ruling that made this card the owner of the genre.
 
 ## 11. Provenance
 
-- Registry: `music/genres.yaml` (lines 20–25 defaults, 119–125 genre block — re-measured §14),
+- Registry: `music/genres.yaml` (lines 28–33 defaults, 119–125 genre block — re-measured §14),
   `music/lanes.yaml`, `music/autonomy.yaml` — validated live
   (`registry OK: 14 genres, 10 lanes, 1 stage gate rule(s)`)
 - Rubric: `music/rubrics/gamer.json` (read in full)

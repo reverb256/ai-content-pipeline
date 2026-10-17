@@ -448,7 +448,7 @@ and will send a human looking for a check digit that the standard does not defin
 
 **Assets: no audio yet, and the first plan now exists.** No `music/lyrics/elemental-air/`
 directory, no master, no stems, no render. The generation rail has planned this track:
-`/var/lib/music-plans/elemental-air-above-the-weather.json` (1582 B, re-planned 2026-10-16 16:57 CDT)
+`/var/lib/music-plans/elemental-air-above-the-weather.json` (re-planned 2026-10-16 16:57 CDT)
 carries `bpm: 92`, `key: "C major"`, `duration: 334`, `instrumental: true` and the template's six
 section tags in the lyrics field. Beside it sits
 `elemental-air-above-the-weather.rendered` (0 B, 15:00 CDT) and **no audio file** — the render
@@ -856,3 +856,20 @@ Regenerate the block after any rubric edit — one command, no hand-edit:
   }
 }
 ```
+
+## 18. Loop-tiling prose correction (card `t_00d3dbbd`, 2026-10-16)
+
+`music/briefs/elemental-fire.md` §16 locked the loop-tiling contract and the per-genre values
+into `music/genres.yaml` (`loop_bars`), `music/scripts/check_loop_tiling.py` (the enforcing
+check) and that brief's own prose. This pass corrects the two sites in this brief that still
+asserted the old lengths.
+
+| Site | Was | Is |
+|---|---|---|
+| §4, line 180-181 | "the 600 s video is therefore exactly 230.00 bars — the loop grid and the video length are in register at this tempo" | 230 bars is the **shape** and stays; the **delivered loop** is **46 bars = 120.000 s (5 tiles)**, per the contract of `t_b75ccb4a` |
+| §5, line 548-552 | O3 names the 4-bar defect as "a delivered loop of 4 bars cannot tile a 600 s video at all" | unchanged — it is the incident this card's family fixes. The render must still be longer than the loop: the engine emits 1.5–6.2 s of trailing silence inside its requested window, so a loop as long as the render is refused (measured, `t_b75ccb4a`) |
+
+**Superseded revision of this file:** `sha256
+d275d9ce4c6691508aded2a920c3575a1a5dd8b034055d6b650f68ee5d1c6a1c` (868 lines /
+55304 B) — the content this pass started from. The diff is this §18 and the header supersession
+line above.

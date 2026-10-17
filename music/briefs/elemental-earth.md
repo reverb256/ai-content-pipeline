@@ -305,7 +305,7 @@ Two constraints pinch from opposite sides:
   supplied (`planner.py:98-101`: "t_909069f0 measured the consequence — elemental-earth's
   documented entry is 220 whole bars at 88 BPM = 600.0 s, the planner refused it"). Live read of
   the guard rails — card `t_ae1d9243`, 2026-10-16:
-  `MIN_DURATION_S = 16` (`music/planner/planner.py:151`), `MAX_DURATION_S = 600` (`:152`).
+  `MIN_DURATION_S = 16` (`music/planner/planner.py:147`), `MAX_DURATION_S = 600` (`:148`).
 
 So the planner queue **can** express this genre's own video shape now, and it already does: the
 live entry for this genre is `elemental-earth-chamber-loop`, `instrumental`, `duration 600`
@@ -566,8 +566,8 @@ draft-mode scaffold).
 
 **The instrumental half of this section is closed.** The brief stage measured
 `planner.py --lyrics-mode choices=["draft","ai"]` with no `--instrumental`, so an instrumental
-genre "cannot enter this queue either". Live now: `planner.py:905`
-`--lyrics-mode choices=["draft", "ai", "instrumental"], default="draft"`, and `planner.py:215`
+genre "cannot enter this queue either". Live now: `planner.py:1331`
+`--lyrics-mode choices=["draft", "ai", "instrumental"], default="draft"`, and `planner.py:410`
 `is_instrumental_template(genre)` derives the flag from the template's own "Leave the **lyrics box
 empty**" sentence. The consequence is visible in the queue above — the earth entry carries
 `"instrumental": true` and its plan carries `"lyrics_mode": "instrumental"` (§8).
@@ -834,7 +834,7 @@ card**: the two live follow-ups that touch the genre already exist (§11).
 - **Repo state at this pass:** HEAD `c296db6` (2026-10-16 15:56:54 CDT), divergence
   **72 ahead / 0 behind** `origin/main` (`ba28f55`). The 72-commit publish gap is the lane's
   standing pattern (local `main` only). Every path the brief stage recorded as missing —
-  `music/suno-gen.py` (50030 B), `music/sunolocal/`, `music/assets/pack.py`,
+  `music/suno-gen.py` (42 652 B), `music/sunolocal/`, `music/assets/pack.py`,
   `packages/welcome-asset-pack` — is now in the worktree.
 - **The dangling-reference bullet is closed.** `brain/playbooks/music-lane-architecture.md`
   and `brain/research/music-monetization-2026.md` (11067 B) both exist in this worktree
@@ -861,7 +861,7 @@ included), 6 tag-sheet sections in the order quoted, and the instrumental marker
 genres among them (`video_shape` re-read for all four elementals). Visual style 1088 B. Bar math
 exact: 88 BPM → bar 2.727273 s, 420 s = 154.000 bars, 480 s = 176.000, 600 s = 220.000, 4 bars =
 10.909 s, 5 bars = 13.636 s. `planner.py:82-83` `MIN_DURATION_S = 30` / `MAX_DURATION_S = 420` — **anchored** (§14 is that pass's record);
-`planner.py:528` `--lyrics-mode choices=["draft","ai"]`, no `--instrumental`. `packages/welcome-asset-pack`
+`planner.py:1331` `--lyrics-mode choices=["draft","ai"]`, no `--instrumental`. `packages/welcome-asset-pack`
 extracted from `origin/main` (`83cd0ce`) → `gate_sync_ready --lane game-assets` **FAIL, the same 12
 findings verbatim**; 5 loops / 12 stems / 8 one-shots / 6 SFX; `gate_loop_points` on the 1.3 s loop
 **FAIL** (span), on the 51.605 s stem **PASS, curvature 0.24×, RMS 0.02570** — byte-for-byte the
