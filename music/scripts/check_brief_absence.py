@@ -36,7 +36,7 @@ PROCESS LESSON (the root cause of the duplication)
 The second check was written without listing the directory first. Before adding a check,
 run `ls music/scripts/` and read the names. Both files were `check_brief_absence*`.
 
-WHAT COUNTS AS A CLAIM — seven rules, each measured against this lane's briefs
+WHAT COUNTS AS A CLAIM — nine rules, each measured against this lane's briefs
 ------------------------------------------------------------------------------
 R1. PREDICATE. The union of the two checks' markers, matched after markdown emphasis is
     stripped (so `is **not in this checkout**` — the incident's own markup — matches):
@@ -68,32 +68,36 @@ R6. NOT A HISTORY PARAGRAPH (paragraph-level, not line-level). A paragraph carry
     sentence it hit). A card id is deliberately NOT a stamp — measured 2026-10-16: treating it
     as one dropped two real claims (see the comment on HISTORY_PHRASES).
 R7. BINDING — the predicate must govern the path. A predicate binds to the nearest path NAMED
-    BEFORE it on the same line. That is how these sentences actually read: "`suno-gen.py` is
-    **not in this checkout**", "… but that file is not in this checkout" (owner: the path named
-    just before it). Paths that do NOT exist still take the binding, so a long row cannot lend
-    its absence claim to a path it merely cites earlier.
-    Measured false positives this rule kills:
-      * `elemental-water.md:779` — "`butler` and `~/.hermes/vault/itch_io_key` are still absent
-        (§10); `music/assets/pack.py` exists". The absence governs the vault key; pack.py is
-        named after it and is asserted present.
-      * `jungle-dnb.md:765` — "one with it `absent`, both measured with
-        `music/rubrics/measure.py`". `absent` governs `style_weight`.
-      * `elemental-earth.md:737` — a stage-plan row that claims `music/mix/master.py` (which
-        really is absent, measured: no `music/mix/` dir) is absent, while citing
-        `music/gates/gate_loudness.py` earlier in the same row. The binding is master.py, so
-        the existing gate file is not flagged.
-      * `jungle-dnb.md:903` — a handoff row claiming the playbook does not exist, which also
-        names `lanes.yaml` / `autonomy.yaml` as files that CITE it. Those two exist and must
-        not be flagged; only the playbook is.
-    It must KEEP the genuine claims, including table rows where the path and its verdict sit in
-    different cells: `jungle-dnb.md:359` before its correction was
-    "| B — Suno CDP … | `music/suno-gen.py` | **NO — the file does not exist in this tree.**".
-    A row that also asserts the token's path is PRESENT/exists is a correction record and is
-    skipped.
-    KNOWN LIMIT (measured, not hidden): binding is same-line, and only backwards. A claim whose
-    path and predicate are split across a wrapped line break, or phrased forwards
-    ("absent from this checkout: `X`"), is NOT caught. No live brief uses either shape
-    (14 briefs, 41 absence predicate(s), measured 2026-10-16).
+   BEFORE it on the same line. That is how these sentences actually read: "`suno-gen.py` is
+   **not in this checkout**", "… but that file is not in this checkout" (owner: the path named
+   just before it). Paths that do NOT exist still take the binding, so a long row cannot lend
+   its absence claim to a path it merely cites earlier.
+   Measured false positives this rule kills:
+     * `elemental-water.md:779` — "`butler` and `~/.hermes/vault/itch_io_key` are still absent
+       (§10); `music/assets/pack.py` exists". The absence governs the vault key; pack.py is
+       named after it and is asserted present.
+     * `jungle-dnb.md:765` — "one with it `absent`, both measured with
+       `music/rubrics/measure.py`". `absent` governs `style_weight`.
+     * `elemental-earth.md:737` — a stage-plan row that claims `music/mix/master.py` (which
+       really is absent, measured: no `music/mix/` dir) is absent, while citing
+       `music/gates/gate_loudness.py` earlier in the same row. The binding is master.py, so
+       the existing gate file is not flagged.
+     * `jungle-dnb.md:903` — a handoff row claiming the playbook does not exist, which also
+       names `lanes.yaml` / `autonomy.yaml` as files that CITE it. Those two exist and must
+       not be flagged; only the playbook is.
+   It must KEEP the genuine claims, including table rows where the path and its verdict sit in
+   different cells: `jungle-dnb.md:359` before its correction was
+   "| B — Suno CDP … | `music/suno-gen.py` | **NO — the file does not exist in this tree.**".
+   A row that also asserts the token's path is PRESENT/exists is a correction record and is
+   skipped.
+   The remote-object test (the line below) is CLAUSE-SCOPED, not line-scoped: measured
+   2026-10-16 (t_1081832d), `chiptune-8bit.md:703` reads "absent from local `main` ...
+   present on `origin/main`", and a 60-char tail search dropped it because `origin/main`
+   appeared later in the same sentence. The scope now runs to the next `,;`.
+   KNOWN LIMIT (measured, not hidden): binding is same-line, and only backwards. A claim whose
+   path and predicate are split across a wrapped line break, or phrased forwards
+   ("absent from this checkout: `X`"), is NOT caught. No live brief uses either shape
+   (14 briefs, 41 absence predicate(s), measured 2026-10-16).
 
 R8. A LOCAL-REF claim ("absent from local `main`", "not in this branch") is a worktree
    claim, not a revision one. Measured 2026-10-16 (card t_1081832d): the pre-merge check
