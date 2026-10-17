@@ -20,9 +20,20 @@ Three smaller shapes of the same defect were measured in the same corpus:
     120000, 82 B) whose target was a pruned scratch dir under another profile's
     cache. `git cat-file -s` on it returns the LENGTH OF THE TARGET STRING, 82 -
     a package that ships a link ships no bytes.
+  * `campaigns/virtual-reflections/artwork/` (29 files, 22 MB, mtimes
+    2026-10-16 14:07-14:49) was untracked in ONE checkout (zephyr) and in NO ref
+    at all: `git log --all -- campaigns/virtual-reflections/artwork` was EMPTY, so
+    a `git clean -xdf` there deletes the only copy. Nothing named those files - the
+    campaign record (MANIFEST.json) names audio/master paths only - so R1 could not
+    see them. They are the deliverable of two `done` cards (t_de485c84 draft
+    covers, t_96c2f8ba manifest key) that nothing in the repo held.
   * the demo in `music/lanes/streaming.py` packed its throwaway track INTO the
     repo's `music/packages/streaming/`, so a verification run leaves a package
     dir behind. That is how the fixture above was made.
+  * `music/lanes/streaming.py` hardcoded REPO_ROOT to zephyr's checkout path, which
+    is a symlink to a stale clone with no music/ lane on nexus: the first real
+    package grew a tree OUTSIDE the repo, invisible to git and to every tracked-path
+    check (card t_23641f1f).
 
 RULES - each one is the shape of one of those findings
   R1 named but not tracked   an exported track's `audio_file`, `master_file` and
@@ -41,6 +52,19 @@ RULES - each one is the shape of one of those findings
                              clean` away from gone; the report names the refs
                              that DO carry it, so the fix is a commit, not a
                              re-extract.
+  R5 the lane root is anchored the streaming lane's REPO_ROOT must be anchored to
+                             this module or an env override, never a hardcoded
+                             literal that points at another host's checkout
+                             (card t_23641f1f).
+  R6 a campaign's artwork must be tracked    every media file under a campaign's
+                             `artwork/` must be in the tree at the checked revision
+                             as a regular non-empty blob, and (live checks only)
+                             every artwork file present in the working tree must be
+                             tracked. The campaign record does not name artwork -
+                             `MANIFEST.json` names audio/master paths only - so R1
+                             cannot see it, and the defect went unnoticed across two
+                             `done` cards (t_de485c84, t_96c2f8ba) whose only copies
+                             lived in one checkout (card t_2670f9a8).
 
 Usage:
   /usr/bin/python3 music/scripts/check_media_corpus_tracked.py [--repo PATH] [--rev REV]
@@ -55,6 +79,8 @@ t_5adf0c2a (the spec-2 sweep that found the stray `t_verify_streaming` package).
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
 import json
 import posixpath
 import re
@@ -121,6 +147,63 @@ def named_files(data: dict, campaign: str) -> list[tuple[str, str]]:
 def inside(rel: str, root: str) -> bool:
     """True when `rel` stays under `root` (a manifest may not name ../../etc)."""
     return posixpath.normpath(rel).startswith(root.rstrip("/") + "/")
+
+
+# ---- R5: the streaming lane's package root must be anchored to the repo ------
+# Card t_23641f1f: `music/lanes/streaming.py` hardcoded
+# REPO_ROOT = Path("/home/j_kro/Projects/ai-content-pipeline"), which is a symlink to a
+# stale clone with NO music/ lane on nexus. StreamingPackage.__init__ does
+# `self.package_path.mkdir(parents=True, exist_ok=True)`, so the first real package grew
+# a tree OUTSIDE the repo -- invisible to git, to check_publish_lane_tracked.py and to
+# this check. R1-R4 read the TREE; a root that points outside the repo is a CODE defect,
+# not a tree defect, and nothing here could see it. R5 reads the source:
+#   R5a the root must be anchored to __file__ or an env override, never a literal path;
+#   R5b a literal root must equal THIS repo, or it names another host's checkout.
+LANE_REL = "music/lanes/streaming.py"
+ROOT_ASSIGN = re.compile(r"^\s*REPO_ROOT\s*=\s*(.+)$", re.MULTILINE)
+
+
+def streaming_lane_source(repo: Path) -> str | None:
+    """The source of the streaming lane module, or None when it is absent."""
+    path = repo / LANE_REL
+    if not path.is_file():
+        return None
+    return path.read_text(encoding="utf-8")
+
+
+def streaming_root_problems(repo: Path, src: str | None) -> list[tuple[str, str]]:
+    """(kind, message) for every defect in the lane's REPO_ROOT resolution."""
+    if src is None:
+        return [("R5a",
+                 f"R5 {LANE_REL}: the lane module is absent, so its package root cannot "
+                 f"be audited (card t_23641f1f)")]
+    out: list[tuple[str, str]] = []
+    m = ROOT_ASSIGN.search(src)
+    if not m:
+        out.append(("R5a",
+                    f"R5 {LANE_REL}: REPO_ROOT is not assigned at module scope -- the "
+                    f"package root cannot be audited (card t_23641f1f)"))
+        return out
+    rhs = m.group(1).strip()
+    # R5a: anchored to __file__ or an env override. A bare literal path is the defect.
+    if "__file__" in rhs or "os.environ" in rhs:
+        return out
+    out.append(("R5a",
+                f"R5 {LANE_REL}: REPO_ROOT is a hardcoded literal ({rhs!r}) instead of "
+                f"being anchored to this module or an env override -- on any other host "
+                f"that path is a different checkout and every package lands outside the "
+                f"repo (card t_23641f1f)"))
+    # R5b: when it IS a literal, it must equal this repo.
+    try:
+        literal = Path(rhs).resolve()
+    except (OSError, ValueError):
+        return out
+    if literal != repo.resolve():
+        out.append(("R5b",
+                    f"R5 {LANE_REL}: REPO_ROOT resolves to {literal}, which is not this "
+                    f"repo ({repo.resolve()}) -- packages built here live outside the "
+                    f"tree this check audits (card t_23641f1f)"))
+    return out
 
 
 def run(repo: Path, rev: str | None, live: bool) -> int:
@@ -237,6 +320,66 @@ def run(repo: Path, rev: str | None, live: bool) -> int:
                 problems.append(
                     f"R4 {rel}: in the working tree, not tracked in HEAD{hint}")
 
+    # ---- R6: a campaign's artwork must be tracked -------------------------------
+    # Card t_2670f9a8: `campaigns/virtual-reflections/artwork/` (29 files, 22 MB)
+    # was untracked in ONE checkout (zephyr) and in NO ref at all. Nothing names it -
+    # MANIFEST.json names audio/master paths only, so R1 could not see it - and the
+    # deliverable of two `done` cards (t_de485c84, t_96c2f8ba) lived only there, one
+    # `git clean -xdf` from gone. R6a reads the tree, R6b reads the working tree.
+    ARTWORK_RE = re.compile(r"^campaigns/[^/]+/artwork/")
+    for path, (mode, size) in sorted(entries.items()):
+        if Path(path).suffix.lower() not in MEDIA_EXT:
+            continue
+        if not ARTWORK_RE.match(path):
+            continue
+        if mode != "100644":
+            kind = "SYMLINK" if mode == "120000" else f"mode {mode}"
+            hint = f" -> {_git(repo, 'cat-file', '-p', f'{use}:{path}').strip()}" if mode == "120000" else ""
+            problems.append(
+                f"R6a {path}: tracked as {kind}, {size} B - git stores the target, not the "
+                f"bytes{hint}")
+        elif size <= 0:
+            problems.append(f"R6a {path}: tracked but zero bytes")
+        else:
+            scanned.append(path)
+
+    if live:
+        for man in manifest_paths(tracked):
+            campaign = posixpath.dirname(man)
+            base = repo / f"{campaign}/artwork"
+            if not base.is_dir():
+                continue
+            for p in sorted(base.rglob("*")):
+                if not p.is_file() and not p.is_symlink():
+                    continue
+                if p.suffix.lower() not in MEDIA_EXT:
+                    continue
+                rel = str(p.relative_to(repo))
+                if rel in tracked:
+                    continue
+                carried = refs_carrying(repo, rel)
+                hint = (f" - carried by {', '.join(carried)}" if carried
+                        else " - NO ref in this repo carries it")
+                problems.append(
+                    f"R6b {rel}: in the working tree, not tracked in HEAD{hint}")
+
+    # ---- R5: the streaming lane's package root must be anchored to the repo ------
+    # Card t_23641f1f: `music/lanes/streaming.py` hardcoded
+    # REPO_ROOT = Path("/home/j_kro/Projects/ai-content-pipeline"), which is a symlink
+    # to a stale clone with NO music/ lane on nexus. StreamingPackage.__init__ does
+    # `self.package_path.mkdir(parents=True, exist_ok=True)`, so the first real package
+    # grew a tree OUTSIDE the repo -- invisible to git, to check_publish_lane_tracked.py
+    # and to this check. R1-R4 read the TREE; a root that points outside the repo is a
+    # CODE defect, not a tree defect, and nothing here could see it. R5 reads the source:
+    #   R5a the root must be anchored to __file__ or an env override, never a literal;
+    #   R5b a literal root must equal this repo, or it names another host's checkout.
+    src = streaming_lane_source(repo)
+    if src:
+        for kind, msg in streaming_root_problems(repo, src):
+            problems.append(msg)
+            if kind == "R5a":
+                scanned.append("music/lanes/streaming.py (root anchor)")
+
     if problems:
         print("FAIL check_media_corpus_tracked: the campaign record and the repo disagree")
         for p in problems:
@@ -248,7 +391,7 @@ def run(repo: Path, rev: str | None, live: bool) -> int:
 
     print(f"PASS check_media_corpus_tracked: {named_total} named media file(s) tracked "
           f"at {use}, no package symlink, no untracked media under "
-          f"campaigns/*/{{audio,masters}} or {PACKAGE_ROOT}/")
+          f"campaigns/*/{{audio,masters,artwork}} or {PACKAGE_ROOT}/")
     return 0
 
 
@@ -314,6 +457,54 @@ def selftest() -> int:
     print("selftest OK: R1 (manifest names a file git does not hold), R3 (symlink where "
           "media belongs), R2 (exported=false with the file present), R4 (untracked media "
           "on disk) each FAIL, and the corrected tree PASSes")
+
+    # R5: a streaming lane whose REPO_ROOT is a hardcoded literal that is NOT this repo
+    # is a defect (card t_23641f1f). The lane module is part of the throwaway repo, so
+    # plant the zephyr path, commit, assert the helper FAILs and the run carries an R5
+    # line, then restore the anchored root and assert the helper is silent and the run
+    # carries NO R5 line. Judging R5 through its own helper (not the whole-tree rc)
+    # keeps this case independent of the R2 leftover the earlier steps leave behind.
+    lane = tmp / LANE_REL
+    lane.parent.mkdir(parents=True, exist_ok=True)
+    lane.write_text(
+        'REPO_ROOT = Path("/home/j_kro/Projects/ai-content-pipeline")\n'
+        'MUSIC_ROOT = REPO_ROOT / "music"\n'
+        'PACKAGES_DIR = MUSIC_ROOT / "packages" / "streaming"\n')
+    subprocess.run(["git", "-C", str(tmp), "add", "-A"], capture_output=True, check=True)
+    subprocess.run(["git", "-C", str(tmp), "commit", "-qm", "bad streaming root"],
+                   capture_output=True, check=True)
+    bad_src = streaming_lane_source(tmp)
+    bad_hits = streaming_root_problems(tmp, bad_src)
+    assert bad_hits, "R5 must flag a hardcoded REPO_ROOT that is not this repo"
+    assert all(k in ("R5a", "R5b") for k, _ in bad_hits), \
+        f"R5 findings must be R5a/R5b, got {[k for k, _ in bad_hits]}"
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        rc = run(tmp, "HEAD", live=False)
+    assert rc == 1, f"R5 must make the whole check fail (rc={rc})"
+    assert "R5" in out.getvalue(), "R5 must be named in the run's output"
+
+    # Restore the anchored form: __file__-based, with an env override. The helper is
+    # silent, and the run carries no R5 line (the R2 leftover above is a different rule).
+    lane.write_text(
+        'import os\n'
+        'REPO_ROOT = Path(os.environ.get("MUSIC_REPO_ROOT", Path(__file__).resolve().parents[2]))\n'
+        'MUSIC_ROOT = REPO_ROOT / "music"\n'
+        'PACKAGES_DIR = MUSIC_ROOT / "packages" / "streaming"\n')
+    subprocess.run(["git", "-C", str(tmp), "add", "-A"], capture_output=True, check=True)
+    subprocess.run(["git", "-C", str(tmp), "commit", "-qm", "anchored streaming root"],
+                   capture_output=True, check=True)
+    good_src = streaming_lane_source(tmp)
+    assert not streaming_root_problems(tmp, good_src), \
+        "R5 must be silent on an anchored REPO_ROOT"
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        run(tmp, "HEAD", live=False)
+    assert "R5" not in out.getvalue(), \
+        "an anchored REPO_ROOT must produce no R5 line in the run"
+
+    print("selftest OK: R5 (hardcoded REPO_ROOT that is not this repo) FAILs the helper "
+          "and the run, and an anchored root is silent")
     return 0
 
 

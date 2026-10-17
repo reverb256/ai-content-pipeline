@@ -105,15 +105,20 @@ def package_release(track_id: str, master_path: str, artwork_path: str,
     return packer.package(Path(master_path), Path(artwork_path))
 
 if __name__ == "__main__":
-    # Verification mode: Create a dummy track package
+    # Verification mode: Create a dummy track package. The demo ALWAYS packs into a
+    # tempdir: card t_8f515be3 measured that packing into the repo's
+    # music/packages/streaming/ leaves a package dir behind, which is how the
+    # throwaway t_verify_streaming fixture was made in the first place. The root is
+    # still resolved from __file__ (card t_23641f1f) -- only the DEMO's destination
+    # is unbound.
     import tempfile
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_master = Path(tmpdir) / "test_master.wav"
         tmp_art = Path(tmpdir) / "test_art.jpg"
         tmp_master.write_text("DUMMY WAV DATA")
         tmp_art.write_text("DUMMY JPG DATA")
-        
+
         try:
             res = package_release(
                 track_id="t_verify_streaming",
@@ -124,7 +129,7 @@ if __name__ == "__main__":
                 genre="Chill Lounge",
                 # Pack into the tempdir: a verification run must leave no package
                 # dir behind (card t_8f515be3).
-                out_dir=Path(tmpdir) / "packages"
+                out_dir=Path(tmpdir) / "packages",
             )
             print(json.dumps(res, indent=2))
         except Exception as e:
