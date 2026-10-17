@@ -1,3 +1,3 @@
-file '/tmp/music-gate-fixtures/pscene_0.mp4'
-file '/tmp/music-gate-fixtures/pscene_1.mp4'
-file '/tmp/music-gate-fixtures/pscene_2.mp4'
+file '/home/j_kro/.cache/music-gate-fixtures/pscene_0.mp4'
+file '/home/j_kro/.cache/music-gate-fixtures/pscene_1.mp4'
+file '/home/j_kro/.cache/music-gate-fixtures/pscene_2.mp4'

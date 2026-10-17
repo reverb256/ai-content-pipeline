@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger("streaming_lane")
 
 # CONSTANTS
-REPO_ROOT = Path("/home/j_kro/Projects/ai-content-pipeline")
+REPO_ROOT = Path(os.getenv("MUSIC_REPO_ROOT", Path(__file__).resolve().parent.parent.parent))
 MUSIC_ROOT = REPO_ROOT / "music"
 PACKAGES_DIR = MUSIC_ROOT / "packages" / "streaming"
 

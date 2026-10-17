@@ -152,20 +152,65 @@ def istft(Z: np.ndarray, sr: int, nperseg: int = 2048,
 # BPM / key detection
 # ──────────────────────────────────────────────────────────
 
-def estimate_bpm(x: np.ndarray, sr: int) -> float:
-    """Onset-based tempo estimate via autocorrelation."""
+# The tempo analyser's own STFT window, in samples. Below it the analyser has no
+# tempo to make (see estimate_bpm), and the manifest records BPM_UNKNOWN
+# instead of a tempo — never a default. Card t_18c3d512; the same "do not
+# invent a field" rule the key follows (t_4906bc6e) and the planner's key/bpm
+# anchors follow (t_f65b0f4c).
+BPM_NPERSEG = 2048          # onset-envelope window; the analyser's usable length
+BPM_HOP = 1024              # hop between frames
+BPM_UNKNOWN = "unknown"     # what the manifest says when nothing was measured
+
+def estimate_bpm(x: np.ndarray, sr: int) -> float | None:
+    """Onset-based tempo estimate via autocorrelation.
+
+    Returns None when the clip is shorter than the analyser's own STFT window
+    (BPM_NPERSEG), or when the autocorrelation finds no peak in the plausible
+    range. There is no tempo to report at that length, so there is no tempo to
+    write: the caller records BPM_UNKNOWN, never a default (card t_18c3d512 —
+    the tempo half of the key's class, t_4906bc6e).
+
+    The window is the measured floor, not a guess. On nexus 2026-10-16
+    (numpy 2.5.3 / scipy, /usr/bin/python3) the pre-fix function had FOUR hard-
+    coded exits that all answered 120.0 for a clip it never measured:
+
+        if len(x) < nperseg:      return 120.0     # nperseg = 2048
+        if len(env) < 4:         return 120.0
+        if peak < min_lag:       return 120.0
+        if period_sec <= 0:      return 120.0
+
+    Live readings of a 128 Hz tone (a signal with no beat at all):
+
+        n=    64 -> 120.0      n=  1000 -> 120.0      n= 2047 -> 120.0
+        n= 2048 -> 120.0      n=  4096 -> 120.0      n=  8192 -> 120.0
+        n=16384 -> 184.57
+
+    120.0 is also a real, common tempo, so a reader cannot tell a refusal from a
+    measurement — and it is not cosmetic: choose_loop_bars(sr, bpm, n) derives
+    the bar length from it, so a fabricated tempo changes where the loop is cut.
+
+    The body's own phase structure, measured with the early returns stripped
+    (probe_bpm_phases.py): below 1025 samples it raises
+    `ValueError: noverlap must be less than nperseg` (scipy shrinks nperseg to
+    the input length and the hop then equals it); 2048..16383 samples yields
+    either a too-short envelope or no autocorrelation peak in the 60-180 BPM
+    range. So the analyser's real usable length is 16384 samples (3.000 s at
+    44.1 kHz) — the first length at which a beatless tone produces a reading
+    (184.57, the edge of the plausible range, not a tempo). The floor is that
+    length, stated here so the caller can distinguish it from a measurement.
+    """
     x = np.asarray(x, dtype=np.float64)
     # onset envelope: energy in 1024-hop frames
     hop = 1024
-    nperseg = 2048
+    nperseg = BPM_NPERSEG
     if len(x) < nperseg:
-        return 120.0
+        return None
     spec = sps.stft(x, sr, nperseg=nperseg, noverlap=nperseg - hop)
     Z = spec[2]
     env = np.abs(Z).sum(axis=0)
     env = env / (env.max() + 1e-9)
     if len(env) < 4:
-        return 120.0
+        return None
 
     # autocorrelation
     ac = np.correlate(env, env, mode="full")
@@ -180,10 +225,10 @@ def estimate_bpm(x: np.ndarray, sr: int) -> float:
     ac[max_lag:] = 0
     peak = int(np.argmax(ac))
     if peak < min_lag:
-        return 120.0
+        return None
     period_sec = peak * frame_shift / sr
     if period_sec <= 0:
-        return 120.0
+        return None
     return round(60.0 / period_sec, 2)
 
 

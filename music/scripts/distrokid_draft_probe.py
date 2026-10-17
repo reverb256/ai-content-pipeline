@@ -7,6 +7,9 @@ at DRAFT, no live release.
 """
 import json
 from music.publish.playwright.session import SessionHelper
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from music.publish.playwright.distrokid import DistroKidAdapter
 
 with SessionHelper() as session:
@@ -14,7 +17,7 @@ with SessionHelper() as session:
     result = adapter.upload_release(
         album_title="DRAFT PROBE",
         track_titles=["DRAFT PROBE"],
-        artwork_path="music/packages/streaming/t_verify_streaming/artwork.jpg",
+        artwork_path="music/packages/streaming/fixtures/artwork.jpg",
         genre_primary="Electronic",
         sub_genre_primary="Deep House",
         songwriter_first="PROBE",
