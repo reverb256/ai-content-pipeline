@@ -1248,6 +1248,23 @@ def cmd_plan(args) -> int:
         REPO / "music" / "plans" / f"{ctx['genre']}-{re.sub(r'[^a-z0-9]+', '-', args.brief.lower())[:40].strip('-')}.json")
     out.parent.mkdir(parents=True, exist_ok=True)
 
+    # A plan written to a path this user cannot open is a plan nobody can read,
+    # and the render rail reads plan files. Card t_3479ebbe: the suite's own
+    # scratch is private per run, but a HUMAN running this CLI by hand can still
+    # point --out at a root-owned file in a sticky /tmp, and the raw
+    # PermissionError that followed was the whole incident - a traceback is not
+    # a refusal, and the scheduled matrix read it as a misbehaving gate. Say so
+    # before the write, with the errno, the owner, and the one thing that fixes
+    # it: point --out somewhere this user owns.
+    try:
+        probe = open(out, "ab")
+    except OSError as e:
+        print(f"REFUSED: cannot write the plan to {out} ({e}). "
+              f"Point --out at a path this user owns, or remove the foreign file "
+              f"if it is a leftover from another run.")
+        return 2
+    probe.close()
+
     print(f"plan     : {out}")
     print(f"genre    : {ctx['genre']}   lyrics_mode: {'sheet' if sheet else mode}")
     if sheet:
