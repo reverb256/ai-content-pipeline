@@ -163,9 +163,14 @@ Four consequences that are decisions, not details:
    template measures exactly 600.000 s (ffprobe). When this brief was written the planner
    capped a plan at 420 s (`MAX_DURATION_S = 420`); re-measured 2026-10-16 (§14) the cap is
    **600 s** (`music/planner/planner.py:148`, raised by commit `52ae620` for this very shape — the constant moved from `:104`; re-read 2026-10-16 by card `t_ae1d9243`).
-   **600.000 s is whole-bar at this genre's tempo — 375 bars × 1.600 s a bar — so the loop can
-   be rendered at full length.** Revised decision: plan the loop at 375 bars / 600 s; cut it
-   to a shorter whole-bar master only if the game-asset pack wants one.
+   **600.000 s is whole-bar at this genre's tempo — 375 bars × 1.600 s a bar — so the render can
+   be made at full length.** Decision: **plan the render at 375 bars / 600 s** (the master); cut
+   it to a shorter whole-bar master only if the game-asset pack wants one. The *delivered loop*
+   is a separate object — card `t_b75ccb4a`'s loop-tiling contract (enforced by
+   `music/scripts/check_loop_tiling.py`) fixes it at **75 bars = 120.000 s (5 tiles into the 600 s
+   shape)**, cut from inside the render. A 600 s loop window is refused for the same silence reason
+   as the air brief's — the engine emits trailing silence inside its requested window, so the
+   render must be longer than the loop (measured, `t_b75ccb4a`).
 4. **The `youtube-gaming` gate rejects the existing shape template.** Measured: the lane's own
    `music/visuals/loop_10min.mp4` (600.0 s, 1280×720, 25 fps) **FAILS**
    `gate_youtube_authentic` with `only 4 distinct frame signature(s) across 600.0s (10 required)
@@ -603,10 +608,11 @@ carries none, §6.1) with `lyricsMode: instrumental`, `bpm: 150` and a duration 
 whole-bar, and it must satisfy the render rail's loop check — this genre's `loop-10min` shape
 makes the master a loop claim (§6.5).
 
-Deliverable for `generate`: **one 375-bar (600.000 s) whole-bar loop at 150 BPM** — the full
+Deliverable for `generate`: **one 375-bar (600.000 s) whole-bar render at 150 BPM** — the full
 `loop-10min` shape, whole-bar and inside the planner's 600 s cap (§3.3) — no reverb, no pads,
-four voices, ending on the loop phrase; plus a second take for curation. A 64-bar (102.40 s)
-whole-bar master is the acceptable game-asset pack cut. Render on the `sunolocal` rail: it is
+four voices, ending on the loop phrase; plus a second take for curation. The **delivered loop**
+is **75 bars = 120.000 s (5 tiles)**, cut from inside that render (card `t_b75ccb4a`). A 64-bar
+(102.40 s) whole-bar master is the acceptable game-asset pack cut. Render on the `sunolocal` rail: it is
 what runs by itself, and `music/suno-gen.py` is present now but needs a logged-in browser
 session on a host (§6.1). Then `curate` → `stems` → `master` → `gate` → `package`
 (`gate_sync_ready --lane game-assets` + `gate_loop_points`, both currently un-wired, §8.1) →
