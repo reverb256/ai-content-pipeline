@@ -94,12 +94,12 @@ That is not trivia: it is the root cause of a live dispatch failure (§11.3).
 | Lyric blueprint | `music/lyrics/blueprints/jungle-dnb.yaml` — **added 2026-10-16 by card `t_e6d422ec`** (§16). 7 of the 14 genres have one (activist, anime-ending, anime-opening, chill-lounge, epic-orchestral-boss, jungle-dnb, trance); it was 4 at the §14 pass, when `anime-ending.yaml` landed |
 | Registry note | `"Same Beatport ban applies. Amen-break / ragga vocal direction."` |
 
-Registry `defaults:` that bind every track (`music/genres.yaml` lines 20–25; line 19 is blank,
+Registry `defaults:` that bind every track (`music/genres.yaml` lines 20–24; line 19 is blank,
 and this range was cited as 19–25 before the §14 pass):
 export `studio`, stems `true`, lyrics `human-original`, release_private `true`,
 gate_profile `reviewer-deepseek`.
 
-The genre's own block (`music/genres.yaml` lines 47–54) in full:
+The genre's own block (`music/genres.yaml` lines 47–53) in full:
 
 ```yaml
   jungle-dnb:
@@ -954,7 +954,7 @@ still does not decide: j_kro owns the release title.
 
 ## 13. Provenance
 
-- Registry: `music/genres.yaml` (lines 20–25 defaults, 47–54 this genre), `music/lanes.yaml`,
+- Registry: `music/genres.yaml` (lines 20–24 defaults, 47–54 this genre), `music/lanes.yaml`,
   `music/autonomy.yaml` — validated live (`registry OK: 14 genres, 10 lanes`)
 - Rubric: `music/rubrics/edm.json` read in full; anchors quote EDMProd, Veena Studio,
   Transmission Samples (URLs in its `sources`)
@@ -1013,7 +1013,7 @@ object or campaign artifact was modified.
 | §1 | `registry OK: 14 genres, 10 lanes`; quota `0/60` | `/usr/bin/python3 music/registry.py validate` → rc=0, identical lines; `gate_quota` → PASS 0/60, 0 studio exports | ok |
 | §1 | template 4 032 B, style field 653/1000, 347 chars headroom | `wc -c` 4032; fenced block 653 chars / 653 bytes (pure ASCII — both counting conventions agree); 1000−653 = 347 | ok |
 | §1 | visual style doc 1 157 bytes | `wc -c` 1157 **bytes** / 1151 characters — the unit label is right this time | ok |
-| §1 | this genre's block is `genres.yaml` lines 47–54 | line 47 is `  jungle-dnb:`, line 54 is the `notes:` line — exact | ok |
+|| §1 | this genre's block is `genres.yaml` lines 47–53 | line 47 is `  jungle-dnb:`, line 53 is the `notes:` line — exact | ok |
 | §1 | the `defaults:` block is lines **19–25** | the block is lines **20–25**; line 19 is blank | **corrected** |
 | §1 | deployed template + registry md5s match the repo | `kubectl` payload md5 `c91b4d0e0f53d3abf9c17dc501801088` (template) and `3386db64eb5780da5988cdb5a37f8f03` (registry) — both identical to the worktree files | ok |
 | §1.1 | rubric `edm.json`: 6 criteria, weights 3/3/2/2/1/1, threshold 7.0, `genres: [trance, jungle-dnb]` | every value exact | ok |
@@ -1173,7 +1173,7 @@ What the file carries, and how each piece was checked:
 |---|---|---|
 | `bpm_anchor` | **168** | the genre's caption states 168 and the queue entry pins `bpm: 168`; `planner.py show --genre jungle-dnb` prints `"bpm_anchor": 168` where it printed `null` before |
 | `structure` | `Intro`, `Break`, `Hook`, `Break`, `Hook`, `Break`, `Outro` | the template's own tag sheet, verbatim and in order — compared programmatically against `planner.load_template("jungle-dnb")["structure"]`: identical, repeats included |
-| `genre` / `family` | `jungle-dnb` / `edm` | `music/genres.yaml` lines 47–54 |
+|| `genre` / `family` | `jungle-dnb` / `edm` | `music/genres.yaml` lines 47–53 |
 | `theme` / `voice_notes` | brief §2 Intent and §4 | transcription of the human-authored artifacts, not invention |
 | `avoid` | the template's Exclude Styles plus the clinical-DnB drift | 3 quoted phrases, which `planner.validate()` enforces against a finished sheet |
 | `title_candidates` | `Two Speeds`, `Slow Grid Toast`, `Wheel It Forward` | the field the queue entry was blocked on; §12 keeps the release title j_kro's call |
@@ -1204,7 +1204,7 @@ lyrics.py scaffold --genre jungle-dnb BEFORE  rc=2  FAIL: no lyric blueprint for
 
 - **Superseded by the next pass (card `t_a54fb00d`, 2026-10-16).** The three sites now read
   `7 of 14` and `7`: `planner.py:325` `(7 of 14 genres do)`, `planner.py:337` `the 7 genres that
-  have no blueprint yet`, `tests/test_planner.py:62` `The 7 of 14 genres with no blueprint fell
+  have no blueprint yet`, `tests/test_planner.py:104` `The 7 of 14 genres with no blueprint fell
   back`. The first two moved from `:297`/`:309` while this pass ran — other cards took
   `planner.py` from 1157 to 1371 lines — so those two citations are the 17:31 CDT reading, where
   the pass left them. Each figure in the fence above describes the revision that wrote it, and not
@@ -1303,7 +1303,7 @@ file's in any of the three readings**, and this pass changed no figure — the d
 people's writes landing under a shared tree.
 
 - **Superseded revision of this file:** `sha256 5b3914191c5108814cccaaaa2c51f8a5b5eff1efc17455f7ddc4c173dac486ea` (1168 lines / 76 392 B).
-- **Superseded by this pass (card `t_6dd13d76`, 2026-10-16T17:21-05:00 CDT):** `sha256 3411f2eb58de226cc6d7d5ef524b6c06d78fd34e1c2a99c445278eabc21cd15f` (1261 lines / 85229 B) — the code-comment citation above was re-pointed from `planner.py:182` to `planner.py:297`: the file grew since that reading and `:182` is blank now, while `:297` is the `load_blueprint` docstring the line names. The census text it quotes was corrected by card `t_a54fb00d` in the pass that follows — see the
+- **Superseded by this pass (card `t_6dd13d76`, 2026-10-16T17:21-05:00 CDT):** `sha256 3411f2eb58de226cc6d7d5ef524b6c06d78fd34e1c2a99c445278eabc21cd15f` (1261 lines / 85229 B) — the code-comment citation above was re-pointed from `planner.py:297` to `planner.py:297`: the file grew since that reading and `:182` is blank now, while `:297` is the `load_blueprint` docstring the line names. The census text it quotes was corrected by card `t_a54fb00d` in the pass that follows — see the
 bullet two below and §16.
 - **Not changed, not re-filed otherwise:** the trend-fallback card `t_eb648761` is still a
   duplicate to close, and the blueprint-census comments in `music/planner/planner.py` and
@@ -1321,7 +1321,7 @@ file or cluster object was touched, and no figure in THIS file moved.
 |---|---|---|---|
 | 1 | `planner.py:325` `load_blueprint` docstring | `(3 of 15 genres do)` at `3967dea` | `(7 of 14 genres do)` |
 | 2 | `planner.py:337` `bpm_in_caption` docstring | `the 11 genres that have no blueprint yet` at `dda0d32` | `the 7 genres that have no blueprint yet` |
-| 3 | `tests/test_planner.py:62` comment | `Only 3 of 14 genres have a blueprint, so 11` at `dda0d32` | `The 7 of 14 genres with no blueprint fell back` |
+| 3 | `tests/test_planner.py:104` comment | `Only 3 of 14 genres have a blueprint, so 11` at `dda0d32` | `The 7 of 14 genres with no blueprint fell back` |
 
 The first two citations moved from `:297`/`:309` to `:325`/`:337` at the 2026-10-16 17:34:46 CDT
 commit `f832112`, which took `planner.py` from 1157 to 1371 lines. Live census at the 17:31 CDT
@@ -1339,7 +1339,7 @@ $ /usr/bin/python3 music/scripts/check_code_census.py --rev HEAD     # the BEFOR
 FAIL check_code_census: 4 stale census claim(s) in revision HEAD                       # rc=1
   music/planner/planner.py:297  claimed "3 of 15 genres"  measured 7 of the 14
   music/planner/planner.py:309  claimed "the 11 genres that have no blueprint"  measured 7
-  music/tests/test_planner.py:62  claimed "3 of 14 genres"  measured 7 of the 14
+  music/tests/test_planner.py:104  claimed "3 of 14 genres"  measured 7 of the 14
   music/scripts/check_brief_drift.py:119  `**eleven** blueprint-less genres` — a historical
       comment line, anchored "when written" in this pass so history stays history
 $ /usr/bin/python3 music/scripts/check_code_census.py                # the worktree
