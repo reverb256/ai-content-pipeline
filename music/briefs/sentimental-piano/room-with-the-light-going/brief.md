@@ -369,9 +369,12 @@ from the draft refusal by design, and the rail rendered this genre: the marker i
 - **The plan's key is a placeholder, not a decision.** `"key": "C minor"` in the plan
   is `planner.py`'s documented default; this genre carries no researched key. The
   release key remains j_kro's creative call. Card t_f65b0f4c.
-- **The render is not in the ledger.** `music/quota-ledger.json` records exactly one
-  render (`elemental-air`). This genre's render is absent, so the ledger undercounts
-  delivered work. §11.5.
+- **The render IS in the ledger.** `music/quota-ledger.json` records **8** renders; this
+  genre's render is `sentimental-piano-room-with-the-light-going`, entry #8 (job
+  `9d35527ba64645ccab967fc654681d4b`, sha256 `d909ad910a0cf8476bd210f671d09ef699e60fe993d42c79704b9c9318135eb9`,
+  180.000 s). The two surviving residuals on this bullet's list are NOT this: the master still
+  has no copy at the documented render path (card `t_8c3cd415`) and the engine source still has
+  two divergent copies (card `t_42bc85ba`). §11.5.
 - **The delivered master is not durable in the pipeline.** The render rail writes the
   audio into the render pod's `/tmp` and discards it (card t_320bae4c); the copy that
   survives is the engine's own artifact store, cited in §5.
@@ -552,8 +555,9 @@ PASS gate_quota               period 2026-10, 0/60, studio 0                    
 ### 11.5 Still open — not this pass's to close
 
 - **The key is a default.** `planner.py` wrote `"key": "C minor"` (t_f65b0f4c).
-- **The render ledger is incomplete.** `music/quota-ledger.json` records one render
-  (`elemental-air`); this genre's render is missing from it.
+- **The render ledger is complete for this genre.** `music/quota-ledger.json` records **8**
+  renders; this genre's render is `sentimental-piano-room-with-the-light-going`, entry #8 (job
+  `9d35527ba64645ccab967fc654681d4b`, sha256 `d909ad910a0c…`, 180.000 s).
 - **The engine source has two divergent copies.** aip's mirror is pre-v0.1.3
   (t_42bc85ba) while the pod runs v0.1.3 (§6b).
 - **The delivered master is not pipeline-durable.** The render rail writes audio into
