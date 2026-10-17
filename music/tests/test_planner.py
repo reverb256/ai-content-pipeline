@@ -709,44 +709,54 @@ print("9. a plan written to a path this user cannot open is REFUSED, never a tra
 # it as a misbehaving gate. The planner now probes the path before the write
 # and says so, with the errno and the one thing that fixes it.
 #
-# The fixture is a mode-000 directory THIS user owns, so it can be created
-# here without root: the point is an UNWRITABLE path, and the owner of the
-# path is not the point. (A root-owned file in /tmp cannot be created by this
-# user either, so the live incident file is an ops/host cleanup - the card
-# says so, and this test must not depend on it happening.)
-probe_dir = scratch("unwritable")
-probe_dir.mkdir()
-probe_dir.chmod(0o000)
-bad_out = probe_dir / "plan.json"
-r_unw = subprocess.run(
-    [sys.executable, str(PLANNER), "plan", "--brief", BRIEF,
-     "--genre", "activist", "--lyrics-mode", "draft", "--out", str(bad_out)],
-    capture_output=True, text=True)
-out_unw = (r_unw.stdout + r_unw.stderr)
-check("an unwritable --out is refused with rc 2, not rc 1 and not rc 0",
-      r_unw.returncode == 2, f"rc={r_unw.returncode}")
-check("the refusal says so and names the path (no bare traceback)",
-      "REFUSED" in out_unw and str(bad_out) in out_unw,
-      out_unw.strip()[-200:])
-check("the refusal is not a raw PermissionError traceback",
-      "Traceback" not in out_unw and "PermissionError" not in out_unw,
-      out_unw.strip()[-200:])
-check("no plan was written to the unwritable path", not bad_out.is_file())
-probe_dir.chmod(0o700)
-shutil.rmtree(probe_dir, ignore_errors=True)
+# ROOT: this fixture is untestable for root, and the card asks for rc=0 under
+# root. Root bypasses file permission bits - a mode-000 directory is still
+# writable by uid 0 (measured: root wrote 15 B into /tmp/root-perm-test/test.txt
+# after chmod 000). So under root the planner is CORRECT to write the plan
+# instead of refusing it, and section 9's refusal assertions would be wrong.
+# Rather than weaken the check for non-root runs, the section is skipped under
+# root and says so - the same way the suite skips nothing for a normal user.
+# The gate matrix runs as root, so a section that cannot hold under root would
+# have made the scheduled matrix red for a reason that is not a gate defect.
+if os.getuid() == 0:
+    print("  SKIP  section 9: this fixture is a mode-000 directory, which root "
+          "bypasses (root writes a mode-000 dir without error). The planner's "
+          "refusal is correct for every non-root user; under root the plan is "
+          "written, which is also correct.")
+else:
+    probe_dir = scratch("unwritable")
+    probe_dir.mkdir()
+    probe_dir.chmod(0o000)
+    bad_out = probe_dir / "plan.json"
+    r_unw = subprocess.run(
+        [sys.executable, str(PLANNER), "plan", "--brief", BRIEF,
+         "--genre", "activist", "--lyrics-mode", "draft", "--out", str(bad_out)],
+        capture_output=True, text=True)
+    out_unw = (r_unw.stdout + r_unw.stderr)
+    check("an unwritable --out is refused with rc 2, not rc 1 and not rc 0",
+          r_unw.returncode == 2, f"rc={r_unw.returncode}")
+    check("the refusal says so and names the path (no bare traceback)",
+          "REFUSED" in out_unw and str(bad_out) in out_unw,
+          out_unw.strip()[-200:])
+    check("the refusal is not a raw PermissionError traceback",
+          "Traceback" not in out_unw and "PermissionError" not in out_unw,
+          out_unw.strip()[-200:])
+    check("no plan was written to the unwritable path", not bad_out.is_file())
+    probe_dir.chmod(0o700)
+    shutil.rmtree(probe_dir, ignore_errors=True)
 
-# ...and the happy path still writes. A refusal that also broke the normal
-# path would be a different kind of defect.
-good_out = scratch("happy-plan.json")
-r_ok = subprocess.run(
-    [sys.executable, str(PLANNER), "plan", "--brief", BRIEF,
-     "--genre", "activist", "--lyrics-mode", "draft", "--out", str(good_out)],
-    capture_output=True, text=True)
-check("a writable --out still plans and writes (rc 0)",
-      r_ok.returncode == 0 and good_out.is_file(),
-      (r_ok.stdout + r_ok.stderr).strip()[-200:])
-if good_out.is_file():
-    good_out.unlink()
+    # ...and the happy path still writes. A refusal that also broke the normal
+    # path would be a different kind of defect.
+    good_out = scratch("happy-plan.json")
+    r_ok = subprocess.run(
+        [sys.executable, str(PLANNER), "plan", "--brief", BRIEF,
+         "--genre", "activist", "--lyrics-mode", "draft", "--out", str(good_out)],
+        capture_output=True, text=True)
+    check("a writable --out still plans and writes (rc 0)",
+          r_ok.returncode == 0 and good_out.is_file(),
+          (r_ok.stdout + r_ok.stderr).strip()[-200:])
+    if good_out.is_file():
+        good_out.unlink()
 
 # ---------------------------------------------------------------------------
 print()
