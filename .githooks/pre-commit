@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# pre-commit — the arming half of the shared-tree commit fence (kanban t_6d0b7dd7).
+#
+# This file is ONLY a dispatcher. The decision lives in
+#     music/scripts/git_commit_fence.sh          (this repo = source of record)
+#     scripts/git_commit_fence.sh                (mining-k8s copy; kept byte-equal
+#                                                  by music/scripts/check_commit_fence_armed.py)
+# Reasoning, evidence and the escape hatches: read git_commit_fence.sh's header.
+#
+# Enabled with:  git config core.hooksPath .githooks
+# (set in both repos on nexus; check_commit_fence_armed.py fails when it is not)
+#
+# ---------------------------------------------------------------------------
+# The SECOND decision in this chain (kanban t_8dadd6cb): CONTENT, not scope.
+# ---------------------------------------------------------------------------
+# The fence answers "which paths does this commit's index carry?". It cannot
+# answer "are those paths' bytes older than the branch's own bytes?", so it
+# ALLOWS the commit that dropped a shipped hunk: measured 2026-10-16, commit
+# edeef61 named its paths (private index, fence ALLOW) and lost section 13 of
+# music/gates/check_gate_suite.sh that 9082ce3 had shipped (re-landed a31deb2).
+# music/scripts/check_stale_write.py --staged refuses that write, naming the
+# origin commit and the card whose bytes the change drops. Reasoning, evidence
+# and the escape hatches: music/docs/STALE-WRITE.md.
+#
+# A guard that cannot be measured prints NOTE and ALLOWS, exactly like the fence:
+# hooks do not travel with the tree, so the DETECTOR for a disarmed guard is on
+# the schedule — `check_stale_write.py --armed`, run_gate_matrix.sh leg 2f.
+set -uo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+
+# --- 1. scope: the shared-tree commit fence (t_6d0b7dd7) --------------------
+exec_out=0
+if [ -f "$root/music/scripts/git_commit_fence.sh" ]; then
+  bash "$root/music/scripts/git_commit_fence.sh" || exec_out=$?
+else
+  echo "commit-fence: NOTE no fence at music/scripts/git_commit_fence.sh — this commit's index scope was not measured (check_commit_fence_armed.py is the detector for that)." >&2
+fi
+
+# --- 2. content: a stale whole-file write (t_8dadd6cb) ---------------------
+guard="$root/music/scripts/check_stale_write.py"
+if [ -f "$guard" ]; then
+  py=""
+  for cand in "${PY:-}" /usr/bin/python3 python3; do
+    [ -n "$cand" ] || continue
+    if command -v "$cand" >/dev/null 2>&1; then py="$cand"; break; fi
+  done
+  if [ -n "$py" ]; then
+    # $GIT_INDEX_FILE is THIS commit's own index: a named-paths commit gets
+    # .git/next-index-*.lock, so the guard measures exactly the paths the commit
+    # carries and never a sibling's staged work. The two guards see the same
+    # index and neither writes anything.
+    "$py" "$guard" --staged || exit $?
+  else
+    echo "check_stale_write: NOTE no usable python3 — this commit's content was not measured (run_gate_matrix.sh leg 2f is the detector for that)." >&2
+  fi
+else
+  echo "check_stale_write: NOTE no guard at music/scripts/check_stale_write.py — this commit's content was not measured (check_stale_write.py --armed is the detector for that)." >&2
+fi
+
+exit "$exec_out"
