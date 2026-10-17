@@ -152,20 +152,73 @@ def istft(Z: np.ndarray, sr: int, nperseg: int = 2048,
 # BPM / key detection
 # ──────────────────────────────────────────────────────────
 
-def estimate_bpm(x: np.ndarray, sr: int) -> float:
-    """Onset-based tempo estimate via autocorrelation."""
+# The tempo analyser's own STFT window, in samples. Below it the analyser has no
+# tempo to make (see estimate_bpm), and the manifest records BPM_UNKNOWN
+# instead of a tempo — never a default. Card t_18c3d512; the same "do not
+# invent a field" rule the key follows (t_4906bc6e) and the planner's key/bpm
+# anchors follow (t_f65b0f4c).
+BPM_NPERSEG = 2048          # onset-envelope window; the analyser's usable length
+BPM_HOP = 1024              # hop between frames
+BPM_UNKNOWN = "unknown"     # what the manifest says when nothing was measured
+
+# The key analyser's own STFT window, in samples. Below it the analyser has no
+# key to make (see estimate_key), and the manifest records KEY_UNKNOWN
+# instead of a key — never a default. Card t_4906bc6e; the same "do not invent
+# a field" rule the planner's key follows (t_f65b0f4c).
+KEY_NPERSEG = 4096          # chromagram window; also the analyser's usable length
+KEY_HOP = 512               # hop between windows
+KEY_UNKNOWN = "unknown"     # what the manifest says when nothing was measured
+
+def estimate_bpm(x: np.ndarray, sr: int) -> float | None:
+    """Onset-based tempo estimate via autocorrelation.
+
+    Returns None when the clip is shorter than the analyser's own STFT window
+    (BPM_NPERSEG), or when the autocorrelation finds no peak in the plausible
+    range. There is no tempo to report at that length, so there is no tempo to
+    write: the caller records BPM_UNKNOWN, never a default (card t_18c3d512 —
+    the tempo half of the key's class, t_4906bc6e).
+
+    The window is the measured floor, not a guess. On nexus 2026-10-16
+    (numpy 2.5.3 / scipy, /usr/bin/python3) the pre-fix function had FOUR hard-
+    coded exits that all answered 120.0 for a clip it never measured:
+
+        if len(x) < nperseg:      return 120.0     # nperseg = 2048
+        if len(env) < 4:         return 120.0
+        if peak < min_lag:       return 120.0
+        if period_sec <= 0:      return 120.0
+
+    Live readings of a 128 Hz tone (a signal with no beat at all):
+
+        n=    64 -> 120.0      n=  1000 -> 120.0      n= 2047 -> 120.0
+        n= 2048 -> 120.0      n=  4096 -> 120.0      n=  8192 -> 120.0
+        n=16384 -> 184.57
+
+    120.0 is also a real, common tempo, so a reader cannot tell a refusal from a
+    measurement — and it is not cosmetic: choose_loop_bars(sr, bpm, n) derives
+    the bar length from it, so a fabricated tempo changes where the loop is cut.
+
+    The body's own phase structure, measured with the early returns stripped
+    (probe_bpm_phases.py): below 1025 samples it raises
+    `ValueError: noverlap must be less than nperseg` (scipy shrinks nperseg to
+    the input length and the hop then equals it); 2048..16383 samples yields
+    either a too-short envelope or no autocorrelation peak in the 60-180 BPM
+    range. So the analyser's real usable length is 16384 samples (3.000 s at
+    44.1 kHz) — the first length at which a beatless tone produces a reading
+    (184.57, the edge of the plausible range, not a tempo). The floor is that
+    length, stated here so the caller can distinguish it from a measurement.
+    """
     x = np.asarray(x, dtype=np.float64)
     # onset envelope: energy in 1024-hop frames
     hop = 1024
-    nperseg = 2048
+    nperseg = BPM_NPERSEG
     if len(x) < nperseg:
-        return 120.0
+        return None
     spec = sps.stft(x, sr, nperseg=nperseg, noverlap=nperseg - hop)
     Z = spec[2]
     env = np.abs(Z).sum(axis=0)
     env = env / (env.max() + 1e-9)
     if len(env) < 4:
-        return 120.0
+        return None
 
     # autocorrelation
     ac = np.correlate(env, env, mode="full")
@@ -180,19 +233,31 @@ def estimate_bpm(x: np.ndarray, sr: int) -> float:
     ac[max_lag:] = 0
     peak = int(np.argmax(ac))
     if peak < min_lag:
-        return 120.0
+        return None
     period_sec = peak * frame_shift / sr
     if period_sec <= 0:
-        return 120.0
+        return None
     return round(60.0 / period_sec, 2)
 
 
-def estimate_key(x: np.ndarray, sr: int) -> str:
-    """Coarse key estimate via chromagram centroid → major/minor."""
-    if len(x) < 2048:
-        return "C minor"
-    hop = 512
-    nperseg = 4096
+def estimate_key(x: np.ndarray, sr: int) -> str | None:
+    """Coarse key estimate via chromagram centroid → major/minor.
+
+    Returns None when the clip is shorter than the analyser's own STFT window
+    (KEY_NPERSEG). There is no estimate to make at that length, so there is no
+    key to report: the caller records KEY_UNKNOWN, never a default (card
+    t_4906bc6e — the asset-pack half of the planner's key, t_f65b0f4c).
+
+    The window is the measured floor, not a guess. On nexus 2026-10-16
+    (numpy 2.5.3 / scipy): the pre-fix early return answered every clip under
+    2048 samples with a hard-coded "C minor" it never analysed, and 2048..4095
+    samples — above that guard — made `sps.stft` shrink nperseg to the input
+    length and raise `ValueError: noverlap must be less than nperseg`.
+    """
+    if len(x) < KEY_NPERSEG:
+        return None
+    hop = KEY_HOP
+    nperseg = KEY_NPERSEG
     Zxx = sps.stft(x, sr, nperseg=nperseg, noverlap=nperseg - hop)[2]
     freqs = np.abs(Zxx)
     # map to 12-TET bins
@@ -1034,11 +1099,17 @@ def main():
     ap.add_argument("--genre", default="chill-lounge",
                     help="Genre (must exist in music/genres.yaml)")
     ap.add_argument("--bpm", type=float, default=None,
-                    help="Source tempo, when known. The generator's estimator "
-                         "is only a fallback; bar alignment follows this value, "
-                         "so state it when the registry fixes a tempo")
+                        help="Source tempo, when known. The generator's estimator "
+                             "is only a fallback; bar alignment follows this value, "
+                             "so state it when the registry fixes a tempo. A run "
+                             "with neither --bpm nor a measurable source REFUSES "
+                             "to emit a pack (card t_18c3d512).")
+                         "with neither --bpm nor a measurable source REFUSES "
+                         "to emit a pack (card t_18c3d512).")
     ap.add_argument("--key", default=None,
-                    help="Source key, when known (else estimated)")
+                    help="Source key, when known (else estimated from the "
+                         "audio; the manifest says 'unknown' when the source "
+                         "is too short for the estimator to measure)")
     ap.add_argument("--out", default=None,
                     help="Output directory for the pack (default: <repo>/packages/<pack_name>)")
     ap.add_argument("--no-sfx", action="store_true", help="Skip SFX generation")
@@ -1068,13 +1139,53 @@ def main():
     print(f"[pack] loaded {track_path.name}: {len(x)/sr:.2f}s @ {sr}Hz, {rms(x):.4f} RMS")
 
     bpm = args.bpm if args.bpm else estimate_bpm(x, sr)
-    key = args.key or estimate_key(x, sr)
+    # The tempo: a stated one wins; else the analyser's own measurement; else an
+    # explicit BPM_UNKNOWN. A hard-coded tempo is a claim about audio nobody
+    # measured, and the manifest's `bpm` is a field a downstream reader — and
+    # this pack's licence record — trusts (card t_18c3d512, the tempo half of
+    # t_4906bc6e). The stated path already refuses nonsense: --bpm must be
+    # positive, so a stated tempo is at least a claim someone stands behind.
+    stated_bpm = args.bpm or None
+    measured_bpm = None if stated_bpm else bpm
+    bpm = stated_bpm or measured_bpm or BPM_UNKNOWN
     if args.bpm and args.bpm <= 0:
         print(f"[pack] ERROR: --bpm must be positive (got {args.bpm})",
               file=sys.stderr)
         sys.exit(2)
-    print(f"[pack] BPM={bpm}{' (stated)' if args.bpm else ' (estimated)'}, "
-          f"key={key}{' (stated)' if args.key else ' (estimated)'}")
+    if isinstance(bpm, str):
+        # Nothing was stated and nothing was measured. Bar alignment follows a
+        # tempo, so a pack cannot be built: refuse BEFORE the manifest, and say
+        # which of the two paths failed. A pack that ships loops cut at an
+        # invented tempo is worse than one that does not ship (card t_18c3d512).
+        print(f"[pack] ERROR: no tempo for bar alignment — the source is "
+              f"{len(x)} samples ({len(x)/sr:.3f}s) and the onset estimator "
+              f"returned no reading (its window is {BPM_NPERSEG} samples; "
+              f"below {BPM_NPERSEG * 8} samples a beatless clip yields nothing "
+              f"measurable). Pass --bpm when the tempo is known, or re-render "
+              f"the source with a beat.", file=sys.stderr)
+        sys.exit(2)
+    if stated_bpm:
+        bpm_note = "(stated)"
+    elif measured_bpm is not None:
+        bpm_note = "(estimated)"
+    else:
+        bpm_note = ""  # unreachable: the str branch exits above
+    # The key: a stated one wins; else the analyser's own measurement; else an
+    # explicit KEY_UNKNOWN. A hard-coded key is a claim about audio nobody
+    # analysed, and the manifest's `key` is a field a downstream reader — and
+    # this pack's licence record — trusts (card t_4906bc6e).
+    stated_key = args.key or None
+    measured_key = None if stated_key else estimate_key(x, sr)
+    key = stated_key or measured_key or KEY_UNKNOWN
+    if stated_key:
+        key_note = "(stated)"
+    elif measured_key:
+        key_note = "(estimated)"
+    else:
+        key_note = (f"(NOT measured: the source is {len(x)} samples, under the "
+                    f"analyser's {KEY_NPERSEG}-sample window — pass --key when "
+                    f"the key is known)")
+    print(f"[pack] BPM={bpm} {bpm_note}, key={key} {key_note}")
 
     bars, loop_len = choose_loop_bars(sr, bpm, len(x))
     if loop_len <= 0:
