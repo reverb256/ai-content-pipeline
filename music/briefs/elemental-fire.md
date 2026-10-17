@@ -359,8 +359,10 @@ byte-identical to `origin/main`) still carries the coupling the first pass measu
 ```
 
 But that mirror is not the deployed code. The live engine is **`sunolocal v0.1.3`**
-(pod `mining/sunolocal-source-*`; `music/quota-ledger.json` records the engine for the one
-render it logs as "sunolocal v0.1.3 -> comfyui-zephyr"), and its
+(pod `mining/sunolocal-source-*`; `music/quota-ledger.json` records the engine for the
+render it logs as "sunolocal v0.1.3 -> comfyui-zephyr" — that string is the engine field of
+`elemental-air-above-the-weather`, the entry it came from, and it stays true of that entry),
+and its
 `/opt/sunolocal/music/sunolocal/translate.py` reads:
 
 ```
@@ -495,9 +497,11 @@ Measured:
     11 421 612 B, `sha256 013339ab7c5dd8b6c6f21826512be400ed58fc37a357222823de78274a82382f`;
   - the delivered loop `/var/lib/music-plans/loops/elemental-fire-emberfall.loop.wav`
     (**6.400 s / 4 bars**, PASSes both rulers — measured §9) and its `loop_points.json`.
-  Still absent: stems, cover, package, ISRC, disclosure file and the 600 s visual. The render
-  is **not recorded in `music/quota-ledger.json`** (its `renders:` list holds one entry,
-  elemental-air) — card `t_d6b0cb36` owns that log gap.
+    Still absent: stems, cover, package, ISRC, disclosure file and the 600 s visual. The render
+    **is** recorded in `music/quota-ledger.json`: `elemental-fire-emberfall` is entry #7 of 8
+    (job `405de4ba80ce4575804250865b358925`, sha256 `013339ab7c5dd8b6c6f21826512be400ed58fc37a357222823de78274a82382f`,
+    120.000 s, written 15:52 by card `t_b21aeb51`). The entry records the LOOP-CLOSED master, not the
+    15:09 first render — it says so in its own `notes`.
 - **`music/visuals/element_fire.mp4` is a TEST FIXTURE, not a product.** It is 5.000 s,
   1280×720, 14 133 B, built by `music/gates/_visual_fixtures.py` for `check_gate_suite.sh`.
   Executed against the real gate:
@@ -951,7 +955,7 @@ the reproducible one.
 | 8 | The deployed `translate.py` makes 150 BPM unreachable at 80 % style adherence | The repo mirror still does, but it is NOT the deployed code: the live engine (sunolocal **v0.1.3**) takes an **explicit `bpm`, which wins**. The plan on disk reads `bpm 150` | CORRECTED (§5, §7) |
 | 9 | `music/suno-gen.py` "is not in this checkout"; tree **15 behind** `origin/main` | On disk (42 652 B, `is_instrumental_template` `:141`); `main` @ `2611770` = **0 behind / 73 ahead** `origin/main` (`t_8a715681` done) | CORRECTED (§7, §12, header) |
 | 10 | "No lyric sheet and no blueprint… no masters" (genre unrendered) | Plan `/var/lib/music-plans/elemental-fire-emberfall.json` exists: `bpm 150`, `key D Phrygian`, `duration 120`, `instrumental true`, bare tag sheet (queued by `t_28146d70`, done) | CORRECTED (§7, §8) |
-| 11 | (same) | Master rendered: `/var/lib/music-plans/elemental-fire-emberfall.flac`, **120.000 s**, 48 kHz stereo, `sha256 013339ab…`, `.rendered` marker; **not** in `music/quota-ledger.json` (card `t_d6b0cb36`) | CORRECTED (§8) |
+| 11 | (same) | Master rendered: `/var/lib/music-plans/elemental-fire-emberfall.flac`, **120.000 s**, 48 kHz stereo, `sha256 013339ab…`, `.rendered` marker; **is** in `music/quota-ledger.json` — `elemental-fire-emberfall` is entry #7 of 8 (job `405de4ba80ce4575804250865b358925`, sha256 `013339ab7c5d…`, written 15:52 by card `t_b21aeb51`; the entry records the loop-closed master, not the 15:09 first render) | CORRECTED (§8) |
 | 12 | "the master loop is 120.0 s (75 bars)… tiles exactly 5×" | Delivered loop is **4 bars / 6.400 s** (PASSes both rulers); 4 does not tile 600 s (93.75); the 120 s master ends in **4.787 s of digital silence** (`115.196687 .. 119.983688`). Card `t_b75ccb4a` owns the decision | CORRECTED (§2, §4) |
 | 13 | §9's headline: `gate_loop_points` PASSES a broken loop | **FIXED** (fold, `t_bab8aa19`/`ae05548`): `loop/faded.wav` now FAILs — curvature 2.21× under the ceiling, level Δ 8.8 dB over it; `loop2/B_faded` Δ 8.9 dB; A still PASSes, C 5.99× / D 34.01× still FAIL | CORRECTED (§9) |
 | 14 | `loop_seam_check.py` prints `curvature: PASS 2.21x` and `SELFTEST PASS` | At this pass: `curvature: FAIL 2.21x` (it inherited the delegated gate's three-ruler exit status) and `--selftest` was **red, rc=1**: "B_faded: curvature ruler measured FAIL, documented PASS (2.21)". Its finding was still right; its report was not. **Card `t_88879c37` — CLOSED by the tool-fix pass: `curvature: PASS 2.21x`, `SELFTEST PASS`, rc=0 (§17)** | FIXED (§9, §17) |

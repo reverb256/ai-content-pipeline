@@ -301,9 +301,14 @@ fetch returns five or more snippets. `check_oracle_determinism.py` PASS rc=0;
 - **Clearance doc and license tiers** (§8 items 2 and 3) still do not exist anywhere in the
   tree. The `sync` and `direct-license` lanes cannot pass their gates until they do.
 - **Audio.** Measured live: `/var/lib/sunolocal/artifacts/` holds 14 rendered files (13 `.flac`
-  + 1 `.wav`, newest mtime 2026-10-16T15:28), and `music/quota-ledger.json` records exactly one
-  render — genre `elemental-air`, 0 standard downloads, 0 studio exports. No chill-lounge render
-  is recorded, so this genre's generate stage is genuine first work.
+  + 1 `.wav`, newest mtime 2026-10-16T15:28), and `music/quota-ledger.json` records **8**
+  renders — `elemental-air-above-the-weather`, `chill-lounge-slow-gold`,
+  `commentary-beds-lo-fi-jazz-bed`, `commentary-beds-lo-fi-jazz-sting`,
+  `elemental-earth-chamber-loop`, `sentimental-piano-room-with-the-light-going`,
+  `elemental-fire-emberfall`, `final-round` — 0 standard downloads, 0 studio exports.
+  This genre's render **is** recorded: `chill-lounge-slow-gold` (job `4cdf2e43854c4d258c1a467fe3ca0b26`,
+  sha256 `ead1b1efdf84e845f16c42859d2b0a27826ce86d89f8012001dd3c9c536d9a05`, 420.000 s,
+  plan rendered 2026-10-16T15:17:48-05:00, queued by card `t_6d7ad524`).
 - **Who dispatches this card.** The live `music-pipeline-driver.service` runs the right checkout
   with `--board music` (fixed by t_41f354be) but its own unit file pins `Environment=DRY_RUN=1`:
   it resolves the route and logs `[dry-run] would dispatch producer` without launching anything,
