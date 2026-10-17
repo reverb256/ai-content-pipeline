@@ -1,0 +1,28 @@
+{
+  "schema": "music/track-lyrics-manifest v1",
+  "track_slug": "what-runs-beneath",
+  "title": "What Runs Beneath",
+  "genre": "activist",
+  "genre_family": "vocal",
+  "theme": "Water. A town learns what runs beneath it, then stands up. Specific, local, unwon. Ends with a door, not a victory.",
+  "authorship": {
+    "status": "human-original",
+    "authors": [
+      "j_kro"
+    ],
+    "written_at": "2026-10-08T12:48:59+00:00",
+    "ai_assist": "Lyric text written by j_kro. Suno will only render vocals from this text; it did not write or edit any line.",
+    "suno_generated_lyrics": false
+  },
+  "files": {
+    "lyrics.suno.txt": {
+      "sha256": "0833bfdb58afa3a34cfc5c7e16b35ea98bf4bfa0d0ffb3b76ec485c94c84f2e8",
+      "bytes": 1399
+    },
+    "lyrics.txt": {
+      "sha256": "8d74f469b75e596109f24546c6adadcc84e79927fe011e6fd759a7a674853980",
+      "bytes": 1009
+    }
+  },
+  "notes": "Lane fit: direct-fan (Patreon/own site) + sync for documentaries. Testimony, not slogans; no named real parties."
+}

@@ -1,0 +1,43 @@
+# Secrets — never commit
+.env
+*.env
+.env.*
+!.env.example
+
+# Browser profiles / sessions — never commit
+browser-profile/
+~/.hermes/browser-profile/
+*.session.json
+*session*.json
+har-captures/*.har
+!har-captures/*.sample.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Build / cache
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Logs
+*.log
+logs/
+models/voxcpm/
+
+# Music gate matrix runtime state (card t_b16b9046) — written by
+# music/scripts/run_gate_matrix.sh on every scheduled run, not source.
+performance/music-gate-matrix.status.json
+performance/music-gate-matrix-last-run.txt
+performance/fleet-route-probe.status.json
+performance/fleet-route-probe-last-run.txt

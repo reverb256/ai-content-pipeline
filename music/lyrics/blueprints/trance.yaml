@@ -1,0 +1,46 @@
+# Lyric blueprint — trance (family: edm)
+# Data, not code. The writer writes the actual lyrics from this brief.
+genre: trance
+family: edm
+theme: >-
+  Holding on through the long stretch before dawn. Not a party song — a
+  3am promise. One voice against a big sky. The build is the meaning.
+voice_notes: >-
+  Short declarative lines. Euphoria with gravity: the joy costs something.
+  First person, never "we party". The chorus must survive being chopped
+  into a 16-bar drop loop — one line carries the whole song.
+rhyme: >-
+  AABB or AAAA in the chorus (drive/sky/alive). Verses may go free.
+line_length: "4-8 words per line. Chorus lines shorter than verse lines."
+bpm_anchor: 138
+mood_words: [horizon, pulse, wire, signal, dawn, gravity, lift]
+avoid: >-
+  "Hands up", "the club", drink references, "tonight we're never gonna stop",
+  anything Beatport-top-100 generic.
+title_candidates:
+  - "Signal Before Dawn"
+  - "Long Way to the Sky"
+  - "Wire and Horizon"
+structure:
+  - tag: "Intro"
+    guidance: "2 lines, airy. A question or a held note."
+  - tag: "Verse 1"
+    guidance: "4 lines. The ground situation: tired, still moving. Plain words."
+  - tag: "Pre-Chorus"
+    guidance: "2-3 lines. Tension rises. Shorten the lines."
+  - tag: "Chorus"
+    guidance: "4 lines. The promise. Repeat the title phrase twice."
+  - tag: "Verse 2"
+    guidance: "4 lines. The cost named honestly. Same meter as Verse 1."
+  - tag: "Chorus"
+    guidance: "Repeat. Identical words."
+  - tag: "Bridge"
+    guidance: "2 lines. Strip to the fear. This is the quiet before the last drop."
+  - tag: "Chorus"
+    guidance: "Final chorus. Lift one word an octave in the phrasing."
+  - tag: "Outro"
+    guidance: "1-2 lines. Dissolve on the horizon image."
+notes: >-
+  Lane fit: streaming (DistroKid independent release) + youtube-mix. Beatport
+  is closed (2026-08-12). Vocals are a texture, not a story — every line must
+  loop cleanly against a 138 BPM four-on-the-floor.

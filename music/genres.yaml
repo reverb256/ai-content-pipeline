@@ -1,0 +1,224 @@
+# music/genres.yaml — declarative genre registry.
+# Add a genre = add a block. Never edit a script to add a genre.
+#
+# Schema per block (all keys REQUIRED — registry.py validate enforces):
+#   family:         free-form family label (validator checks lane refs, not families)
+#   prompt_template: path relative to music/ — MUST resolve to a real file
+#   visual_style:   path relative to music/ — MUST resolve to a real file
+#   lanes:          every entry MUST exist as a lane in lanes.yaml
+#   cadence:        <int>/wk
+#   video_shape:    platform-native video shape for the videobot
+#   loop_bars:      OPTIONAL — the DELIVERED loop's length in whole bars, for a
+#                   genre whose shape is built by repeating a loop (loop-10min).
+#                   It must TILE the shape exactly: the shape's bar count
+#                   (shape seconds x bpm / 240) must divide by loop_bars, or the
+#                   video's last seam is a jump cut. The rule, the arithmetic and
+#                   the per-genre values are stated under the gamer family below;
+#                   music/scripts/check_loop_tiling.py recomputes them and fails
+#                   on a violation. Absent = the genre makes no loop-tile claim.
+#   notes:          lane rationale, platform bans, target market
+#
+# Source: brain/playbooks/music-lane-architecture.md §2.
+# anime-opening / anime-ending merged from music/prompts/anisong-genre-blocks.yaml
+# (delivered by task t_5e35a231, anisong genre templates; required by the
+# Virtual Reflections album, tracks 7-9).
+
+version: 1
+
+defaults:
+  export: studio              # Studio = unlimited downloads (see quota gate)
+  stems: true                 # stems mandatory for sync + direct-licensing
+  lyrics: human-original      # original lyrics -> copyrightable -> SOCAN
+  release_private: true       # never auto-publish
+  gate_profile: reviewer-deepseek
+
+genres:
+
+  chill-lounge:
+    family: ambient
+    prompt_template: prompts/chill-lounge.md
+    visual_style: visuals/lofi-room-rain.md
+    lanes: [youtube-longform, streaming, sync, direct-license]
+    cadence: 3/wk
+    video_shape: album-30-60min
+    notes: "Highest-volume lane. Needs visual identity to survive inauthentic-content review."
+
+  trance:
+    family: edm
+    prompt_template: prompts/trance.md
+    visual_style: visuals/neon-horizon.md
+    lanes: [streaming, youtube-mix, direct-license, sync]
+    cadence: 2/wk
+    video_shape: mix-60min
+    notes: "Beatport BANNED (2026-08-12). Independent release + DJ mixes only. No label path."
+
+  jungle-dnb:
+    family: edm
+    prompt_template: prompts/jungle-dnb.md
+    visual_style: visuals/urban-grain.md
+    lanes: [streaming, youtube-mix, direct-license]
+    cadence: 2/wk
+    video_shape: mix-60min
+    notes: "Same Beatport ban applies. Amen-break / ragga vocal direction."
+
+  sentimental-piano:
+    family: acoustic
+    prompt_template: prompts/sentimental-piano.md
+    visual_style: visuals/soft-window-light.md
+    lanes: [sync, streaming, direct-license, youtube-longform]
+    cadence: 3/wk
+    video_shape: album-30-60min
+    notes: "Sync-friendly: slow, predictable structure, easy to clear. Mood discovery trend."
+
+  # loop_bars: 16 — THE DELIVERED LOOP'S LENGTH (card t_8b4fcc48, measured
+  # 2026-10-16). This genre has no video shape, but its BED is sold as a
+  # seamless wrap, so the registry declares the loop: 16 bars at the genre's own
+  # 120 BPM = exactly 32.000 s, the kit's talk-bed spec (template §8, the
+  # queue entry's own bar math). A declared `loop_bars` IS the loop claim that
+  # `loop_close.py --claims-loop` reads, so the render rail now BUILDS AND
+  # MEASURES this genre's loop exactly as it does a `loop-10min` genre's. Before
+  # this, `video_shape: none` was read as "not a loop claim" and the rail
+  # certified the master on `rc=0` alone: the delivered bed's last 3.44 s were
+  # digital silence (sha256 e6a3b77a8d68615a5910be2118eed8a317d59c4557faef435
+  # 53ad155f44cff97, level delta 43.3 dB, gate_loop_points rc=1).
+  #
+  # There is nothing to TILE here (no `loop-10min` shape), so only the span band
+  # applies — 32.000 s sits inside 24.0 .. 120.0 s (check_loop_tiling.py).
+  #
+  # The render must be LONGER than the loop it carries: the engine emits
+  # 1.5-6.2 s of digital silence inside every requested window, so the queue
+  # entry asks for 48 s and the delivered loop is the last whole 16 bars of that
+  # render's musical region (measured on the 32 s render: music stops at
+  # 28.560562 s, so a 32.0 s loop could not fit).
+  commentary-beds:
+    family: utility
+    prompt_template: prompts/commentary-beds.md
+    visual_style: visuals/none.md
+    lanes: [direct-license, sync]
+    cadence: 5/wk
+    video_shape: none
+    loop_bars: 16
+    notes: "Loopable + stemmed. Market: 82% of podcasts license stock themes."
+
+  activist:
+    family: vocal
+    prompt_template: prompts/activist.md
+    visual_style: visuals/documentary-grain.md
+    lanes: [direct-fan, sync-documentary, streaming]
+    cadence: 1/wk
+    video_shape: lyric-video
+    notes: "Ad-suitability risk — audience-funded > ad-funded. Sync for doc/film is the pro outlet."
+
+  # ---- elemental / gamer family -------------------------------------------
+  # One block per element. Copy the block, change prompt + visual. Infinite variety.
+  #
+  # loop_bars — THE LOOP-TILE CONTRACT (decided 2026-10-16, card t_b75ccb4a).
+  #
+  # `video_shape: loop-10min` is a 600.000 s video built by REPEATING the
+  # delivered loop, so the loop's length must divide the shape exactly or the
+  # video's last seam is a jump cut. Both quantities are whole bars, and the
+  # shape's own bar count is a function of the GENRE'S OWN TEMPO:
+  #
+  #     bar_s      = 240 / bpm                 (4/4)
+  #     shape_bars = 600.0 / bar_s = 2.5 x bpm       375 bars at 150 BPM
+  #                                                  205 at 82, 220 at 88,
+  #                                                  230 at 92
+  #     loop_bars  must DIVIDE shape_bars, and
+  #     span       = loop_bars x bar_s  must be <= 120.000 s  (the CEILING: the
+  #                  master-loop length the genre briefs locked, i.e. the full
+  #                  arc) and >= 24.000 s (the FLOOR: shorter than that is a
+  #                  fragment, not a phrase).
+  #
+  # The value is the LARGEST divisor at or below the ceiling — and it must also
+  # be one the render can deliver WHOLE. The ACE engine emits 1.5-6.2 s of
+  # digital silence inside every requested window, so a loop as long as the
+  # render itself can never be closed: measured on a 120.000 s render, a 75-bar
+  # (120.000 s) loop is REFUSED ("the musical region (115.197s) is shorter than
+  # one 120.000s loop — nothing to close"), while 25 bars (40.000 s) closes with
+  # a 0.0 dB level delta and passes all three rulers. That is why the 150 BPM
+  # genres differ: elemental-fire's render is 120 s, so its 75 bars is
+  # unreachable and it takes the next divisor down, 25 bars; chiptune-8bit is
+  # also 150 BPM but plans a 600 s render, so it takes the ceiling itself.
+  # A render that is to carry a loop must therefore be longer than that loop.
+  #
+  # 4 bars is NOT a legal default here: at 150 BPM it is 6.400 s, and
+  # 600 / 6.4 = 93.75 tiles — FRACTIONAL. BARS_PREFERRED = 4 in
+  # music/assets/pack.py stays as the PACK lane's own cutdown default (an
+  # in-engine cutdown loop is repeated by the game engine and carries no tiling
+  # requirement) — the video tile is chosen here, per genre.
+
+  elemental-fire:
+    family: gamer
+    prompt_template: prompts/elemental-fire.md
+    visual_style: visuals/element-fire.md
+    lanes: [game-assets, youtube-gaming, streaming]
+    cadence: 2/wk
+    video_shape: loop-10min
+    loop_bars: 25              # 40.000 s at 150 BPM -> 375/25 = 15 exact tiles
+    notes: "Boss/battle theme. Target indie devs + gaming music channels."
+
+  elemental-water:
+    family: gamer
+    prompt_template: prompts/elemental-water.md
+    visual_style: visuals/element-water.md
+    lanes: [game-assets, youtube-gaming, streaming]
+    cadence: 2/wk
+    video_shape: loop-10min
+    loop_bars: 41              # 120.000 s at 82 BPM -> 205/41 = 5 exact tiles
+
+  elemental-earth:
+    family: gamer
+    prompt_template: prompts/elemental-earth.md
+    visual_style: visuals/element-earth.md
+    lanes: [game-assets, youtube-gaming, streaming]
+    cadence: 2/wk
+    video_shape: loop-10min
+    loop_bars: 44              # 120.000 s at 88 BPM -> 220/44 = 5 exact tiles
+
+  elemental-air:
+    family: gamer
+    prompt_template: prompts/elemental-air.md
+    visual_style: visuals/element-air.md
+    lanes: [game-assets, youtube-gaming, streaming]
+    cadence: 2/wk
+    video_shape: loop-10min
+    loop_bars: 46              # 120.000 s at 92 BPM -> 230/46 = 5 exact tiles
+
+  chiptune-8bit:
+    family: gamer
+    prompt_template: prompts/chiptune-8bit.md
+    visual_style: visuals/pixel-scene.md
+    lanes: [game-assets, youtube-gaming, streaming]
+    cadence: 2/wk
+    video_shape: loop-10min
+    loop_bars: 75              # 120.000 s at 150 BPM -> 375/75 = 5 exact tiles
+
+  epic-orchestral-boss:
+    family: gamer
+    prompt_template: prompts/epic-orchestral-boss.md
+    visual_style: visuals/dark-fantasy.md
+    lanes: [game-assets, youtube-gaming, sync, streaming]
+    cadence: 1/wk
+    video_shape: single-4min
+
+  # ---- anisong family -----------------------------------------------------
+  # Merged from music/prompts/anisong-genre-blocks.yaml (task t_5e35a231).
+  # Required by the Virtual Reflections album (campaigns/virtual-reflections/CAMPAIGN.md).
+
+  anime-opening:
+    family: anisong
+    prompt_template: prompts/anime-opening.md
+    visual_style: visuals/anime-opening.md
+    lanes: [streaming, sync, direct-license, youtube-gaming]
+    cadence: 1/wk
+    video_shape: single-4min
+    notes: "Anison idiom: 130-180 BPM, IV-V-iii-vi royal road, FINAL CHORUS JUMPS UP ONE KEY (the defining gesture), 90-second TV-edit density, Japanese vocals in Japanese script. Required by the Virtual Reflections album (tracks 7-8). A generation without the key-changed final chorus is OUT of genre - reject it."
+
+  anime-ending:
+    family: anisong
+    prompt_template: prompts/anime-ending.md
+    visual_style: visuals/anime-ending.md
+    lanes: [streaming, sync, direct-license, youtube-longform]
+    cadence: 1/wk
+    video_shape: album-30-60min
+    notes: "Anison ballad idiom: 70-120 BPM, IV-V-iii-vi royal road, gentle key lift in the final chorus, brushed drums from verse 2, Japanese vocals in Japanese script. Required by the Virtual Reflections album (track 9). Hard-cut ending is a defect - the tail fades the light."

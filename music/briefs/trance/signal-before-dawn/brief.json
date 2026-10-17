@@ -1,0 +1,25 @@
+{
+  "name": "trance-signal-before-dawn",
+  "genre": "trance",
+  "brief": "Signal Before Dawn. Holding on through the long stretch before dawn. Not a party song: a 3am promise, one voice against a big sky. Uplifting trance at 138 BPM in A minor. The breakdown is the emotional centre and the drop is the earned payoff. Lyrics come from the existing human-authored sheet, not from the planner.",
+  "title": "Signal Before Dawn",
+  "lyricsMode": "draft",
+  "language": "en",
+  "duration": 417,
+  "_queue": {
+    "target": "mining-k8s/helm/charts/music-pipeline/values.yaml -> briefs:",
+    "configmap": "mining/music-pipeline-briefs key briefs.json",
+    "planner_job": "mining/music-pipeline (17 */6 * * *)",
+    "plan_out": "/var/lib/music-plans/trance-signal-before-dawn.json",
+    "render_job": "mining/music-pipeline-render (41 */4 * * *)"
+  },
+  "_lyrics_source": {
+    "track_dir": "music/lyrics/trance/signal-before-dawn",
+    "sheet": "lyrics.suno.txt",
+    "sha256": "e667e248627e5c985e76018d424fa1e18d33fc2379381025d7da4a98734505da",
+    "authorship": "human-original, j_kro, 2026-10-08T12:48:59+00:00",
+    "requirement": "plan.lyrics must carry this sheet verbatim; lyricsMode draft is a placeholder only, lyricsMode ai is forbidden for this track (it voids the authorship claim)"
+  },
+  "_duration_basis": "138 BPM, 4/4 -> one bar = 1.7391 s (4*60/138). 240 bars = 417.4 s, inside the planner cap of 600 s (planner.py MIN_DURATION_S=16 at line 147, MAX_DURATION_S=600 at line 148). The cap read 420 when this entry was written; commit 52ae620 (card t_25a6499c) raised it for the registry's loop-10min shape, and the floor moved 30 -> 16 with card t_96dfc521. The rail was re-read 2026-10-16 by card t_ae1d9243 (the cap by t_a7a7d998).",
+  "_plan_key_note": "MEASURED 2026-10-16 (card t_a7a7d998): the queued plan /var/lib/music-plans/trance-signal-before-dawn.json carries \"key\": \"C minor\" because this queue entry pins no keyscale and planner.py falls back to a hardcoded \"C minor\" (planner.py:831). The genre template's caption, which is what the engine receives, says A minor. The defect and its fix are card t_f65b0f4c; pinning `keyscale: A minor` here would mirror the epic-orchestral-boss entry, which states bpm and keyscale explicitly so they travel in the queue."
+}

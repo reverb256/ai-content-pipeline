@@ -1,0 +1,41 @@
+# NEGATIVE TEST FIXTURE — DO NOT SHIP. This is a REAL Suno-generated lyric
+# (classic "Full Song" lyric model), published as the "Umbrellas in Space"
+# example on suno.com (via note.com walkthrough, verified 2026-10-08).
+# It exists so the gate's rejection path is regression-tested.
+# gate_lyrics_original.py MUST fail this file. See SUNO_FINGERPRINTS.md.
+
+[Verse]
+Walking on the stars with my umbrella in tow
+Meteor showers? Nah I'm ready to go
+Asteroids may stumble but I'll take the lead
+Intergalactic traveler with an earthly feed
+
+[Verse 2]
+Floating through the cosmos with a grin so wide
+Planets wave hello as they spin by my side
+My shoes aren't grounded but my heart's in place
+Astral winds can't touch the smirk on my face
+
+[Chorus]
+Umbrellas in space they keep the rays away
+Dancing in zero-g light years from yesterday
+Craft a constellation with a sparkle so bright
+Our universe is endless join me for the flight
+
+[Verse 3]
+Stars whisper secrets as I drift through the night
+Milky Way confetti fills my eyes with delight
+No black hole drama just a cosmic ballet
+Umbrella twirling magic in the vastness of grey
+
+[Verse 4]
+Galaxy's rhythm beating in my chest
+Moonbeams and dreams I'm here as your guest
+Space-time illusion but the moment feels real
+Catch your cosmic breath let's make it surreal
+
+[Bridge]
+Aliens wave like friends I've always known
+Gravity can't catch me cause I've always flown
+Dance beneath the nebula our tempo so grand
+Umbrellas in space take my outstretched hand

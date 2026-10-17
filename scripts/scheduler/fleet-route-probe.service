@@ -1,0 +1,43 @@
+# scripts/scheduler/fleet-route-probe.service
+# systemd user unit — runs the FLEET ROUTING PROBE on a schedule.
+#
+# Card t_7d75bafd. `scripts/fleet-route.py probe` existed and measured 2026-10-16
+# `~/.hermes/state/fleet-route/` did not exist: nothing ran it. The same day 29 of
+# 32 Hermes profiles on this host had a primary that answers HTTP 400
+# MissingSessionID, 14 chains named a provider whose credential is absent, and 5
+# profiles had no fallback at all — with no signal anywhere.
+#
+# This unit is the scheduled home. scripts/fleet-route-probe.sh audits every
+# profile (offline), probes every model in every primary + chain (live), asserts
+# that this very schedule is armed, writes
+# performance/fleet-route-probe.log + .status.json + -last-run.txt, posts to the
+# fleet alert feed on failure, and exits with its own status.
+#
+# Timer: fleet-route-probe.timer (every 3 h at :40)
+# Host: nexus (always-on; the probe calls public inference APIs, so it wants the
+#       network, unlike the music gate matrix which is fully local)
+
+[Unit]
+Description=Fleet Route Probe — audit + live probe of every Hermes profile's route (card t_7d75bafd)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /home/j_kro/ai-content-pipeline/scripts/fleet-route-probe.sh
+WorkingDirectory=/home/j_kro/ai-content-pipeline
+# PY pinned like the music units: a bare `python3` in a worker shell resolves to
+# the Hermes bundled interpreter, which has no PyYAML (t_d3b9e218). fleet-route.py
+# tolerates that one, but the audit's YAML read must not go through it.
+Environment=PY=/usr/bin/python3
+Environment=HOME=/home/j_kro
+Environment=FLEET_ROUTE_HERMES_HOME=/home/j_kro/.hermes
+Nice=10
+IOSchedulingClass=idle
+# Deliberately NO SuccessExitStatus: rc=1 (a profile carries a routing flag, or a
+# model did not answer) and rc=2 (the schedule itself is not armed) must make this
+# unit FAIL, so `systemctl --user status fleet-route-probe.service` and the
+# verify-fleet installed-unit section both surface it. "Finished" while the fleet
+# is routed at a dead provider is the defect this unit exists to end.
+# 30 minutes bounds a hang: the audit takes ~1 s, the live probe 1-3 min.
+TimeoutStartSec=1800
