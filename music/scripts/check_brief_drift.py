@@ -30,7 +30,7 @@ For every `music/briefs/**/*.md` it finds two families of count:
   * DIVERGENCE — "N commits behind `origin/main`, M ahead" (either number may be a digit or an
     English number word). Recomputed with
     `git rev-list --left-right --count origin/main...HEAD` → `<behind> <ahead>`.
-  * BLUEPRINT CENSUS — "<n> blueprint-less genres" and "<n> of the <m> genres" / "only <n>
+  * BLUEPRINT CENSUS — "<n> blueprint-less genres" and "<n> of the <m> genres" / "only <n>"
     genres with a lyric blueprint". Recomputed from `music/genres.yaml` (the registry loader)
     and the number of `music/lyrics/blueprints/*.yaml` files.
 
@@ -58,6 +58,7 @@ Related checks (deliberately not duplicated here)
 
 cited: t_b7dd5655 (this incident), t_ace3bfb1 (the brief), t_8a715681 (the divergence itself),
 t_55379aba (the sibling figures check, whose shape this follows).
+
 """
 
 from __future__ import annotations
@@ -73,8 +74,7 @@ BRIEF_GLOB = "music/briefs/**/*.md"
 _WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7,
           "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13,
           "fourteen": 14, "fifteen": 15, "sixteen": 16}
-_NUMPAT = r"(?:\d+|" + "|".join(_WORDS) + r")"
-
+_NUMPAT = r"(?:\\d+|" + "|".join(_WORDS) + r")"
 
 def num(token: str) -> int:
     token = token.strip().lower()
@@ -82,21 +82,21 @@ def num(token: str) -> int:
 
 
 # "15 commits behind `origin/main`, 7 ahead"  /  "**6 ahead, 15 behind**"
-DIVERGE_AHEAD = re.compile(rf"({_NUMPAT})\s*(?:commits?\s+)?behind[^\n]{{0,80}}?({_NUMPAT})\s*ahead",
+DIVERGE_AHEAD = re.compile(rf"({_NUMPAT})\\s*(?:commits?\\s+)?behind[^\\n]{{0,80}}?({_NUMPAT})\\s*ahead",
                            re.I)
-DIVERGE_BACK = re.compile(rf"({_NUMPAT})\s*ahead[^\n]{{0,80}}?({_NUMPAT})\s*(?:commits?\s+)?behind",
+DIVERGE_BACK = re.compile(rf"({_NUMPAT})\\s*ahead[^\\n]{{0,80}}?({_NUMPAT})\\s*(?:commits?\\s+)?behind",
                           re.I)
-# the two numbers the pair must equal; git prints "<behind>\t<ahead>"
+# the two numbers the pair must equal; git prints "<behind>\\t<ahead>"
 # An ANCHORED claim is a historical fact, not a claim about now: the line names the revision
 # or stamps the clock time it was measured at. Unanchored "N behind / M ahead" is a claim
 # about the present and must hold against the present tree.
 ANCHORED = re.compile(
     r"`[0-9a-f]{7,40}`|when written|at write time|at filing|"
-    r"\b\d{1,2}:\d{2}\b|\bmeasured (?:at|on)\b", re.I)
+    r"\\b\\d{1,2}:\\d{2}\\b|\\bmeasured (?:at|on)\\b", re.I)
 
-BLUEPRINT_LESS = re.compile(rf"({_NUMPAT})\s+blueprint-(?:less|free)\s+genres", re.I)
-OF_GENRES = re.compile(rf"only\s+({_NUMPAT})\s+genres?\s+with\s+a\s+lyric\s+blueprint", re.I)
-NUM_OF_GENRES = re.compile(rf"({_NUMPAT})\s+of\s+(?:the\s+)?({_NUMPAT})\s+genres", re.I)
+BLUEPRINT_LESS = re.compile(rf"({_NUMPAT})\\s+blueprint-(?:less|free)\\s+genres", re.I)
+OF_GENRES = re.compile(rf"only\\s+({_NUMPAT})\\s+genres?\\s+with\\s+a\\s+lyric\\s+blueprint", re.I)
+NUM_OF_GENRES = re.compile(rf"({_NUMPAT})\\s+of\\s+(?:the\\s+)?({_NUMPAT})\\s+genres", re.I)
 
 
 # ---------------------------------------------------------------------------
@@ -152,11 +152,14 @@ def check_text(label: str, text: str, live: dict) -> tuple[list[str], int]:
                     continue
                 if (behind, ahead) != (live["behind"], live["ahead"]):
                     findings.append(
-                        f"{label}:{lineno}  claimed \"{a} behind / {b} ahead\"  "
+                        f"{label}:{lineno}  claimed \\\"{a} behind / {b} ahead\\\"  "
                         f"measured {live['behind']} behind / {live['ahead']} ahead of "
-                        f"origin/main  [STALE DIVERGENCE]")
+                        f"origin/main  [STALE DIVERGENCE]"
+                    )
         for m in (BLUEPRINT_LESS, OF_GENRES):
             for got in m.findall(line):
+                if ANCHORED.search(line):
+                    continue
                 checked += 1
                 if m is OF_GENRES:
                     # "one of only three genres with a lyric blueprint" counts the genres
@@ -166,24 +169,29 @@ def check_text(label: str, text: str, live: dict) -> tuple[list[str], int]:
                     actual = live["blueprints"]
                     if num(got) != actual:
                         findings.append(
-                            f"{label}:{lineno}  claimed \"only {got} genres with a lyric "
-                            f"blueprint\"  measured {actual} "
-                            f"(music/lyrics/blueprints/*.yaml)  [STALE CENSUS]")
+                            f"{label}:{lineno}  claimed \\\"only {got} genres with a lyric "
+                            f"blueprint\\\"  measured {actual} "
+                            f"(music/lyrics/blueprints/*.yaml)  [STALE CENSUS]"
+                        )
                     continue
                 actual = live["genres"] - live["blueprints"]
                 if num(got) != actual:
                     findings.append(
-                        f"{label}:{lineno}  claimed \"{got}\" blueprint-less genres  "
+                        f"{label}:{lineno}  claimed \\\"{got}\\\" blueprint-less genres  "
                         f"measured {actual} ({live['genres']} registered genres - "
-                        f"{live['blueprints']} in music/lyrics/blueprints/)  [STALE CENSUS]")
+                        f"{live['blueprints']} in music/lyrics/blueprints/)  [STALE CENSUS]"
+                    )
         for a, b in NUM_OF_GENRES.findall(line):
             if "blueprint" not in line.lower():
+                continue
+            if ANCHORED.search(line):
                 continue
             checked += 1
             if num(a) != live["blueprints"] or num(b) != live["genres"]:
                 findings.append(
-                    f"{label}:{lineno}  claimed \"{a} of the {b} genres\"  measured "
-                    f"{live['blueprints']} of the {live['genres']}  [STALE CENSUS]")
+                    f"{label}:{lineno}  claimed \\\"{a} of the {b} genres\\\"  measured "
+                    f"{live['blueprints']} of the {live['genres']}  [STALE CENSUS]"
+                )
     return findings, checked
 
 
@@ -210,15 +218,15 @@ def read(repo: Path, rel: str, rev: str | None) -> str:
 
 def selftest() -> int:
     live = {"behind": 15, "ahead": 29, "genres": 14, "blueprints": 3}
-    good = ("the checkout is 15 commits behind `origin/main`, 29 ahead\n"
-            "the flat 100 fallback that the eleven blueprint-less genres get\n"
-            "Activist is one of only three genres with a lyric blueprint\n"
-            "and only 3 of the 14 exist\n")
-    bad = ("the checkout is 15 commits behind `origin/main`, 7 ahead\n"
-           "the flat 100 fallback that the seven blueprint-less genres get\n"
-           "only 9 genres with a lyric blueprint\n")
-    anchored = ("this checkout is 15 behind / 7 ahead of `origin/main` when written\n"
-                "the repo was at `9ebf6af`, 15 commits behind `origin/main`, 7 ahead\n")
+    good = ("the checkout is 15 commits behind `origin/main`, 29 ahead\\n"
+            "the flat 100 fallback that the eleven blueprint-less genres get\\n"
+            "Activist is one of only three genres with a lyric blueprint\\n"
+            "and only 3 of the 14 exist\\n")
+    bad = ("the checkout is 15 commits behind `origin/main`, 7 ahead\\n"
+           "the flat 100 fallback that the seven blueprint-less genres get\\n"
+           "only 9 genres with a lyric blueprint\\n")
+    anchored = ("this checkout is 15 behind / 7 ahead of `origin/main` when written\\n"
+                "the repo was at `9ebf6af`, 15 commits behind `origin/main`, 7 ahead\\n")
     f_bad, c_bad = check_text("bad", bad, live)
     f_good, c_good = check_text("good", good, live)
     f_anch, c_anch = check_text("anchored", anchored, live)
