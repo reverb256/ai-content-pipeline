@@ -954,7 +954,7 @@ still does not decide: j_kro owns the release title.
 
 ## 13. Provenance
 
-- Registry: `music/genres.yaml` (lines 20–24 defaults, 47–54 this genre), `music/lanes.yaml`,
+- Registry: `music/genres.yaml` (lines 20–24 defaults, 47–53 this genre), `music/lanes.yaml`,
   `music/autonomy.yaml` — validated live (`registry OK: 14 genres, 10 lanes`)
 - Rubric: `music/rubrics/edm.json` read in full; anchors quote EDMProd, Veena Studio,
   Transmission Samples (URLs in its `sources`)
@@ -1256,6 +1256,7 @@ readings below, `check_brief_line_refs` read 119 ranges (from 118) and `check_br
 findings (from 8), both with nothing in this file either way.
 
 **One FAIL that fired during the fix belongs to the check, not to the briefs, and is filed.** At the
+- **Superseded by this pass (card `t_f257bd22`, 2026-10-16):** `sha256 9f79730efc9b0370995356b300538ba7756474e500e58a25cd65137909f12a15` (1467 lines / 100213 B) — the eight line citations that had landed on a blank line after genres.yaml and planner.py moved again were re-pointed in the citing briefs only; no referent file was touched. The live `load_blueprint` docstring is back at `planner.py:297`, so the §16 fence citation follows it, and the t_6dd13d76 supersession record above is unchanged (it describes that pass, which moved the citation from :182 to :297).
 16:10 run the check reported a third failure, at line 835 of `music/briefs/chiptune-8bit.md`, for a
 path-and-line token *quoted* inside a fenced block labelled "Verbatim results": that block records
 the check's own output at revision `c296db6`, named on the prose line above the fence. The brief
@@ -1303,7 +1304,7 @@ file's in any of the three readings**, and this pass changed no figure — the d
 people's writes landing under a shared tree.
 
 - **Superseded revision of this file:** `sha256 5b3914191c5108814cccaaaa2c51f8a5b5eff1efc17455f7ddc4c173dac486ea` (1168 lines / 76 392 B).
-- **Superseded by this pass (card `t_6dd13d76`, 2026-10-16T17:21-05:00 CDT):** `sha256 3411f2eb58de226cc6d7d5ef524b6c06d78fd34e1c2a99c445278eabc21cd15f` (1261 lines / 85229 B) — the code-comment citation above was re-pointed from `planner.py:297` to `planner.py:297`: the file grew since that reading and `:182` is blank now, while `:297` is the `load_blueprint` docstring the line names. The census text it quotes was corrected by card `t_a54fb00d` in the pass that follows — see the
+- **Superseded by this pass (card `t_6dd13d76`, 2026-10-16T17:21-05:00 CDT):** `sha256 3411f2eb58de226cc6d7d5ef524b6c06d78fd34e1c2a99c445278eabc21cd15f` (1261 lines / 85229 B) — the code-comment citation above was re-pointed from `planner.py:182` to `planner.py:297`: the file grew since that reading and `:182` is blank now, while `:297` is the `load_blueprint` docstring the line names. The census text it quotes was corrected by card `t_a54fb00d` in the pass that follows — see the
 bullet two below and §16.
 - **Not changed, not re-filed otherwise:** the trend-fallback card `t_eb648761` is still a
   duplicate to close, and the blueprint-census comments in `music/planner/planner.py` and
