@@ -1,5 +1,6 @@
 import os
 import json
+import shutil
 import uuid
 import logging
 from typing import Dict, Any, Optional
@@ -20,10 +21,16 @@ class StreamingPackage:
     Follows the requirement: one track, complete metadata, ISRC, and master.
     """
     
-    def __init__(self, track_id: str, metadata: Dict[str, Any]):
+    def __init__(self, track_id: str, metadata: Dict[str, Any],
+                 out_dir: Optional[Path] = None):
         self.track_id = track_id
         self.metadata = metadata
-        self.package_path = PACKAGES_DIR / track_id
+        # `out_dir` exists so the VERIFICATION run below packs into a tempdir
+        # instead of into this repo. Card t_8f515be3 measured why: the throwaway
+        # `t_verify_streaming/` package was committed to main as a manifest plus
+        # two symlinks into a pruned scratch dir, and a reader counts that as
+        # "the master is in the repo".
+        self.package_path = (Path(out_dir) if out_dir else PACKAGES_DIR) / track_id
         self.package_path.mkdir(parents=True, exist_ok=True)
         
     def generate_isrc(self) -> str:
@@ -46,20 +53,26 @@ class StreamingPackage:
         with open(manifest_path, "w") as f:
             json.dump(self.metadata, f, indent=2)
             
-        # 2. Link Master Audio
+        # 2. Copy Master Audio - a COPY, never a symlink (card t_8f515be3).
+        # git stores a link's TARGET, not the bytes: the committed package of the
+        # verification run held an 82-byte master.wav whose target was a scratch
+        # path that no longer existed. Duplicating bytes costs nothing here - a
+        # package master that is byte-identical to the campaign master is the
+        # SAME blob in the object store (measured on
+        # music/packages/streaming/erasing-the-distance/master.wav).
         master_dest = self.package_path / "master.wav"
         if master_path.exists():
-            # Use symlink to avoid duplicating large WAVs during packaging
-            if master_dest.exists(): master_dest.unlink()
-            master_dest.symlink_to(master_path)
+            if master_dest.exists() or master_dest.is_symlink(): master_dest.unlink()
+            shutil.copyfile(master_path, master_dest)
         else:
             raise FileNotFoundError(f"Master audio not found at {master_path}")
             
-        # 3. Link Artwork
+        # 3. Copy Artwork - the same rule as the master above (card t_8f515be3):
+        # a package ships bytes, and a link to a scratch dir ships a path string.
         art_dest = self.package_path / "artwork.jpg"
         if artwork_path.exists():
-            if art_dest.exists(): art_dest.unlink()
-            art_dest.symlink_to(artwork_path)
+            if art_dest.exists() or art_dest.is_symlink(): art_dest.unlink()
+            shutil.copyfile(artwork_path, art_dest)
         else:
             raise FileNotFoundError(f"Artwork not found at {artwork_path}")
             
@@ -73,7 +86,7 @@ class StreamingPackage:
 def package_release(track_id: str, master_path: str, artwork_path: str, 
                     title: str, artist: str, genre: str, 
                     lyrics: str = "", explicit: bool = False, 
-                    ai_disclosure: bool = True):
+                    ai_disclosure: bool = True, out_dir: Optional[Path] = None):
     """
     Entry point for the distributor bot to package a track.
     """
@@ -88,19 +101,24 @@ def package_release(track_id: str, master_path: str, artwork_path: str,
         "secondary_distributor": "tunecore"
     }
     
-    packer = StreamingPackage(track_id, metadata)
+    packer = StreamingPackage(track_id, metadata, out_dir=out_dir)
     return packer.package(Path(master_path), Path(artwork_path))
 
 if __name__ == "__main__":
-    # Verification mode: Create a dummy track package
+    # Verification mode: Create a dummy track package. The demo ALWAYS packs into a
+    # tempdir: card t_8f515be3 measured that packing into the repo's
+    # music/packages/streaming/ leaves a package dir behind, which is how the
+    # throwaway t_verify_streaming fixture was made in the first place. The root is
+    # still resolved from __file__ (card t_23641f1f) -- only the DEMO's destination
+    # is unbound.
     import tempfile
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_master = Path(tmpdir) / "test_master.wav"
         tmp_art = Path(tmpdir) / "test_art.jpg"
         tmp_master.write_text("DUMMY WAV DATA")
         tmp_art.write_text("DUMMY JPG DATA")
-        
+
         try:
             res = package_release(
                 track_id="t_verify_streaming",
@@ -108,7 +126,10 @@ if __name__ == "__main__":
                 artwork_path=str(tmp_art),
                 title="Verification Track",
                 artist="Hermes Bot",
-                genre="Chill Lounge"
+                genre="Chill Lounge",
+                # Pack into the tempdir: a verification run must leave no package
+                # dir behind (card t_8f515be3).
+                out_dir=Path(tmpdir) / "packages",
             )
             print(json.dumps(res, indent=2))
         except Exception as e:
