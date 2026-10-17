@@ -1256,14 +1256,37 @@ def cmd_plan(args) -> int:
     # a refusal, and the scheduled matrix read it as a misbehaving gate. Say so
     # before the write, with the errno, the owner, and the one thing that fixes
     # it: point --out somewhere this user owns.
-    try:
-        probe = open(out, "ab")
-    except OSError as e:
-        print(f"REFUSED: cannot write the plan to {out} ({e}). "
-              f"Point --out at a path this user owns, or remove the foreign file "
-              f"if it is a leftover from another run.")
-        return 2
-    probe.close()
+    #
+    # The probe must not CREATE the target: a refused plan (duration outside the
+    # rail, or a sheet that fails validation) must leave NO file for the render
+    # rail to pick up, and opening it "ab" would leave an empty one behind. So:
+    #   * the target EXISTS  -> open it "ab" (append, never truncate). If that
+    #     fails the file is foreign-owned in a sticky dir and the caller cannot
+    #     replace it; if it succeeds the caller owns it and the write goes ahead.
+    #   * the target is ABSENT -> prove the PARENT is writable by creating and
+    #     removing a throwaway probe in it. A missing target in a writable dir
+    #     is writable by this user; a missing target in a dir this user cannot
+    #     create in is not.
+    if out.exists():
+        try:
+            with open(out, "ab"):
+                pass
+        except OSError as e:
+            print(f"REFUSED: cannot write the plan to {out} ({e}). "
+                  f"Point --out at a path this user owns, or remove the foreign "
+                  f"file if it is a leftover from another run.")
+            return 2
+    else:
+        probe = out.parent / f".probe-{os.getpid()}"
+        try:
+            with open(probe, "wb"):
+                pass
+            probe.unlink()
+        except OSError as e:
+            print(f"REFUSED: cannot write the plan to {out} ({e}). "
+                  f"Point --out at a path this user owns, or remove the foreign "
+                  f"file if it is a leftover from another run.")
+            return 2
 
     print(f"plan     : {out}")
     print(f"genre    : {ctx['genre']}   lyrics_mode: {'sheet' if sheet else mode}")
