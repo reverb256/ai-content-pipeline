@@ -63,6 +63,9 @@ FENCE_REL = "music/scripts/git_commit_fence.sh"      # source of record (lane)
 FENCE_MIRROR_REL = "scripts/git_commit_fence.sh"     # mining-k8s copy
 SELFTEST_REL = "music/scripts/test_git_commit_fence.sh"
 HOOK_REL = ".githooks/pre-commit"
+GUARD_REL = "music/scripts/check_stale_write.py"      # source of record (lane)
+GUARD_MIRROR_REL = "scripts/check_stale_write.py"     # mining-k8s copy
+GUARD_SELFTEST_REL = "music/scripts/test_check_stale_write.py"
 HOOKS_PATH = ".githooks"
 
 
@@ -135,6 +138,66 @@ def fence_problems(lane: Path, other: Path | None, mirror_rel: str,
             if run.returncode != 0:
                 tail = (run.stdout or run.stderr).strip().splitlines()[-4:]
                 problems.append("SELFTEST the planted-defect suite failed "
+                                f"(rc={run.returncode}): " + " | ".join(tail))
+    return problems
+
+
+def content_guard_problems(lane: Path, other: Path | None, mirror_rel: str,
+                           guard_rel: str, skip_selftest: bool) -> list[str]:
+    """Every reason the content guard is not armed, for one lane repo (+ its copy)."""
+    problems: list[str] = []
+
+    guard = lane / guard_rel
+    if not guard.exists():
+        problems.append(f"MISSING {guard} — the content guard is not in the tree")
+        return problems
+    if not os.access(guard, os.X_OK):
+        problems.append(f"NOT-EXECUTABLE {guard} — git runs a hook with exec; chmod +x it")
+
+    hp = hooks_path(lane)
+    if hp != HOOKS_PATH:
+        problems.append(f"HOOKSPATH {lane}: core.hooksPath={hp or '(unset)'} "
+                        f"(want {HOOKS_PATH}) — run: git -C {lane} config core.hooksPath {HOOKS_PATH}")
+
+    hook = lane / HOOK_REL
+    if not hook.exists():
+        problems.append(f"MISSING {hook} — the hook file is not in the tree")
+    else:
+        if not os.access(hook, os.X_OK):
+            problems.append(f"NOT-EXECUTABLE {hook} — git never runs a non-executable hook")
+        if guard_rel not in hook.read_text(encoding="utf-8", errors="replace"):
+            problems.append(f"HOOK-DOES-NOT-NAME {hook} never mentions {guard_rel}")
+
+    if other is not None:
+        mirror = other / mirror_rel
+        if not mirror.exists():
+            problems.append(f"MISSING {mirror} — the copy is absent")
+        elif sha256(mirror) != sha256(guard):
+            problems.append(f"DRIFT {mirror} differs from {guard} "
+                            f"({sha256(mirror)[:12]} != {sha256(guard)[:12]}) — "
+                            f"one implementation, copied: cp {guard} {mirror}")
+        mhp = hooks_path(other)
+        if mhp != HOOKS_PATH:
+            problems.append(f"HOOKSPATH {other}: core.hooksPath={mhp or '(unset)'} "
+                            f"(want {HOOKS_PATH})")
+        mhook = other / HOOK_REL
+        if not mhook.exists():
+            problems.append(f"MISSING {mhook} — the hook file is not in the tree")
+        else:
+            if not os.access(mhook, os.X_OK):
+                problems.append(f"NOT-EXECUTABLE {mhook}")
+            if guard_rel not in mhook.read_text(encoding="utf-8", errors="replace"):
+                problems.append(f"HOOK-DOES-NOT-NAME {mhook} never mentions {guard_rel}")
+
+    if not skip_selftest:
+        suite = lane / GUARD_SELFTEST_REL
+        if not suite.exists():
+            problems.append(f"MISSING {suite} — the content guard has no planted-defect suite")
+        else:
+            run = subprocess.run(["bash", str(suite)], capture_output=True, text=True)
+            if run.returncode != 0:
+                tail = (run.stdout or run.stderr).strip().splitlines()[-4:]
+                problems.append(f"SELFTEST the planted-defect suite failed "
                                 f"(rc={run.returncode}): " + " | ".join(tail))
     return problems
 
@@ -273,21 +336,26 @@ def main() -> int:
                   f"(the fence's copy lives there; pass --other-repo '' to check the lane alone)")
             return 3
 
-    problems = fence_problems(lane, other, args.mirror_rel, args.fence_rel, args.skip_selftest)
+    fence_probs = fence_problems(lane, other, args.mirror_rel, args.fence_rel, args.skip_selftest)
+    guard_probs = content_guard_problems(lane, other, args.mirror_rel, GUARD_MIRROR_REL, GUARD_REL, args.skip_selftest)
+    problems = fence_probs + guard_probs
     if problems:
-        print(f"FAIL check_commit_fence_armed: {len(problems)} problem(s) — the fence is NOT armed, "
-              f"so a whole-index commit in the shared tree is allowed again (incident t_42bc85ba)")
+        print(f"FAIL check_commit_fence_armed: {len(problems)} problem(s) — shared-tree guards NOT armed, "+
+              f"so a whole-index commit in the shared tree is allowed again")
         for p in problems:
             print(f"  {p}")
-        print("  The fence: music/scripts/git_commit_fence.sh (header explains the defect and the escapes)")
+        print("  The fence: music/scripts/git_commit_fence.sh")
+        print("  The content guard: music/scripts/check_stale_write.py")
         return 1
 
     hp = hooks_path(lane)
-    print(f"PASS check_commit_fence_armed: fence armed on {lane.name} "
-          f"(core.hooksPath={hp}, hook {HOOK_REL})"
-          + (f" and {other.name} (copy {args.mirror_rel} byte-identical)" if other else ""))
+    print(f"PASS check_commit_fence_armed: guards armed on {lane.name} "+
+          f"(core.hooksPath={hp}, hook {HOOK_REL})"+
+          + (f" and {other.name} (fence copy {args.mirror_rel} byte-identical, guard copy {GUARD_MIRROR_REL} byte-identical)" if other else ""))
     print(f"  fence: {lane / args.fence_rel}")
-    print(f"  suite: {'skipped (--skip-selftest)' if args.skip_selftest else 'planted-defect suite passed'}")
+    print(f"  guard: {lane / GUARD_REL}")
+    print(f"  fence suite: {"skipped (--skip-selftest)" if args.skip_selftest else "planted-defect suite passed"}")
+    print(f"  guard suite: {"skipped (--skip-selftest)" if args.skip_selftest else "planted-defect suite passed"}")
     return 0
 
 
